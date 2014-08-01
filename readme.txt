@@ -10,9 +10,7 @@ Qwiz lets you create quizzes and flashcard decks using simple shortcodes (such a
 
 
 == Description ==
-Easy online quizzes and flashcards sets for WordPress - use simple shortcodes
-(such as "[q]" for a question) in your page or post.
-See http://dkprojects.net/qwiz
+Easy online quizzes and flashcards for WordPress - use simple shortcodes (such as "[q]" for a question) in your page or post.  See http://dkprojects.net/qwiz
 
 == Installation ==
 Upload 'qwiz-online-qwizzes-wp-plugin.php' to your plugins directory ('.../wp-content/plugins').
