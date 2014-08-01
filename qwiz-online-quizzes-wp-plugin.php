@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Qwiz - online quizzes and flashcards
  * Plugin URI: http://dkprojects.net/qwiz
- * Description: Easy online quizzes and flashcard sets for WordPress pages
+ * Description: Easy online quizzes and flashcards for WordPress
  * Version: 1.0
  * Author: Dan Kirshner
  * Author URI: http://dkprojects.net/qwiz
@@ -32,9 +32,3074 @@ function add_qwiz_js () {
 /* Qwiz/Qwizcards v1.00 
  * Initial WordPress release 2014-07-31
  */
-if(! window.console){window.console={log: function(){} };}qwiz_={};var i3=function(){var s2='qwiz_';$=jQuery;var q=this;var o='div.entry-content';var e0=[];var q1=0;var c2=[];var d3;var h3=[];var m0;$(document).ready(function(){a();m2();if(e0.length){alert(k2('Error',e0.length)+' found:\n\n'+e0.join('\n'));}if(q1){$('.qwiz-feedback').hide();for(var w0=0;w0<q1;w0++){if(c2[w0] || h3[w0].o1==1){q.next_question(w0);}}}});function m2(){var d4=[];$('xmp').each(function(){d4.push($(this).html());$(this).html('');});$(o).each(function(){var n0=$(this).html();if(! n0){} else{var f3=n0.search('[qwiz]');if(f3!=-1){var y1=n0.replace(/<!--[\s\S]*?-->/gm,'');new_html=y1.replace(/\[!\][\s\S]*?\[\/!\]/gm,'');f(y1);var e3=y1.match(/\[qwiz[\s\S]*?\[\/qwiz\]/gm);if(e3){q1=e3.length;for(w0=0;w0<q1;w0++){var z1=o2(e3[w0]);y1=y1.replace(/(<[^\/][^>]*?>\s*)*?\[qwiz[\s\S]*?\[\/qwiz\]/m,z1);}}$(this).html(y1);}}});if(d4.length){$('xmp').each(function(i){$(this).html(d4[i]);});}}function a(){var s=[];s.push('<style type="text/css">\n');s.push('.qwiz {');s.push('   border:          2px solid black;');s.push('   width:           500px;');s.push('   min-height:      300px;');s.push('   padding:         5px;');s.push('}');s.push('.qwiz img {');s.push('   border:          0px;');s.push('}');s.push('div.qwiz-header {');s.push('   color:           white;');s.push('   background:      black;');s.push('   padding:         0px;');s.push('   margin:          -5px -5px 0px -5px;');s.push('}');s.push('div.qwiz-header * {');s.push('   margin:          0px;');s.push('   padding:         5px;');s.push('}');s.push('.qwiz-mode {');s.push('   font-size:       90%;');s.push('   display:         inline-block;');s.push('   margin:          0px;');s.push('   padding-left:    3px;');s.push('   padding-right:   3px;');s.push('   color:           gray;');s.push('}');s.push('.qwiz-progress {');s.push('   font-size:       90%;');s.push('   display:         inline-block;');s.push('   float:           right;');s.push('   margin:          0px;');s.push('   color:           gray;');s.push('}');s.push('.qwizq {');s.push('   display:         none;');s.push('}');s.push('.qwiz-choices p {');s.push('   padding-left:    1.6em;');s.push('   text-indent:     -1.6em;');s.push('   margin-top:      0px;');s.push('   margin-bottom:   0.5em;');s.push('}');s.push('.next_button {');s.push('   text-align:      center;');s.push('}');s.push('.qbutton {');s.push('   margin-bottom: 10px;');s.push('   border-top: 1px solid #96d1f8;');s.push('   background: #65a9d7;');s.push('   background: -webkit-gradient(linear, left top, left bottom, from(#3e779d), to(#65a9d7));');s.push('   background: -webkit-linear-gradient(top, #3e779d, #65a9d7);');s.push('   background: -moz-linear-gradient(top, #3e779d, #65a9d7);');s.push('   background: -ms-linear-gradient(top, #3e779d, #65a9d7);');s.push('   background: -o-linear-gradient(top, #3e779d, #65a9d7);');s.push('   padding: 5px 10px;');s.push('   -webkit-border-radius: 8px;');s.push('   -moz-border-radius: 8px;');s.push('   border-radius: 8px;');s.push('   -webkit-box-shadow: rgba(0,0,0,1) 0 1px 0;');s.push('   -moz-box-shadow: rgba(0,0,0,1) 0 1px 0;');s.push('   box-shadow: rgba(0,0,0,1) 0 1px 0;');s.push('   text-shadow: rgba(0,0,0,.4) 0 1px 0;');s.push('   color: white;');s.push('   font-size: 14px;');s.push('   font-weight: bold;');s.push('   font-family: arial, verdana, sans-serif;');s.push('   text-decoration: none;');s.push('   vertical-align: middle;');s.push('}');s.push('.qbutton:hover {');s.push('   border-top-color: #28597a;');s.push('   background: #28597a;');s.push('   color: #ccc;');s.push('}');s.push('.qbutton:active {');s.push('   border-top-color: #1b435e;');s.push('   background: #1b435e;');s.push('}');s.push('</style>');;$(s.join('\n')).appendTo('head');}function o2(n0){h3.push({});h3[w0].j1=0;h3[w0].m1=0;h3[w0].v0=-1;var g3=n0.match(/(<[^\/][^>]*?>\s*)*?\[qwiz[^\]]*\]/m)[0];var o1=0;var y1='';var d2=false;n0=y(n0,g3);var m=n0.match(/\[qwiz[^\]]*\]((<\/[^>]*?>\s*)*)/m,'');if(m){var z0=m[1];y1+=z0;}n0=n0.replace(/\[qwiz[^\]]*\]((<\/[^>]*?>\s*)*)/m,'');n0=b4(n0);if(n0.search(/\[q([^\]]*)\]/m)==-1){e0.push('Did not find question tags ("[q]") for qwiz '+(w0+1));} else{n0=l2(n0,w0,0,true);var b1=j2(n0,['[i]'],['[q]','[q ']);if(b1=='NA'){b1=j2(n0,['^'],['[q]','[q ']);}if(b1==''){d2=true;} else{if(n0.substr(0,5)!=b1.substr(0,5)){e0.push('Text before intro [i] - qwiz '+(w0+1));}b1=b1.replace('[i]','');y1+='<div id="intro-qwiz'+w0+'">\n'+b1+'</div>\n';}var y2=n0.match(/\[q [^\]]*\][\s\S]*|\[q\][\s\S]*/m)[0];var a3=y2.match(/\[q[^\]]*\]/gm);o1=a3.length;h3[w0].b3=new Array(o1);h3[w0].topics=[];p2(w0,a3);var f1=n0.match(/(<[^\/][^>]*?>\s*)*?\[q[ \]]/gm);var r2=[];var n1=f1.length;for(var x0=0;x0<n1;x0++){var e1=f1[x0].length;r2.push(f1[x0].substr(0,e1-3));}var r3=y2.search(/\]/)+1;var e1=y2.length;y2=y2.substring(r3,e1-7);var g0=y2.match(/\[x\]([\s\S]*)/m);if(g0){g0=g0[1];} else{g0='';}y2=y2.replace(/\[x\][\s\S]*/m,'');var c3=y2.split(/\[q [^\]]*\]|\[q\]/);var w2=[];for(var v0=0;v0<o1;v0++){w2.push(n2(w0,v0,c3[v0],r2[v0]));}y1+=w2.join('\n');}c2.push(d2);h3[w0].o1=o1;y1=v(w0,g3,y1,g0);return y1;}function y(n0,g3){n0=n0.substring(g3.length,n0.length-7);while(true){var t=n0.search(' ');if(t!=-1){break;} else{n0=atob(n0);}}n0='[qwiz]'+n0+'[/qwiz]';return n0;}function v(w0,g3,n0,g0){var m=g3.match(/\[qwiz([^\]]*)\]/m);var d=m[1];var n3=d.match(/repeat_incorrect="[^"]+"/m);h3[w0].repeat_incorrect_b=true;if(n3){var m3=n3[0];h3[w0].repeat_incorrect_b=m3.search('false')==-1;d=d.replace(m3,'');}var y3='<div id="qwiz'+w0+'" class="qwiz" '+d+'>\n';style='';if(m0=='' || m0=='NA'){style=' style="display: none;"';}y3+='<div id="header-qwiz'+w0+'" class="qwiz-header"'+ style+'>'+m0+'</div>\n';if(h3[w0].o1>1){y3+='<div>\n';var d1='Learn mode: questions repeat until answered correctly.';var w3='Test mode: incorrectly-answered questions do not repeat.';var g1;var x3;if(h3[w0].repeat_incorrect_b){g1='Learn';x3=d1+' '+w3;} else{g1='Test';x3=w3+' '+d1;}y3+='   <div id="mode-qwiz'+w0+'" class="qwiz-mode" title="'+x3+'">\n';y3+='      Mode: '+g1+'\n';y3+='   </div>\n';y3+='   <div id="progress-qwiz'+w0+'" class="qwiz-progress">\n';y3+='   </div>\n';y3+='</div>\n';}if(g0){var p3 ='    <button onclick="'+s2+'.restart_quiz ('+w0+')">\n'+'       Take the quiz again\n'+'    </button>\n';g0=g0.replace('[restart]',p3);}var e='<div id="summary-qwiz'+w0+'" class="qwizq">\n'+'    <div id="summary_report-qwiz'+w0+'">'+'    </div>\n'+     g0+'\n'+'</div>\n';e+='<div class="next_button" id="next_button-qwiz'+w0+'">\n'+'   <button class="qbutton" onclick="'+s2+'.next_question ('+w0+')">'+'<span id="next_button_text-qwiz'+w0+'">'+'Start quiz'+'</span>'+'</button>\n'+'</div>\n';e+='</div>\n';n0=y3+n0+e;return n0;}function p2(w0,a3){var p1=0;var o1=a3.length;for(var v0=0;v0<o1;v0++){var z2=a3[v0];var f1=z2.match(/\[q +([^\]]*)\]/);if(f1 && f1[1].substr(0,7)=='topic="'){var c=f1[1].substr(7);var f1=c.match(/([^"]*)"/);if(f1){var b3=b4(f1[1]);b3=b3.split(/; */);h3[w0].b3[v0]=b3;p1++;for(var i=0;i<b3.length;i++){var z3=b3[i];if(h3[w0].topics.indexOf(z3)==-1){h3[w0].topics.push(z3);}}}}}if(p1>0){ if(p1!=o1){e0.push('Topic(s) were given for at least one question, but at least one question doesn\'t have a topic.');}h3[w0].topic_statistics={};var w1=h3[w0].topics.length;for(var y0=0;y0<w1;y0++){var z3=h3[w0].topics[y0];h3[w0].topic_statistics[z3]={};h3[w0].topic_statistics[z3].j1=0;h3[w0].topic_statistics[z3].m1=0;}}}this.restart_quiz=function(w0){$('#summary-qwiz'+w0).hide();h3[w0].j1=0;h3[w0].m1=0;for(var v0=0;v0<h3[w0].o1;v0++){var j3='#qwiz'+w0+'-q'+v0;$(j3).data('answered_correctly','');}var w1=h3[w0].topics.length;for(var y0=0;y0<w1;y0++){var z3=h3[w0].topics[y0];h3[w0].topic_statistics[z3].j1=0;h3[w0].topic_statistics[z3].m1=0;}h3[w0].v0=-1;q.next_question(w0);};this.next_question=function(w0){var v0=h3[w0].v0;d3='qwiz'+w0;var o1=h3[w0].o1;if(v0==-1){if(o1>1){$('#intro-'+d3).hide();$('#next_button-qwiz'+w0).css('text-align','left');}if(o1>1){a0(w0);$('#next_button_text-'+d3).html('Next question');}} else{var j3='#'+d3+'-q'+v0;$(j3).hide();}$('#next_button-'+d3).hide();var k1=h3[w0].j1;if(! h3[w0].repeat_incorrect_b){k1+=h3[w0].m1;}if(k1==o1){c0(w0);} else{while(true){v0++;if(v0 >= o1){v0=0;}var j3='#'+d3+'-q'+v0;if(! $(j3).data('answered_correctly')){break;}}h3[w0].v0=v0;b0(w0,v0);}};function b0(w0,v0){var j3='qwiz'+w0+'-q'+v0;$('[id^='+j3+']').hide();$('#'+j3).show();$('input[name='+j3+']').removeAttr('disabled').removeAttr('checked');$('.choices-'+j3).on('mouseover',function(){$(this).css({'cursor':'pointer','color':'#045FB4'})}).on('mouseout',function(){;$(this).css({'cursor':'text','color':'black'})});}function n2(w0,v0,n0,i2){var q3=n0.search(/(<[^\/][^>]*?>\s*)*?\[c\*{0,1}\]/m);if(q3==-1){e0.push('Did not find choices ("[c]") for qwiz '+(w0+1)+', question '+(v0+1));y1='';l3='';} else{var x2=n0.substr(0,q3);var y1='<div id="qwiz'+w0+'-q'+v0+'" class="qwizq">\n'+    i2+x2;var l3=n0.substr(q3);y1+='</p><span class="qwiz-choices">';}var j=n0.match(/\[c\*{0,1}\]/gm);var i1=0;if(j){i1=j.length;}var j1=0;for(var r0=0;r0<i1;r0++){var v2=['[c]','[c*]'];var u2=['[c]','[c*]','[f]'];var g=j2(l3,v2,u2);l3=l3.substr(g.length);var k3=w(w0,v0,r0,j[r0]);j1+=k3[0];g=g.replace(/\[c\*{0,1}\]/m,k3[1]);y1+='<span class="choices-qwiz'+w0+'-q'+v0+'" onclick="'+s2+'.process_choice (\'qwiz'+w0+'-q'+v0+'-a'+r0+'\')">\n'+ g+'</span>';}y1+='</span>\n';y1+='<div style="clear: both;"></div>\n';if(j1==0){e0.push('No choice was marked correct: qwiz '+(1+w0)+', question '+(1+v0));} else if(j1>1){e0.push('More than one choice was marked correct: qwiz '+(1+w0)+', question '+(1+v0));}var j0=l3.match(/(<[^\/][^>]*?>\s*)*?\[f\][\s\S]*/m);if(! j0){e0.push('Did not find feedback ("[f]") for qwiz '+(w0+1)+', question '+(v0+1));j0='';} else{j0=j0[0].replace('[f]','');}var l0=j0.split(/\[f\]/);var l1=l0.length;if(i1!=l1){e0.push('Number of feedback items does not match number of choices: qwiz '+(1+w0)+', question '+(1+v0));}var f1=n0.match(/(<[^\/][^>]*?>\s*)*?\[f\]/gm);var h0=[];for(var t0=0;t0<l1;t0++){var e1=f1[t0].length;h0.push(f1[t0].substr(0,e1-3));}var i0=[];for(var t0=0;t0<l1;t0++){i0.push(u(w0,v0,t0,l0[t0],h0[t0]));}y1+=i0.join('\n');y1+='</div>\n';return y1;}function v3(t3){var u3='('+t3.join(')|(')+')';u3=u3.replace(/([\[\]\*])/g,'\\$1');u3='(('+u3+')\\s*)';return u3;}function j2(n0,v2,u2){var h2='(<[^/][^>]*?>\\s*)*?';var u3=h2+v3(v2);var b2=h2+v3(u2);var k='((</[^>]*?>\\s*)*)';var re=new RegExp('([\\s\\S]*?)('+u3+'[\\s\\S]*?)'+b2+k,'im');var p0=n0.match(re);var o0='';var l='';if(p0){o0=p0[2];var q0=o0.replace(/<[^>]+>/gm,'');if(q0.search(/\S/)==-1){o0='';} else{var u0=7+v2.length;var t2=p0[u0];if(t2 && t2[1]=='/'){o0+=t2;}var s0=u0+2+u2.length;var l=p0[s0];if(l){o0+=l;}}} else{o0='NA';}return o0;}function l2(n0,w0,v0,a1){var v2=['[h]'];var u2=['[q]','[q '];if(a1!=undefined){u2.push('[i]');}m0=j2(n0,v2,u2);if(m0!='NA' && m0!=''){if(n0.substr(0,5)!=m0.substr(0,5)){e0.push('Text before header [h] - qwiz '+(w0+1));}n0=n0.replace(m0,'');m0=m0.replace(/\[h\]/ig,'');}return n0;}function c0(w0){var o3=[];var o1=h3[w0].o1;var j1=h3[w0].j1;var m1=h3[w0].m1;if(h3[w0].repeat_incorrect_b){o3.push('<p><b>Congratulations, you\'re done!</b></p>');if(m1==0){o3.push('<p>In this '+f2(o1)+'-question quiz, you answered every question correctly on the first try!</p>');} else{o3.push('<p>In finishing this '+f2(o1)+'-question quiz, you entered '+f2(m1)+' incorrect '+k2('answer',m1)+'.</p>');}} else{if(m1==0){o3.push('<p>Congratulations, you answered all questions correctly.</p>');} else{o3.push('<p>Your score is '+f2(j1)+' out of '+f2(o1)+' questions.</p>');}}var w1=h3[w0].topics.length;if(w1==1){var z3=h3[w0].topics[0];var b;if(o1==2){b='Both';} else{b='All '+ f2(o1);}o3.push('<p>'+b+' '+k2('question',o1)+' were about topic &ldquo;'+z3+'.&rdquo;</p>');} else if(w1>1){o3.push('<ul>');for(var y0=0;y0<w1;y0++){var z3=h3[w0].topics[y0];var t1=h3[w0].topic_statistics[z3].j1;var u1=h3[w0].topic_statistics[z3].m1;var v1=t1+u1;if(v1>0){var a4='<li>';a4+='For topic &ldquo;'+z3+'&rdquo; there '+k2('was',v1)+' '+f2(v1)+' '+k2('question',v1)+'.&nbsp;';if(u1==0){if(v1>2){a4+='You answered all of these questions correctly';} else if(v1==2){a4+='You answered both of these questions correctly';} else{a4+='You answered this question correctly';}if(h3[w0].repeat_incorrect_b){a4+=' on the first try.';} else{a4+='.';}} else{if(h3[w0].repeat_incorrect_b){var x1=v1+u1;a4+='It took you '+f2(x1)+' '+k2('try',x1)+' to answer '+k2('this',v1)+' '+k2('question',v1)+' correctly.';} else{a4+='Your score is '+f2(t1)+' correct out of '+f2(v1)+'.';}}a4+='</li>';o3.push(a4);}}o3.push('</ul>');}$('#summary_report-qwiz'+w0).html(o3.join('\n'));$('#summary-qwiz'+w0).show();}function f(n0){var f1=n0.match(/\[qwiz|\[\/qwiz\]/gm);if(f1){var r1=f1.length;var f0=false;if(r1%2!=0){f0=true;} else{for(var i=0;i<r1;i++){var s3=f1[i];if(i%2==0){if(f1[i]!='[qwiz'){f0=true;break;}} else{if(f1[i]!='[/qwiz]'){f0=true;break;}}}}if(f0){alert('Unmatched [qwiz] - [/qwiz] pairs.');e0.push('Unmatched [qwiz] - [/qwiz] pairs.');}}}function w(w0,v0,r0,h){var n0='';var x='';var p=0;if(h=='[c*]'){x='data-correct="1" ';p=1;}n0+='<input type="radio" id="radio-qwiz'+w0+'-q'+v0+'-a'+r0+'" name="qwiz'+w0+'-q'+v0+'" '+x+' onclick="'+s2+'.process_choice (\'qwiz'+w0+'-q'+v0+'-a'+r0+'\')" />\n';return [p,n0];}this.process_choice=function(k0){var f1=k0.match(/(.*)-/);j3=f1[1];d3=k0.match(/(.*?)-/)[1];w0=parseInt(d3.substr(4));var z=$('input[name='+j3+']').attr('disabled');if(z!='disabled'){$('#'+j3+' .qwiz-feedback').hide();$('#'+k0).show();var d0=document.getElementById('radio-'+k0);d0.checked=true;$('input[name='+j3+']').attr('disabled',true);$('.choices-'+j3).on('mouseover',function(){$(this).css({'cursor':'text','color':'black'})});var r=$('#radio-'+k0).data('correct');if(r){h3[w0].j1++;$('#'+j3).data('answered_correctly',1);} else{h3[w0].m1++;if(! h3[w0].repeat_incorrect_b){$('#'+j3).data('answered_correctly',0);}}var v0=k0.match(/-q([0-9]+)-/)[1];var b3=h3[w0].b3[v0];if(b3){for(var ii=0;ii<b3.length;ii++){var z3=b3[ii];if(r){h3[w0].topic_statistics[z3].j1++;} else{h3[w0].topic_statistics[z3].m1++;}}}if(h3[w0].o1>1){a0(w0);var k1=h3[w0].j1;if(! h3[w0].repeat_incorrect_b){k1+=h3[w0].m1;}if(k1==h3[w0].o1){$('#next_button_text-'+d3).html('View summary report');}$('#next_button-'+d3).show();}}};function a0(w0){var q2;var h1=h3[w0].j1+h3[w0].m1;var k1=h3[w0].j1;if(! h3[w0].repeat_incorrect_b){k1+=h3[w0].m1;}var s1=h3[w0].o1 - k1;if(h1==0){q2='Questions in this quiz: '+s1;} else{q2=h3[w0].o1+' questions, '+h1+' '+k2('response',h1)+', '+h3[w0].j1+' correct, '+h3[w0].m1+' incorrect, '+s1+' to go';}$('#progress-'+d3).html(q2);}function u(w0,v0,t0,c1,i2){var n0='';n0+='<div class="qwiz-feedback" id="qwiz'+w0+'-q'+v0+'-a'+t0+'">\n';n0+='<hr />\n';n0+=i2+c1;n0+='<div style="clear: both;"></div>\n';n0+='</div>\n';return n0;}var g2=['zero','one','two','three','four','five','six','seven','eight','nine','ten'];function f2(e2){var c4;if(e2>9){c4=e2;} else{c4=g2[e2];}return c4;}function k2(c4,n){var a2;if(n==1){a2=c4;} else{if(c4=='was'){a2='were';} else if(c4=='this'){a2='these';} else if(c4=='try'){a2='tries';} else{a2=c4+'s';}}return a2;}function b4(s){if('a'.b4){s=s.b4();} else{s=s.replace(/^\s+|\s+$/g,'');}return s;}};i3.call(qwiz_);
+// Do-nothing function for old IE.
+if (! window.console) {
+   window.console = {log: function(){} };
+}
 
-if(! window.console){window.console={log: function(){} };}qcard_={};var k3=function(){var o3='qcard_';$=jQuery;var q=this;var c0='div.entry-content';var u0=[];var g2=0;var q2=[];var h0;var i0=[];var p4=[];var i2;var n4=new Object;var o4=new Object;$(document).ready(function(){c();d3();if(u0.length){alert(z2('Error',u0.length)+' found:\n\n'+u0.join('\n'));}if(g2){for(var k1=0;k1<g2;k1++){t1(k1);s1(k1);x3(k1,'front',true);if(q2[k1] || i0[k1].e2==1){q.set_next_buttons(k1);q.process_card(k1);} else{i0[k1].el_qcard_card_front.html(i0[k1].x1);}var j3=x3(k1,'front',true);v3(k1,j3);}}});function d3(){var s4=[];$('xmp').each(function(){s4.push($(this).html());$(this).html('');});$(c0).each(function(){var e1=$(this).html();if(! e1){} else{var m3=e1.search('[qdeck]');if(m3!=-1){var m2=e1.replace(/<!--[\s\S]*?-->/gm,'');m2=m2.replace(/\[!\][\s\S]*?\[\/!\]/gm,'');z(m2);var l3=m2.match(/\[qdeck[\s\S]*?\[\/qdeck\]/gm);if(l3){g2=l3.length;for(var k1=0;k1<g2;k1++){var k2=e3(l3[k1],k1);m2=m2.replace(/\[qdeck[\s\S]*?\[\/qdeck\]/m,k2);}}$(this).html(m2);}}});if(s4.length){$('xmp').each(function(i){$(this).html(s4[i]);});}}function c(){var s=[];s.push('<style type="text/css">');s.push('.qcard_window {');s.push('   position:            relative;');s.push('}');s.push('.qcard_progress {');s.push('   text-align:          right;');s.push('}');s.push('.qcard_progress p {');s.push('   font-size:           90%;');s.push('   color:               gray;');s.push('   margin:              0px;');s.push('}');s.push('div.qcard_header {');s.push('   color:           white;');s.push('   background:      black;');s.push('   margin:          0px;');s.push('   padding:         0px;');s.push('}');s.push('div.qcard_header * {');s.push('   margin:          0px;');s.push('   padding:         0px 5px 0px 5px;');s.push('}');s.push('.qcard_card {');s.push('   position:            relative;');s.push('}');s.push('.qcard_textentry {');s.push('   font-size:           13pt;');s.push('   font-weight:         bold;');s.push('   color:               blue;');s.push('}');s.push('.qcard_card .front {');s.push('   min-height:          280px;');s.push('}');s.push('.qcard_card td.center {');s.push('   padding:             5px;');s.push('   text-align:          center;');s.push('   vertical-align:      middle;');s.push('   font-size:           12pt;');s.push('   font-weight:         bold;');s.push('}');s.push('.qcard_card img {');s.push('   border:              0px;');s.push('   box-shadow:          none;');s.push('}');s.push('.qcard_card .back .center {');s.push('   background-image: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAf4AAAE2CAIAAAAPtmerAAAACXBIWXMAAA7EAAAOxAGVKw4bAAAEnklEQVR4nO3YMW1AMRQEwTgyf3ix9Mm8sLCLnUFw1Ra3ZuYHgJLf1wMAuE36AXKkHyBH+gFypB8gR/oBcqQfIEf6AXKkHyBH+gFypB8gR/oBcqQfIEf6AXKkHyBH+gFypB8gR/oBcqQfIEf6AXKkHyBH+gFypB8gR/oBcqQfIEf6AXKkHyBH+gFypB8gR/oBcqQfIEf6AXKkHyBH+gFypB8gR/oBcqQfIEf6AXKkHyBH+gFypB8gR/oBcqQfIEf6AXKkHyBH+gFypB8gR/oBcqQfIGf//P293gDAVWtmXm8A4CqHD0CO9APkSD9AjvQD5Eg/QI70A+RIP0CO9APkSD9AjvQD5Eg/QI70A+RIP0CO9APkSD9AjvQD5Eg/QI70A+RIP0CO9APkSD9AjvQD5Eg/QI70A+Ts883rDQBctWakH6DF4QOQI/0AOdIPkCP9ADnSD5Aj/QA50g+QI/0AOdIPkCP9ADnSD5Aj/QA50g+QI/0AOdIPkCP9ADnSD5Aj/QA50g+QI/0AOdIPkCP9ADnSD5Aj/QA5+3zzegMAV60Z6QdocfgA5Eg/QI70A+RIP0CO9APkSD9AjvQD5Eg/QI70A+RIP0CO9APkSD9AjvQD5Eg/QI70A+RIP0CO9APkSD9AjvQD5Eg/QI70A+RIP0CO9APkSD9Azj7fvN4AwFVrRvoBWhw+ADnSD5Aj/QA50g+QI/0AOdIPkCP9ADnSD5Aj/QA50g+QI/0AOdIPkCP9ADnSD5Aj/QA50g+QI/0AOdIPkCP9ADnSD5Aj/QA50g+QI/0AOdIPkLPPN683AHDVmpF+gBaHD0CO9APkSD9AjvQD5Eg/QI70A+RIP0CO9APkSD9AjvQD5Eg/QI70A+RIP0CO9APkSD9AjvQD5Eg/QI70A+RIP0CO9APkSD9AjvQD5Eg/QI70A+Ts883rDQBctWakH6DF4QOQI/0AOdIPkCP9ADnSD5Aj/QA50g+QI/0AOdIPkCP9ADnSD5Aj/QA50g+QI/0AOdIPkCP9ADnSD5Aj/QA50g+QI/0AOdIPkCP9ADnSD5Aj/QA5+3zzegMAV60Z6QdocfgA5Eg/QI70A+RIP0CO9APkSD9AjvQD5Eg/QI70A+RIP0CO9APkSD9AjvQD5Eg/QI70A+RIP0CO9APkSD9AjvQD5Eg/QI70A+RIP0CO9APkSD9Azj7fvN4AwFVrRvoBWhw+ADnSD5Aj/QA50g+QI/0AOdIPkCP9ADnSD5Aj/QA50g+QI/0AOdIPkCP9ADnSD5Aj/QA50g+QI/0AOdIPkCP9ADnSD5Aj/QA50g+QI/0AOdIPkLPPN683AHDVmpF+gBaHD0CO9APkSD9AjvQD5Eg/QI70A+RIP0CO9APkSD9AjvQD5Eg/QI70A+RIP0CO9APkSD9AjvQD5Eg/QI70A+RIP0CO9APkSD9AjvQD5Eg/QI70A+Ts883rDQBctWakH6DF4QOQI/0AOdIPkCP9ADnSD5Aj/QA50g+QI/0AOdIPkCP9ADnSD5Aj/QA50g+QI/0AOdIPkCP9ADnSD5Aj/QA50g+QI/0AOdIPkCP9ADnSD5Aj/QA5/8mNPTHI1j+2AAAAAElFTkSuQmCC);');s.push('   background-repeat:   no-repeat;');s.push('   background-size:     contain;');s.push('   background-position: center;');s.push('   min-height:          280px;');s.push('   line-height:         25px;');s.push('   font-size:           12pt;');s.push('}');s.push('.qcard_card .back .center p {');s.push('   margin-top:          25px;');s.push('   padding-top:         12.5px;');s.push('   margin-bottom:       25.5px;');s.push('}');s.push('.qcard_card .cbutton {');s.push('   display:          none;');s.push('}');s.push('.qcard_next_buttons {');s.push('   position:            relative;');s.push('   margin-top:          5px;');s.push('   text-align:          center;');s.push('}');s.push('.qbutton {');s.push('   margin-bottom: 10px;');s.push('   border-top: 1px solid #96d1f8;');s.push('   background: #65a9d7;');s.push('   background: -webkit-gradient(linear, left top, left bottom, from(#3e779d), to(#65a9d7));');s.push('   background: -webkit-linear-gradient(top, #3e779d, #65a9d7);');s.push('   background: -moz-linear-gradient(top, #3e779d, #65a9d7);');s.push('   background: -ms-linear-gradient(top, #3e779d, #65a9d7);');s.push('   background: -o-linear-gradient(top, #3e779d, #65a9d7);');s.push('   padding: 5px 10px;');s.push('   -webkit-border-radius: 8px;');s.push('   -moz-border-radius: 8px;');s.push('   border-radius: 8px;');s.push('   -webkit-box-shadow: rgba(0,0,0,1) 0 1px 0;');s.push('   -moz-box-shadow: rgba(0,0,0,1) 0 1px 0;');s.push('   box-shadow: rgba(0,0,0,1) 0 1px 0;');s.push('   text-shadow: rgba(0,0,0,.4) 0 1px 0;');s.push('   color: white;');s.push('   font-size: 14px;');s.push('   font-weight: bold;');s.push('   font-family: arial, verdana, sans-serif;');s.push('   text-decoration: none;');s.push('   vertical-align: middle;');s.push('}');s.push('.qcard_next_buttons .qbutton:hover {');s.push('   border-top-color: #28597a;');s.push('   background: #28597a;');s.push('   color: #ccc;');s.push('}');s.push('.qcard_next_buttons .qbutton:active {');s.push('   border-top-color: #1b435e;');s.push('   background: #1b435e;');s.push('}');s.push('.clear {');s.push('   clear:               both;');s.push('}');s.push('// flipCard_v2.css.');s.push('div.fc_card-container img{');s.push('        position: static !important;');s.push('}');s.push('div.card-container {');s.push('   position: relative;');s.push('   display: block;');s.push('   padding: 0;');s.push('   margin: 0;');s.push('        ');s.push('   -webkit-perspective: 1000px;');s.push('      -moz-perspective: 1000px;');s.push('        -o-perspective: 1000px;');s.push('       -ms-perspective: 1000px;');s.push('           perspective: 1000px;');s.push('}');s.push('.card-container .card {');s.push('   border-radius: 0px;');s.push('   width: 100%;');s.push('   height: 100%;');s.push('   position: absolute;');s.push('   display: inline-block;');s.push('   padding: 0;');s.push('   margin: 0;');s.push('   -webkit-transition: -webkit-transform .7s;');s.push('    -moz-transition: -moz-transform .7s;');s.push('      -o-transition: -o-transform .7s;');s.push('     -ms-transition: -o-transform .7s;');s.push('         transition: transform .7s;');s.push('   -webkit-transform-style: preserve-3d;');s.push('      -moz-transform-style: preserve-3d;');s.push('        -o-transform-style: preserve-3d;');s.push('       -ms-transform-style: preserve-3d;');s.push('           transform-style: preserve-3d;');s.push('}');s.push('.card-container .card>div{	');s.push('   border-radius: 0px;');s.push('   ');s.push('   height: 100%;');s.push('   width: 100%;');s.push('   position: absolute;');s.push('   background: #FFFFFF;');s.push('   text-align: center;');s.push('   ');s.push('   margin: 0;');s.push('   -webkit-box-sizing:border-box;');s.push('      -moz-box-sizing:border-box;');s.push('       -ms-box-sizing:border-box;');s.push('           box-sizing:border-box;');s.push('   -webkit-backface-visibility: hidden;');s.push('      -moz-backface-visibility: hidden;');s.push('        -o-backface-visibility: hidden;');s.push('       -ms-backface-visibility: hidden;');s.push('           backface-visibility: hidden;');s.push('}');s.push('.card-container .card[data-direction="top"] .back, .card-container .card[data-direction="bottom"] .back{');s.push('   -webkit-transform: rotateX(180deg);');s.push('      -moz-transform: rotateX(180deg);');s.push('        -o-transform: rotateX(180deg);');s.push('       -ms-transform: rotateX(180deg);');s.push('           transform: rotateX(180deg);');s.push('}');s.push('.card-container .card[data-direction="right"] .back, .card-container .card[data-direction="left"] .back{');s.push('        -webkit-transform: rotateY(180deg);');s.push('         -moz-transform: rotateY(180deg);');s.push('           -o-transform: rotateY(180deg);');s.push('          -ms-transform: rotateY(180deg);');s.push('              transform: rotateY(180deg);');s.push('}');s.push('.flipping-right {');s.push(' -webkit-transform: rotateY(180deg);');s.push('    -moz-transform: rotateY(180deg);');s.push('      -o-transform: rotateY(180deg);');s.push('     -ms-transform: rotateY(180deg);');s.push('         transform: rotateY(180deg);');s.push('}');s.push('.flipping-left {');s.push('   -webkit-transform: rotateY(-180deg);');s.push('    -moz-transform: rotateY(-180deg);');s.push('      -o-transform: rotateY(-180deg);');s.push('     -ms-transform: rotateY(-180deg);');s.push('         transform: rotateY(-180deg);');s.push('}');s.push('.flipping-top {');s.push('   -webkit-transform: rotateX(180deg);');s.push('      -moz-transform: rotateX(180deg);');s.push('        -o-transform: rotateX(180deg);');s.push('       -ms-transform: rotateX(180deg);');s.push('           transform: rotateX(180deg);');s.push('}');s.push('.flipping-bottom {');s.push('   -webkit-transform: rotateX(-180deg);');s.push('    -moz-transform: rotateX(-180deg);');s.push('      -o-transform: rotateX(-180deg);');s.push('     -ms-transform: rotateX(-180deg);');s.push('         transform: rotateX(-180deg);');s.push('}');s.push('.noCSS3Container{');s.push('        -webkit-perspective: none !important;');s.push('           -moz-perspective: none !important;');s.push('                 -o-perspective: none !important;');s.push('            -ms-perspective: none !important;');s.push('                        perspective: none !important; ');s.push('}');s.push('.noCSS3Card{');s.push('   -webkit-transition: none !important;');s.push('      -moz-transition: none !important;');s.push('        -o-transition: none !important;');s.push('       -ms-transition: none !important;');s.push('                    transition: none !important;');s.push('   -webkit-transform-style: none !important;');s.push('      -moz-transform-style: none !important;');s.push('        -o-transform-style: none !important;');s.push('       -ms-transform-style: none !important;');s.push('           transform-style: none !important;');s.push('}');s.push('.noCSS3Sides{');s.push('   -webkit-backface-visibility: visible !important;');s.push('      -moz-backface-visibility: visible !important;');s.push('        -o-backface-visibility: visible !important;');s.push('       -ms-backface-visibility: visible !important;');s.push('           backface-visibility: visible !important;');s.push('   -webkit-transform: none !important;');s.push('      -moz-transform: none !important;');s.push('        -o-transform: none !important;');s.push('       -ms-transform: none !important;');s.push('           transform: none !important;');s.push('}');s.push('</style>');$(s.join('\n')).appendTo('head');}function e3(e1,k1){i0.push({});i0[k1].cards=[];i0[k1].showing_front_b=true;i0[k1].i1=0;i0[k1].n_reviewed=0;i0[k1].n_got_it=0;i0[k1].w0='';var n3=e1.match(/(<[^>\/]*?>\s*)*?\[qdeck[^\]]*\]/m)[0];var g2=0;var m2='';var r2=false;e1=j0(e1,n3);var m=e1.match(/\[qdeck[^\]]*\]((<\/[^>]*?>\s*)*)/m,'');if(m){var u1=m[1];m2+=u1;}e1=e1.replace(/\[qdeck[^\]]*\]((<\/[^>]*?>\s*)*)/m,'');e1=q4(e1);if(e1.search(/\[q([^\]]*)\]/m)==-1){u0.push('Did not find question tags ("[q]") for qdeck '+(k1+1));} else{e1=c3(e1,k1,0,true);var x1=x2(e1,['[i]'],['[q]','[q ']);if(x1=='NA'){x1=x2(e1,['^'],['[q]','[q ']);}if(x1==''){r2=true;} else{if(e1.substr(0,5)!=x1.substr(0,5)){u0.push('Text before intro [i] - qdeck '+(k1+1));}x1=x1.replace('[i]','');var c4='<button class="qbutton" onclick="'+o3+'.start_deck ('+k1+')">Start reviewing cards</button>';if(x1.indexOf('[start]')!=-1){x1=x1.replace('[start]',c4);} else{x1+=c4;}i0[k1].x1=x1;}var t=e1.match(/\[q [^\]]*\][\s\S]*|\[q\][\s\S]*/m)[0];var v=t.match(/\[q[^\]]*\]/gm);var e2=v.length;i0[k1].w=new Array(e2);i0[k1].p4=[];f3(k1,v);var c2=e1.match(/(<[^>\/]*?>\s*)*?\[q[ \]]/gm);var i3=[];for(var i1=0;i1<e2;i1++){var b2=c2[i1].length;i3.push(c2[i1].substr(0,b2-3));}var b4=t.search(/\]/)+1;var b2=t.length;t=t.substring(b4,b2-8);var w0=t.match(/\[x\]([\s\S]*)/m);if(w0){var u3 ='    <button class="qbutton"'+'            onclick="'+o3+'.start_deck ('+k1+')">\n'+'       Review this flashcard stack again\n'+'    </button>\n';w0=w0[1].replace('[restart]',u3);i0[k1].w0=w0;t=t.replace(/\[x\][\s\S]*/m,'');}var x=t.split(/\[q [^\]]*\]|\[q\]/);for(var i1=0;i1<e2;i1++){h=b3(k1,i1,x[i1],i3[i1]);i0[k1].cards.push(h);}}q2.push(r2);i0[k1].e2=e2;i0[k1].n_to_go=e2;m2=f0(k1,n3);return m2;}function b3(k1,i1,e1,w2){var h=new Object;h.got_it=false;var p=w2+e1;p=p.replace(/\[a\][\s\S]*/m,'');var j2=r(p,k1);h.card_front=j2;var z0=j2!=p;var j=e1.match(/\[a\][\s\S]*/m);if(! j){u0.push('Did not find answer ("[a]") -- card back -- for qdeck '+(k1+1)+', card '+(i1+1)+'\n'+e1);j='';} else{j=j[0].substring(3);}var k=j.split(/\[a\]/);if(k.length!=1){u0.push('Got more than one card back ("[a]") for: qdeck '+(1+k1)+', card '+(1+i1)+'\n'+e1);}var b;var m=e1.match(/(<[^>\/]*?>\s*)*?\[a\]/m);if(m && m[1]){b=m[1];} else{b='';}h.card_back=e0(k1,i1,k[0],b,z0);return h;}function e0(k1,i1,e1,w2,z0){var m2=w2+e1;if(e1.search(/\[.*textentry.*/)!=-1){if(! z0){t0.push('[textentry] on back of card, but not on front - deck '+(k1+1)+', card '(i1+1));}m2=l(m2);} else{if(z0){var a3='<span id="back_textentry_clause-qdeck'+k1+'">You wrote &ldquo;<span id="back_textentry-qdeck'+k1+'" class="qcard_textentry"></span>&rdquo;<br /><br /></span>';m2=a3+'\n'+m2;}}return w2+m2;}function i4(g4){var h4='('+g4.join(')|(')+')';h4=h4.replace(/([\[\]\*])/g,'\\$1');h4='(('+h4+')\\s*)';return h4;}function x2(e1,r3,q3){var v2='(<[^/][^>]*?>\\s*)*?';var h4=v2+i4(r3);var p2=v2+i4(q3);var a0='((</[^>]*?>\\s*)*)';var re=new RegExp('([\\s\\S]*?)('+h4+'[\\s\\S]*?)'+p2+a0,'im');var g1=e1.match(re);var f1='';var b0='';if(g1){f1=g1[2];var h1=f1.replace(/<[^>]+>/gm,'');if(h1.search(/\S/)==-1){f1='';} else{var l1=7+r3.length;var p3=g1[l1];if(p3 && p3[1]=='/'){f1+=p3;}var j1=l1+2+q3.length;var b0=g1[j1];if(b0){f1+=b0;}}} else{f1='NA';}return f1;}function c3(e1,k1,m1,w1){var r3=['[h]'];var q3=['[q]','[q '];if(w1!=undefined){q3.push('[i]');}var b1=x2(e1,r3,q3);if(b1!='NA' && b1!=''){if(e1.substr(0,5)!=b1.substr(0,5)){u0.push('Text before header [h] - qdeck '+(k1+1));}e1=e1.replace(b1,'');b1=b1.replace(/\[h\]/ig,'');}i0[k1].b1=b1;return e1;}function f0(k1,n3){var m=n3.match(/\[qdeck([^\]]*)\]/m);var f=m[1];var k0='style="width: 500px; height: 300px; border: 2px solid black;"';if(! f){f=k0;} else{if(f.search(/style\s*?=/m)==-1){f=k0;} else{if(f.search('width')==-1){f=f.replace(/(style\s*?=\s*?["'])/m, '$1width: 500px;');}if(f.search('height')==-1){f=f.replace(/(style\s*?=\s*?["'])/m, '$1height: 300px;');}if(f.search('border')==-1){f=f.replace(/(style\s*?=\s*?["'])/m, '$1border: 2px solid black;');}}}var p0=[];p0.push('<div id="qcard_window-qdeck'+k1+'" class="qcard_window" style="z-index: '+(20 - k1)+';">');p0.push('   <div id="qcard_progress-qdeck'+k1+'" class="qcard_progress">');p0.push('   </div>');p0.push('   <div id="qcard_header-qdeck'+k1+'" class="qcard_header">');p0.push('   </div>');p0.push('   <div class="card-container"> ');p0.push('      <div id="qcard_card-qdeck'+k1+'" class="qcard_card card" data-direction="right"> <button class="cbutton-qdeck'+k1+' cbutton">Flip</button>');p0.push('         <div class="front">');p0.push('            <table class="qcard_table" '+f+' cellspacing="0" cellpadding="0">');p0.push('               <tr>');p0.push('                  <td class="center">');p0.push('                  </td>');p0.push('               </tr>');p0.push('            </table>');p0.push('         </div>');p0.push('         <div class="back">');p0.push('            <table class="qcard_table" '+f+' cellspacing="0" cellpadding="0">');p0.push('               <tr>');p0.push('                  <td class="center">');p0.push('                  </td>');p0.push('               </tr>');p0.push('            </table>');p0.push('         </div>');p0.push('      </div>');p0.push('   </div>');p0.push('   <div id="qcard_next_buttons-qdeck'+k1+'" + class="qcard_next_buttons">');p0.push('   </div>');p0.push('</div>');return p0.join('\n');}function f3(k1,v){var f2=0;var e2=v.length;for(var i1=0;i1<e2;i1++){var u=v[i1];var c2=u.match(/\[q +([^\]]*)\]/);if(c2 && c2[1].substr(0,7)=='topic="'){var e=c2[1].substr(7);var c2=e.match(/([^"]*)"/);if(c2){var w=q4(c2[1]);w=w.split(/; */);i0[k1].w[i1]=w;f2++;for(var i=0;i<w.length;i++){var m4=w[i];if(i0[k1].p4.indexOf(m4)==-1){i0[k1].p4.push(m4);}}}}}if(f2>0){if(f2!=e2){u0.push('Topic(s) were given for at least one card, but at least one card doesn\'t have a topic.');}i0[k1].o4={};var i2=i0[k1].p4.length;for(var o1=0;o1<i2;o1++){var m4=i0[k1].p4[o1];i0[k1].o4[m4]={};i0[k1].o4[m4].n_correct=0;i0[k1].o4[m4].n_incorrect=0;}}}this.start_deck=function(k1){i0[k1].i1=0;i0[k1].n_got_it=0;i0[k1].n_reviewed=0;var e2=i0[k1].e2;i0[k1].n_to_go=e2;q.set_next_buttons(k1);for(var p1=0;p1<e2;p1++){i0[k1].cards[p1].got_it=false;}for(var o1=0;o1<i2;o1++){var m4=i0[k1].p4[o1];i0[k1].o4[m4].n_got_it=0;}s1(k1);q.process_card(k1);};function z(e1){var c2=e1.match(/\[qdeck|\[\/qdeck\]/gm);if(c2){var h2=c2.length;var v0=false;if(h2%2!=0){v0=true;} else{for(var i=0;i<h2;i++){var f4=c2[i];if(i%2==0){if(c2[i]!='[qdeck'){v0=true;break;}} else{if(c2[i]!='[/qdeck]'){v0=true;break;}}}}if(v0){alert('Unmatched [qdeck] - [/qdeck] pairs.');u0.push('Unmatched [qdeck] - [/qdeck] pairs.');}}}function r(e1,k1){var m2=e1.replace('[textentry]','<input type="text" id="textentry-qdeck'+k1+'" class="qcard_textentry" />');return m2;}function l(e1,k1){if(e1.indexOf('id="back_textentry"')!=-1){e1=e1.replace('back_textentry','back_textentry-qdeck'+k1);} else{e1=e1.replace('textentry','<span id="back_textentry-qdeck'+k1+'" class="qdeck_textentry"></span>');}e1=e1.replace(/\[([^[]*textentry.*?)\]/,'<span id="back_textentry_clause-qdeck'+k1+'">$1</span>');return e1;}function y(){var t0=[];for(var p1=0;p1<e2;p1++){var w=cards[p1].p4;for(var ii=0;ii<w.length;ii++){m4=w[ii];if(p4.indexOf(m4)==-1){p4.push(m4);}if(! n4.hasOwnProperty(m4)){t0.push('Did not get topic/description for topic '+m4);}}}i2=p4.length;for(var o1=0;o1<i2;o1++){var m4=p4[o1];o4[m4]=new Object;o4[m4].n_got_it=0;}return t0;}function t1(k1){i0[k1].el_qcard_container=$('#qcard_window-qdeck'+k1+' div.card-container');i0[k1].el_flip=$('.cbutton-qdeck'+k1);i0[k1].el_progress=$('#qcard_progress-qdeck'+k1);i0[k1].el_header=$('#qcard_header-qdeck'+k1);i0[k1].el_qcard_card=$('#qcard_card-qdeck'+k1);i0[k1].el_qcard_card_front=$('#qcard_card-qdeck'+k1+' div.front td.center');i0[k1].el_qcard_card_back=$('#qcard_card-qdeck'+k1+' div.back  td.center');i0[k1].el_next_buttons=$('#qcard_next_buttons-qdeck'+k1);}function s1(k1){var e2=i0[k1].e2;i0[k1].card_order=new Array(e2);for(var i=0;i<e2;i++){i0[k1].card_order[i]=i;}}this.set_next_buttons=function(k1){var e1='';e1+='<button class="qbutton" onclick="'+o3+'.got_it ('+k1+')" title="Remove this card from the stack">Got it!</button> &nbsp; ';if(i0[k1].n_to_go>1){e1+='<button class="qbutton next_card-qdeck'+k1+'" onclick="'+o3+'.next_card ('+k1+')" title="Put this card at the bottom of stack, show the next card">Need more practice</button> &nbsp; ';}e1+='<button class="qbutton" onclick="'+o3+'.flip ('+k1+')" title="Show the other side">Flip</button> &nbsp; ';if(i0[k1].n_to_go>1){e1+='<button class="qbutton shuffle-qdeck'+k1+'" onclick="'+o3+'.shuffle_order ('+k1+')" title="Randomly shuffle the remaining cards">Shuffle</button> &nbsp; ';}i0[k1].el_next_buttons.html(e1);};this.process_card=function(k1){if(i0[k1].n_to_go==0){r0(k1);} else{var i1=i0[k1].i1;while(true){var p1=i0[k1].card_order[i1];if(! i0[k1].cards[p1].got_it){if(i0[k1].n_to_go==1){$('.next_card-qdeck'+k1).attr('disabled',true);$('.next_card-qdeck'+k1).css({color:'#e6e6e6',background:'#cccccc','border-top-color':'#cccccc','text-shadow':'none','box-shadow':'none'});$('.shuffle-qdeck'+k1).attr('disabled',true);$('.shuffle-qdeck'+k1).css({color:'#e6e6e6',background:'#cccccc','border-top-color':'#cccccc','text-shadow':'none','box-shadow':'none'});}i0[k1].i1=i1;i0[k1].n_reviewed++;q.set_card_front_and_back(k1);break;} else{i1++;if(i1 >= i0[k1].e2){i1=0;}}}}};function r0(k1){if(! i0[k1].showing_front_b){q.flip(k1);}i0[k1].el_progress.html('');i0[k1].el_qcard_card_back.html('');i0[k1].el_next_buttons.html('');var s3=[];if(i0[k1].n_reviewed==i0[k1].e2){s3.push('<p>In this '+t2(i0[k1].e2)+'-flashcard stack, you marked every card &lsquo;got it&rsquo; on the first try.</p>');} else{s3.push('<p>This flashcard stack had '+i0[k1].e2+' cards.  It took you '+i0[k1].n_reviewed+' tries until you felt comfortable enough to to mark &lsquo;got it&rsquo; for each card.</p>');}s3.push(i0[k1].w0);i0[k1].el_qcard_card_front.html(s3.join('\n'));}function n0(k1){var g3;g3='<p>'+i0[k1].e2+' cards total, '+i0[k1].n_reviewed+' '+z2('card',i0[k1].n_reviewed)+' reviewed, '+i0[k1].n_to_go+' '+z2('card',i0[k1].n_to_go)+' to go</p>';i0[k1].el_progress.html(g3);}this.flip=function(k1){var s0=$('#textentry-qdeck'+k1);var w3;if(i0[k1].showing_front_b){if(s0.length){s0.css('visibility','hidden');var l4=s0.val();if(l4){$('#back_textentry_clause-qdeck'+k1).show();$('#back_textentry-qdeck'+k1).html(l4);} else{$('#back_textentry_clause-qdeck'+k1).hide();}}w3='back';} else{w3='front';}x3(k1,w3);i0[k1].el_flip.trigger('click');var y3=function(){s0.css('visibility','visible');};if(! i0[k1].showing_front_b){setTimeout(y3,700);}i0[k1].showing_front_b=! i0[k1].showing_front_b;};function x3(k1,y0,r1){if(r1!=undefined){var b1=i0[k1].b1;if(b1=='' || b1=='NA'){i0[k1].el_header.hide();} else{i0[k1].el_header.html(b1);}}var j3=$('#qcard_card-qdeck'+k1+' div.'+y0+' table.qcard_table').outerWidth();i0[k1].el_progress.width(j3);i0[k1].el_header.width(j3);i0[k1].el_next_buttons.width(j3);return j3;}this.set_card_front_and_back=function(k1){var o=['card_front','card_back'];n0(k1);var i1=i0[k1].i1;var p1=i0[k1].card_order[i1];var h=i0[k1].cards[p1];for(var n1=0;n1<2;n1++){var a4=o[n1];if(a4=='card_front'){i0[k1].el_qcard_card_front.html(h[a4]);} else{i0[k1].el_qcard_card_back.html(h[a4]);}}$('#textentry-qdeck'+k1).focus();var j3=x3(k1,'front');v3(k1,j3);};function v3(k1,j3){var d1=i0[k1].el_qcard_card_front.outerHeight();var c1=i0[k1].el_qcard_card_back.outerHeight();var d2=Math.max(d1,c1);i0[k1].el_qcard_container.height(d2);i0[k1].el_qcard_container.width(j3);}this.got_it=function(k1){var i1=i0[k1].i1;var p1=i0[k1].card_order[i1];i0[k1].cards[p1].got_it=true;i0[k1].n_to_go--;q.next_card(k1);};var m0=['right','left','top','bottom'];this.next_card=function(k1){if(! i0[k1].showing_front_b){q.flip(k1);}var i=Math.floor(Math.random() * 4.0);var l2=m0[i];i0[k1].el_qcard_card.attr('data-direction',l2);i0[k1].el_qcard_card.data('direction',l2);i0[k1].i1++;if(i0[k1].i1 >= i0[k1].e2){i0[k1].i1=0;}setTimeout(o3+'.process_card ('+k1+')',375);};function j0(e1,n3){var b2=e1.length;e1=e1.substring(n3.length,e1.length-8);while(true){var d0=e1.search(' ');if(d0!=-1){break;} else{e1=atob(e1);}}e1=n3+e1+'[/qdeck]';return e1;}this.shuffle_order=function(k1){var i1=i0[k1].i1;var p1=i0[k1].card_order[i1];while(true){var n2=i0[k1].card_order[i1];if(n2!=p1 && ! i0[k1].cards[n2].got_it){break;}i0[k1].card_order=z3(i0[k1].card_order);}if(! i0[k1].showing_front_b){q.flip(k1);}i0[k1].n_reviewed--;q.process_card(k1);};function z3(d){var g0=d.length,temporaryValue,randomIndex;while(0 !== g0){randomIndex=Math.floor(Math.random() * g0);g0 -= 1;temporaryValue=d[g0];d[g0]=d[randomIndex];d[randomIndex]=temporaryValue;}return d;}var u2=['zero','one','two','three','four','five','six','seven','eight','nine','ten'];function t2(s2){var r4;if(s2>9){r4=s2;} else{r4=u2[s2];}return r4;}function z2(r4,n){var o2;if(n==1){o2=r4;} else{if(r4=='was'){o2='were';} else if(r4=='this'){o2='these';} else{o2=r4+'s';}}return o2;}function q4(s){if('a'.q4){s=s.q4();} else{s=s.replace(/^\s+|\s+$/g,'');}return s;}};k3.call(qcard_);(function($){$(document).ready(function(){var x0=false;var q0=false;var e4;var j4;var z1;var a2;function a1(){var rv=-1;if(navigator.appName=='Microsoft Internet Explorer');{var ua=navigator.userAgent;var re=new RegExp("MSIE ([0-9]{1,}[\.0-9]{0,})");if(re.exec(ua)!=null)rv=parseFloat( RegExp.$1 );}var y1=!!(navigator.userAgent.match(/Trident/) && !navigator.userAgent.match(/MSIE/));if(y1){rv=11;}return rv;}if( a1()!=-1 ){ x0=true;q0=true;}var d4=(function(){  var   o0=document.createElement('div'),vendors='Khtml Ms O Moz Webkit'.split(' '),b2=vendors.length;return function(prop){  if( prop in o0.style ) return true;prop=prop.replace(/^[a-z]/,function(val){  return val.toUpperCase();});while(b2--){  if( vendors[b2]+prop in o0.style ){  return true;}   }  return false;};})();if( !d4('backfaceVisibility') ){ x0=true;}z1=navigator.userAgent.toLowerCase().indexOf('chrome')>-1 && !!window.chrome;a2=navigator.userAgent.toLowerCase().indexOf('safari')>-1 && !window.chrome;if(z1 || a2){j4=document.createElement('div');var h3=['perspectiveProperty','WebkitPerspective'];for(var i=h3.length - 1;i >= 0;i--){e4=e4 ? e4 : j4.style[h3[i]]!=undefined;};if(! e4){x0=true;} else{var k4=document.createElement('style');k4.textContent='@media (-webkit-transform-3d){#test3d{height:3px}}';document.getElementsByTagName('head')[0].appendChild(k4);j4.id='test3d';document.body.appendChild(j4);}}setTimeout(y2,100);function y2(){if(z1 || a2){if(! x0){retOffsetHeight=j4.offsetHeight === 3;if(! retOffsetHeight){x0=true;}k4.parentNode.removeChild(k4);j4.parentNode.removeChild(j4);}}if( x0 ){jQuery('div.card-container').addClass('noCSS3Container');jQuery('.card').addClass('noCSS3Card');jQuery('.card').children('div').addClass('noCSS3Sides');jQuery('.back').hide();}$('.over').parents('.card-container').on('mouseenter',function(){$this=$(this);if(!$this.hasClass('mouseenter')){$this.addClass('mouseenter');}l0($this.find('.over'));});$('.over').parents('.card-container').on('mouseleave',function(){$this=$(this);if($this.hasClass('mouseenter')){l0($this.find('.over'));}});$('.click').on('click',function(){$this=$(this);l0($this);});$('.click').on('click','.ignoreEvent',function(e){e.stopPropagation();});$('.card').on('click','.cbutton',function(e){e.preventDefault();$this=$(this);l0($this.parents('.card'));});var v1=Array();function l0($this,q1){$this.stop(true,true);if($this.data('autoflip')!=undefined && q1!=undefined){v1[q1]=setTimeout(function(){l0($this,q1);},$this.data('autoflip'));}  if($this.data('mouse')=='true'){return;}if( x0 ){$this.find('div.front').fadeToggle();$this.find('div.back').fadeToggle();return;}if($this.data('direction') ==='right'){$this.toggleClass('flipping-right');}else if($this.data('direction') ==='left'){$this.toggleClass('flipping-left');}else if($this.data('direction') ==='top'){$this.toggleClass('flipping-top');}else if($this.data('direction') ==='bottom'){$this.toggleClass('flipping-bottom');}}var h=$('.card[data-autoflip]');function b4(){h.each(function(q1){$this=$(this);(function(c){var g=c.data('start');if(g==undefined){g=c.data('autoflip');}v1[q1]=setTimeout(function(){l0(c,q1);},g);})($this);});}b4();var t3=function(){for(var i=0;i<v1.length;i++){clearTimeout(v1[i]);}h.removeClass('flipping-right');h.removeClass('flipping-left');h.removeClass('flipping-top');h.removeClass('flipping-bottom');b4();};if(window.addEventListener){window.addEventListener('focus',t3,false);} else if(window.attachEvent){window.attachEvent('onfocus',t3);}h.on('mouseenter',function(){$(this).data('mouse','true');});h.on('mouseleave',function(){$(this).data('mouse','false');});}});})(jQuery);
+
+// =============================================================================
+// Isolate namespace.
+qwiz_ = {};
+var qwizf = function () {
+// =============================================================================
+//
+var qname = 'qwiz_';
+
+// Debug settings.
+debug = [];
+debug.push (false);    // 0 - general.
+debug.push (false);    // 1 - radio/choices html.
+debug.push (false);    // 2 - feedback html.
+debug.push (false);    // 3 - old/new html dump.
+debug.push (false);    // 4 - question tags/topics.
+
+$ = jQuery;
+
+// Private data, but global to this qwiz instance.
+var q = this;
+
+// The identifier -- including qualifiers like "#" -- of the page content (that
+// perhaps contains inline quizzes) on WordPress.
+var content = 'div.entry-content';
+
+var errmsgs = [];
+
+var n_qwizzes = 0;
+var no_intro_b = [];
+
+var qwiz_id;
+var qwizdata = [];
+
+var header_html;
+//var header_persist_b = false;
+
+
+// -----------------------------------------------------------------------------
+$(document).ready (function () {
+
+   // Add default styles for qwiz divs to page.
+   add_style ();
+
+   process_html ();
+
+   // Error messages, if any.
+   if (errmsgs.length) {
+      alert (plural ('Error', errmsgs.length) + ' found:\n\n' + errmsgs.join ('\n'));
+   }
+
+   if (n_qwizzes) {
+
+      // Hide feedback.
+      $('.qwiz-feedback').hide ();
+
+      for (var i_qwiz=0; i_qwiz<n_qwizzes; i_qwiz++) {
+
+         // If no intro for a quiz or single-question quiz, move immediately to
+         // first question.
+         if (no_intro_b[i_qwiz] || qwizdata[i_qwiz].n_questions == 1) {
+            q.next_question (i_qwiz);
+         }
+      }
+   }
+
+});
+
+
+// -----------------------------------------------------------------------------
+function process_html () {
+
+   // Ignore qwiz-tag pairs inside <xmp></xmp> pairs.
+   // Loop over tags (if any), save html, replace (temporarily) with null html.
+   var xmp_htmls = [];
+   $('xmp').each (function () {
+      xmp_htmls.push ($(this).html ());
+      $(this).html ('');
+   });
+
+   // Read WordPress user content divs, look for inline qwiz "tags", loop
+   // over tag pairs.
+   $(content).each (function () {
+      var htm = $(this).html ();
+      if (! htm) {
+
+         //errmsgs.push ('Did not find page content (looking for div "' + content + '")');
+      } else {
+
+         // See if there is a qwiz or qwizzes.
+         var qwiz_pos = htm.search ('[qwiz]');
+         if (qwiz_pos != -1) {
+
+            // Delete comments -- don't want to process [qwiz][/qwiz] pairs or any other
+            // qwiz-related tags that are in comments.
+            var new_htm = htm.replace (/<!--[\s\S]*?-->/gm, '');
+
+            // [!]...[\!] will count as comments, too.
+            new_html = new_htm.replace (/\[!\][\s\S]*?\[\/!\]/gm, '');
+
+            // Check that there are pairs.
+            check_qwiz_tag_pairs (new_htm);
+
+            // Get text, including beginning and ending tags.
+            // "." does not match line-ends (!), so use the whitespace/not-whitespace
+            // construct.  Non-greedy search, global, multiline.
+            var qwiz_matches = new_htm.match (/\[qwiz[\s\S]*?\[\/qwiz\]/gm);
+            if (qwiz_matches) {
+               n_qwizzes = qwiz_matches.length;
+               if (debug[0]) {
+                  console.log ('[process_html] n_qwizzes: ', n_qwizzes);
+                  console.log ('               qwiz_matches[0]: ', qwiz_matches[0]);
+               }
+
+               // Loop over qwiz-tag pairs.
+               for (i_qwiz=0; i_qwiz<n_qwizzes; i_qwiz++) {
+                  var new_qwiz_html = process_qwiz_pair (qwiz_matches[i_qwiz]);
+                  new_htm = new_htm.replace (/(<[^\/][^>]*?>\s*)*?\[qwiz[\s\S]*?\[\/qwiz\]/m, new_qwiz_html);
+               }
+            }
+
+            // Replace content html.
+            $(this).html (new_htm);
+         }
+      }
+   });
+
+   // Restore <xmp> content.
+   if (xmp_htmls.length) {
+      $('xmp').each (function (i) {
+         $(this).html (xmp_htmls[i]);
+      });
+   }
+}
+
+
+// -----------------------------------------------------------------------------
+function add_style () {
+
+   var s = [];
+
+   s.push ('<style type="text/css">\n');
+
+   s.push ('.qwiz {');
+   s.push ('   border:          2px solid black;');
+   s.push ('   width:           500px;');
+   s.push ('   min-height:      300px;');
+   s.push ('   padding:         5px;');
+   s.push ('}');
+
+   s.push ('.qwiz img {');
+   s.push ('   border:          0px;');
+   s.push ('}');
+
+   s.push ('div.qwiz-header {');
+   s.push ('   color:           white;');
+   s.push ('   background:      black;');
+   s.push ('   padding:         0px;');
+                             /* top right bot left */
+   s.push ('   margin:          -5px -5px 0px -5px;');
+   s.push ('}');
+
+   /* All sub-elements of header have zero margin. */
+   s.push ('div.qwiz-header * {');
+   s.push ('   margin:          0px;');
+   s.push ('   padding:         5px;');
+   s.push ('}');
+
+   s.push ('.qwiz-mode {');
+   s.push ('   font-size:       90%;');
+   s.push ('   display:         inline-block;');
+   s.push ('   margin:          0px;');
+   s.push ('   padding-left:    3px;');
+   s.push ('   padding-right:   3px;');
+   s.push ('   color:           gray;');
+   //s.push ('   background:      #CCCCCC;');
+   //s.push ('   border:          1px solid gray;');
+   //s.push ('   border-radius:   4px;');
+   s.push ('}');
+
+   s.push ('.qwiz-progress {');
+   s.push ('   font-size:       90%;');
+   s.push ('   display:         inline-block;');
+   s.push ('   float:           right;');
+   s.push ('   margin:          0px;');
+   s.push ('   color:           gray;');
+   s.push ('}');
+
+   // Questions start out hidden.
+   s.push ('.qwizq {');
+   s.push ('   display:         none;');
+   s.push ('}');
+
+   s.push ('.qwiz-choices p {');
+   s.push ('   padding-left:    1.6em;');
+   s.push ('   text-indent:     -1.6em;');
+   s.push ('   margin-top:      0px;');
+   s.push ('   margin-bottom:   0.5em;');
+   s.push ('}');
+
+   // Starts out centered.
+   s.push ('.next_button {');
+   s.push ('   text-align:      center;');
+   s.push ('}');
+
+   s.push ('.qbutton {');
+   s.push ('   margin-bottom: 10px;');
+   s.push ('   border-top: 1px solid #96d1f8;');
+   s.push ('   background: #65a9d7;');
+   s.push ('   background: -webkit-gradient(linear, left top, left bottom, from(#3e779d), to(#65a9d7));');
+   s.push ('   background: -webkit-linear-gradient(top, #3e779d, #65a9d7);');
+   s.push ('   background: -moz-linear-gradient(top, #3e779d, #65a9d7);');
+   s.push ('   background: -ms-linear-gradient(top, #3e779d, #65a9d7);');
+   s.push ('   background: -o-linear-gradient(top, #3e779d, #65a9d7);');
+   s.push ('   padding: 5px 10px;');
+   s.push ('   -webkit-border-radius: 8px;');
+   s.push ('   -moz-border-radius: 8px;');
+   s.push ('   border-radius: 8px;');
+   s.push ('   -webkit-box-shadow: rgba(0,0,0,1) 0 1px 0;');
+   s.push ('   -moz-box-shadow: rgba(0,0,0,1) 0 1px 0;');
+   s.push ('   box-shadow: rgba(0,0,0,1) 0 1px 0;');
+   s.push ('   text-shadow: rgba(0,0,0,.4) 0 1px 0;');
+   s.push ('   color: white;');
+   s.push ('   font-size: 14px;');
+   s.push ('   font-weight: bold;');
+   s.push ('   font-family: arial, verdana, sans-serif;');
+   s.push ('   text-decoration: none;');
+   s.push ('   vertical-align: middle;');
+   s.push ('}');
+   s.push ('.qbutton:hover {');
+   s.push ('   border-top-color: #28597a;');
+   s.push ('   background: #28597a;');
+   s.push ('   color: #ccc;');
+   s.push ('}');
+   s.push ('.qbutton:active {');
+   s.push ('   border-top-color: #1b435e;');
+   s.push ('   background: #1b435e;');
+   s.push ('}');
+
+   s.push ('</style>');;
+
+   $(s.join ('\n')).appendTo ('head');
+}
+
+
+// -----------------------------------------------------------------------------
+function process_qwiz_pair (htm) {
+
+   // Data object for this qwiz.
+   qwizdata.push ({});
+   qwizdata[i_qwiz].n_correct   = 0;
+   qwizdata[i_qwiz].n_incorrect = 0;
+   qwizdata[i_qwiz].i_question  = -1;
+
+   // Include any opening tags (e.g., "<p>" in WordPress).
+   var qwiz_tag = htm.match (/(<[^\/][^>]*?>\s*)*?\[qwiz[^\]]*\]/m)[0];
+   if (debug[0]) {
+      console.log ('[process_qwiz_pair] qwiz_tag: ', qwiz_tag);
+   }
+
+   var n_questions = 0;
+   var new_htm = '';
+   var no_intro_i_b = false;
+
+   // Is qwiz encoded?  Decode if necessary.  Turns tag into plain '[qwiz]'.
+   htm = decode_qwiz (htm, qwiz_tag);
+
+   // Capture any initial closing tags after [qwiz ...] -- will put them in
+   // front of <div> that replaces [qwiz ...].
+   var m = htm.match (/\[qwiz[^\]]*\]((<\/[^>]*?>\s*)*)/m, '');
+   if (m) {
+      var initial_closing_tags = m[1];
+      new_htm += initial_closing_tags;
+   }
+
+   // Delete [qwiz], any initial closing tags.
+   htm = htm.replace (/\[qwiz[^\]]*\]((<\/[^>]*?>\s*)*)/m, '');
+
+   // Delete any initial whitespace.
+   htm = trim (htm);
+
+   // Make sure there's at least one question.
+   if (htm.search (/\[q([^\]]*)\]/m) == -1) {
+      errmsgs.push ('Did not find question tags ("[q]") for qwiz ' + (i_qwiz + 1));
+   } else {
+
+      // See if header.  Sets header_html global variable.
+      htm = process_header (htm, i_qwiz, 0, true);
+
+      // See if intro.
+      var intro_html = parse_html_block (htm, ['[i]'], ['[q]', '[q ']);
+
+      // See if no [i].
+      if (intro_html == 'NA') {
+         
+         // No [i] -- intro may be text before [q].  See if there is.
+         intro_html = parse_html_block (htm, ['^'], ['[q]', '[q ']);
+      }
+
+      // See if intro was just tags and whitespace.
+      if (intro_html == '') {
+         no_intro_i_b = true;
+      } else {
+
+         // Error if text before [i].
+         if (htm.substr (0, 5) != intro_html.substr (0, 5)) {
+            errmsgs.push ('Text before intro [i] - qwiz ' + (i_qwiz + 1));
+         }
+
+         // Delete [i] from intro.
+         intro_html = intro_html.replace ('[i]', '');
+
+         // Create div with introductory text -- html before first "[q]".
+         new_htm += '<div id="intro-qwiz' + i_qwiz + '">\n' + intro_html + '</div>\n';
+      }
+
+      // question_html -- everything from first [q] on.
+      var question_html = htm.match (/\[q [^\]]*\][\s\S]*|\[q\][\s\S]*/m)[0];
+
+      // Find topic attributes, if any, for each question.  First get array of
+      // tags.
+      var question_tags = question_html.match (/\[q[^\]]*\]/gm);
+      if (debug[4]) {
+         console.log ('[process_qwiz_pair] question_tags[0]: ', question_tags[0]);
+      }
+      n_questions = question_tags.length;
+      if (debug[0]) {
+         console.log ('[process_qwiz_pair] n_questions: ', n_questions);
+      }
+
+      // Topic or topics each question.
+      qwizdata[i_qwiz].question_topics = new Array (n_questions);
+
+      // List of all topics.
+      qwizdata[i_qwiz].topics = [];
+
+      process_topics (i_qwiz, question_tags);
+
+      // Capture any opening tags before each "[q...] tag.
+      var matches = htm.match (/(<[^\/][^>]*?>\s*)*?\[q[ \]]/gm);
+      var q_opening_tags = [];
+      var n_q_opening_tags = matches.length;
+      for (var i_tag=0; i_tag<n_q_opening_tags; i_tag++) {
+         var len = matches[i_tag].length;
+         q_opening_tags.push (matches[i_tag].substr (0, len-3));
+      }
+      if (debug[0]) {
+         console.log ('[process_qwiz_pair] q_opening_tags: ', q_opening_tags.join (', '));
+      }
+
+      // Take off initial "[q]" (or "[q topic=...]" and closing "[/qwiz]".
+      var start = question_html.search (/\]/) + 1;
+      var len = question_html.length;
+      question_html = question_html.substring (start, len-7);
+
+      // If there's exit text, capture for summary div, and delete.
+      var exit_html = question_html.match (/\[x\]([\s\S]*)/m);
+      if (exit_html) {
+         exit_html = exit_html[1];
+      } else {
+         exit_html = '';
+      }
+      question_html = question_html.replace (/\[x\][\s\S]*/m, '');
+
+      // Split into individual items.
+      var questions_html = question_html.split (/\[q [^\]]*\]|\[q\]/);
+
+      // Create a div for each.
+      var question_divs = [];
+      for (var i_question=0; i_question<n_questions; i_question++) {
+         question_divs.push (process_question (i_qwiz, i_question,
+                                               questions_html[i_question],
+                                               q_opening_tags[i_question]));
+      }
+      new_htm += question_divs.join ('\n');
+
+      if (debug[3]) {
+         console.log ('[process_qwiz_pair] new_htm: ', new_htm);
+      }
+   }
+   no_intro_b.push (no_intro_i_b);
+   qwizdata[i_qwiz].n_questions = n_questions;
+
+   // First qwiz tag becomes opening div for box around qwiz.  Add additional
+   // div elements (progress, summary div, "next" button).
+   new_htm = create_qwiz_divs (i_qwiz, qwiz_tag, new_htm, exit_html);
+
+   if (debug[3]) {
+      console.log ('                    new_htm: ', new_htm);
+   }
+
+   return new_htm;
+}
+
+
+// -----------------------------------------------------------------------------
+function decode_qwiz (htm, qwiz_tag) {
+
+   // Get html after [qwiz] tag and before [/qwiz] tag.
+   htm = htm.substring (qwiz_tag.length, htm.length-7);
+   while (true) {
+
+      // See if non-base64 character (blank, for now) in html.
+      var cpos = htm.search (' ');
+      if (cpos != -1) {
+         break;
+      } else {
+         htm = atob (htm);
+      }
+   }
+
+   // Add back [qwiz] [/qwiz] tags.
+   htm = '[qwiz]' + htm + '[/qwiz]';
+
+   return htm;
+}
+
+
+// -----------------------------------------------------------------------------
+// Divs at top of question (qwiz itself, progress), and at bottom "next".
+function create_qwiz_divs (i_qwiz, qwiz_tag, htm, exit_html) {
+
+   // Capture any style info or other attributes provided.
+   var m = qwiz_tag.match (/\[qwiz([^\]]*)\]/m);
+   var attributes = m[1];
+   if (debug[0]) {
+      console.log ('[create_qwiz_divs] attributes: ', attributes);
+   }
+   
+   // If "repeat_incorrect=..." present, parse out true/false, delete.
+   // Default for this qwiz.
+   var repeat_incorrect_matches = attributes.match (/repeat_incorrect="[^"]+"/m);
+   qwizdata[i_qwiz].repeat_incorrect_b = true;
+   if (repeat_incorrect_matches) {
+      var repeat_incorrect = repeat_incorrect_matches[0];
+      qwizdata[i_qwiz].repeat_incorrect_b = repeat_incorrect.search ('false') == -1;
+      if (debug[0]) {
+         console.log ('[create_qwiz_divs] repeat_incorrect:', repeat_incorrect, ', repeat_incorrect_b:', qwizdata[i_qwiz].repeat_incorrect_b);
+      }
+      attributes = attributes.replace (repeat_incorrect, '');
+   }
+
+   // This qwiz opening div.
+   var top_html = '<div id="qwiz' + i_qwiz + '" class="qwiz" ' + attributes + '>\n';
+
+   // Header div.  If no initial header, hide.
+   //var style = ' style="margin: 0px; padding: 5px;"';
+   style = '';
+   if (header_html == '' || header_html == 'NA') {
+      style = ' style="display: none;"';
+   }
+   top_html += '<div id="header-qwiz' + i_qwiz + '" class="qwiz-header"'
+               + style + '>' + header_html + '</div>\n';
+
+   // Mode and progress divs.  Shown only if more than one question.
+   if  (qwizdata[i_qwiz].n_questions > 1) {
+      top_html += '<div>\n';
+      var learn_mode_title = 'Learn mode: questions repeat until answered correctly.';
+      var test_mode_title  = 'Test mode: incorrectly-answered questions do not repeat.';
+      var mode;
+      var title;
+      if (qwizdata[i_qwiz].repeat_incorrect_b) {
+         mode = 'Learn';
+         title = learn_mode_title + ' ' + test_mode_title;
+      } else {
+         mode = 'Test';
+         title = test_mode_title + ' ' + learn_mode_title;
+      }
+      top_html += '   <div id="mode-qwiz' + i_qwiz + '" class="qwiz-mode" title="' + title + '">\n';
+      top_html += '      Mode: ' + mode + '\n';
+      top_html += '   </div>\n';
+      top_html += '   <div id="progress-qwiz' + i_qwiz + '" class="qwiz-progress">\n';
+      top_html += '   </div>\n';
+      top_html += '</div>\n';
+   }
+
+   // Summary div.  If exit text, replace "[restart]", if there, with restart
+   // button html.
+   if (exit_html) {
+      var restart_button_html =
+                          '    <button onclick="' + qname + '.restart_quiz (' + i_qwiz + ')">\n'
+                        + '       Take the quiz again\n'
+                        + '    </button>\n';
+      exit_html = exit_html.replace ('[restart]', restart_button_html);
+   }
+
+   var bottom_html =   '<div id="summary-qwiz' + i_qwiz + '" class="qwizq">\n'
+                     + '    <div id="summary_report-qwiz' + i_qwiz + '">'
+                     + '    </div>\n'
+                     +     exit_html + '\n'
+                     + '</div>\n';
+
+   // "Next" button.
+   bottom_html +=  '<div class="next_button" id="next_button-qwiz' + i_qwiz + '">\n'
+                 + '   <button class="qbutton" onclick="' + qname + '.next_question (' + i_qwiz + ')">'
+                 +        '<span id="next_button_text-qwiz' + i_qwiz + '">'
+                 +           'Start quiz'
+                 +        '</span>'
+                 +    '</button>\n'
+                 + '</div>\n';
+
+   // This qwiz closing div.
+   bottom_html += '</div>\n';
+
+   // Add opening and closing html.
+   htm = top_html + htm + bottom_html;
+
+   return htm;
+}
+
+
+// -----------------------------------------------------------------------------
+function process_topics (i_qwiz, question_tags) {
+
+   // Loop over tags.
+   var n_questions_w_topics = 0;
+   var n_questions = question_tags.length;
+   for (var i_question=0; i_question<n_questions; i_question++) {
+      var question_tag = question_tags[i_question];
+
+      // See if any attribute.
+      var matches = question_tag.match (/\[q +([^\]]*)\]/);
+      if (matches && matches[1].substr (0, 7) == 'topic="') {
+         var attribute = matches[1].substr (7);
+         var matches = attribute.match (/([^"]*)"/);
+         if (matches) {
+            var question_topics = trim (matches[1]);
+            if (debug[4]) {
+               console.log ('[process_topics] question_topics: ', question_topics);
+            }
+
+            // Multiple topics for a question - separated by semicolon (and
+            // optional space).  Split into array.
+            question_topics = question_topics.split (/; */);
+            qwizdata[i_qwiz].question_topics[i_question] = question_topics;
+            n_questions_w_topics++;
+
+            // Add topics to list of topics if not already in list.
+            for (var i=0; i<question_topics.length; i++) {
+               var topic = question_topics[i];
+               if (qwizdata[i_qwiz].topics.indexOf (topic) == -1) {
+                  qwizdata[i_qwiz].topics.push (topic);
+               }
+            }
+         }
+      }
+   }
+
+   if (n_questions_w_topics > 0) { 
+
+      // If any topics given, every question must have at least one topic.
+      if (n_questions_w_topics != n_questions) {
+         errmsgs.push ('Topic(s) were given for at least one question, but at least one question doesn\'t have a topic.');
+      }
+      if (debug[4]) {
+         console.log ('[process_topics] topics: ' + qwizdata[i_qwiz].topics.join ('; '));
+      }
+
+      // Set up statistics by topic.  Object of objects (list of lists).
+      qwizdata[i_qwiz].topic_statistics = {};
+      var n_topics = qwizdata[i_qwiz].topics.length;
+      for (var i_topic=0; i_topic<n_topics; i_topic++) {
+         var topic = qwizdata[i_qwiz].topics[i_topic];
+         qwizdata[i_qwiz].topic_statistics[topic] = {};
+         qwizdata[i_qwiz].topic_statistics[topic].n_correct = 0;
+         qwizdata[i_qwiz].topic_statistics[topic].n_incorrect = 0;
+      }
+   }
+}
+
+
+// -----------------------------------------------------------------------------
+this.restart_quiz = function (i_qwiz) {
+
+   // Hide summary report.
+   $('#summary-qwiz' + i_qwiz).hide ();
+
+   qwizdata[i_qwiz].n_correct = 0;
+   qwizdata[i_qwiz].n_incorrect = 0;
+
+   for (var i_question=0; i_question<qwizdata[i_qwiz].n_questions; i_question++) {
+      var qwizq_id = '#qwiz' + i_qwiz + '-q' + i_question;
+      $(qwizq_id).data ('answered_correctly', '');
+   }
+
+   var n_topics = qwizdata[i_qwiz].topics.length;
+   for (var i_topic=0; i_topic<n_topics; i_topic++) {
+      var topic = qwizdata[i_qwiz].topics[i_topic];
+      qwizdata[i_qwiz].topic_statistics[topic].n_correct = 0;
+      qwizdata[i_qwiz].topic_statistics[topic].n_incorrect = 0;
+   }
+   qwizdata[i_qwiz].i_question = -1;
+   q.next_question (i_qwiz);
+};
+
+
+// -----------------------------------------------------------------------------
+this.next_question = function (i_qwiz) {
+
+   var i_question = qwizdata[i_qwiz].i_question;
+
+   // Global var.
+   qwiz_id = 'qwiz' + i_qwiz;
+
+   var n_questions = qwizdata[i_qwiz].n_questions;
+   if (debug[0]) {
+      console.log ('[next_question] i_question: ', i_question, ', n_questions: ', n_questions);
+   }
+
+   // If was displaying intro, hide -- but show intro (if any) with the single
+   // question of a one-question quiz.
+   if (i_question == -1) {
+      if (n_questions > 1) {
+         $ ('#intro-' + qwiz_id).hide ();
+
+         // After "Start quiz", button is left-aligned.
+         $ ('#next_button-qwiz' + i_qwiz).css ('text-align', 'left');
+      }
+
+      // Also, show progress and change button text.  Only if more than one
+      // question in quiz!
+      if (n_questions > 1) {
+         display_progress (i_qwiz);
+         $ ('#next_button_text-' + qwiz_id).html ('Next question');
+      }
+
+   } else {
+
+      // Hide previous question.
+      var qwizq_id = '#' + qwiz_id + '-q' + i_question;
+      $(qwizq_id).hide ();
+   }
+
+   // Hide "next" button until user makes a choice.
+   $('#next_button-' + qwiz_id).hide ();
+
+   // Next question -- if repeating incorrect, keep running through questions
+   // until all answered correctly.  If done, show summary/exit text.
+   var n_done = qwizdata[i_qwiz].n_correct;
+   if (! qwizdata[i_qwiz].repeat_incorrect_b) {
+      n_done += qwizdata[i_qwiz].n_incorrect;
+   }
+   //if (qwizdata[i_qwiz].repeat_incorrect_b) {
+   if (n_done == n_questions) {
+      display_summary_and_exit (i_qwiz);
+   } else {
+      while (true) {
+         i_question++;
+         if (i_question >= n_questions) {
+            i_question = 0;
+         }
+         var qwizq_id = '#' + qwiz_id + '-q' + i_question;
+         if (! $(qwizq_id).data ('answered_correctly')) {
+            break;
+         }
+      }
+      qwizdata[i_qwiz].i_question = i_question;
+      display_question (i_qwiz, i_question);
+   }
+};
+
+
+// -----------------------------------------------------------------------------
+function display_question (i_qwiz, i_question) {
+
+   var qwizq_id = 'qwiz' + i_qwiz + '-q' + i_question;
+
+   // Hide feedback in case previously displayed.  jQuery operator "^=" is for
+   // "startswith."
+   $('[id^=' + qwizq_id + ']').hide ();
+
+   $('#' + qwizq_id).show ();
+
+   // Enable radio clicks in case previously disabled for this question.
+   // Also, show radios unclicked.
+   $('input[name=' + qwizq_id + ']').removeAttr ('disabled').removeAttr ('checked');
+
+   // Re-enable highlight choices on mouseover, cursor to indicate clickable.
+   $('.choices-' + qwizq_id).on('mouseover', function () {
+      $(this).css ({'cursor': 'pointer', 'color': '#045FB4'})
+   }).on('mouseout', function () {;
+      $(this).css ({'cursor': 'text', 'color': 'black'})
+   });
+}
+
+
+// -----------------------------------------------------------------------------
+function process_question (i_qwiz, i_question, htm, opening_tags) {
+
+   // Span for default indented paragraph style for choices.  Want this ahead of
+   // any opening tags user put in before first "[c]".
+   var span_pos = htm.search (/(<[^\/][^>]*?>\s*)*?\[c\*{0,1}\]/m);
+   if (span_pos == -1) {
+      errmsgs.push ('Did not find choices ("[c]") for qwiz ' + (i_qwiz + 1) + ', question ' + (i_question + 1));
+      new_htm = '';
+      remaining_htm = '';
+   } else {
+      var question_htm = htm.substr (0, span_pos);
+      if (debug[0]) {
+         console.log ('[process_question] span_pos: ', span_pos);
+         console.log ('[process_question] question_htm: ', question_htm);
+      }
+
+      // Wrap in div for this qwiz and question.
+      var new_htm =   '<div id="qwiz' + i_qwiz + '-q' + i_question + '" class="qwizq">\n'
+                     +    opening_tags + question_htm;
+
+      if (debug[1]) {
+         console.log ('[process_question] new_htm: ', new_htm);
+      }
+
+      var remaining_htm = htm.substr (span_pos);
+
+      // Include paragraph-close -- without this, if there's a paragraph-close
+      // within the choices that corresponds to a previous unclosed paragraph,
+      // then, the span won't work.
+      new_htm += '</p><span class="qwiz-choices">';
+   }
+
+   // Do choice tags.  Change [c] to radio button, enclose text in span to
+   // highlight on mouseover.  Choice text includes opening tags and
+   // corresponding closing tags (if any), up to next [c] tag or first [f] tag.
+   // Count choice tags.
+   var choice_tags = htm.match (/\[c\*{0,1}\]/gm);
+   var n_choices = 0;
+   if (choice_tags) {
+      n_choices = choice_tags.length;
+   }
+   if (debug[0]) {
+      console.log ('[process_question] n_choices: ', n_choices);
+   }
+
+   var n_correct = 0;
+   for (var i_choice=0; i_choice<n_choices; i_choice++) {
+
+      // Find choice text -- from opening tags through [c] or [c*] up to
+      // opening tags for next tag.  Delete it from remaining_htm.
+      var qtags = ['[c]', '[c*]'];
+      var qnext_tags = ['[c]', '[c*]', '[f]'];
+      var choice_html = parse_html_block (remaining_htm, qtags, qnext_tags);
+      remaining_htm = remaining_htm.substr (choice_html.length);
+
+      // Replace [c] or [c*] with radio button.
+      var radio_button_html = create_radio_button_html (i_qwiz, i_question, i_choice, choice_tags[i_choice]);
+      n_correct += radio_button_html[0];
+      choice_html = choice_html.replace (/\[c\*{0,1}\]/m, radio_button_html[1]);
+
+      // Assemble with span to make choice clickable and highlight on mouseover.
+      new_htm += '<span class="choices-qwiz' + i_qwiz + '-q' + i_question + '" onclick="' + qname + '.process_choice (\'qwiz' + i_qwiz + '-q' + i_question + '-a' + i_choice + '\')">\n'
+                 + choice_html + '</span>';
+   }
+
+   // Close span for default indented paragraph style for choices.
+   new_htm += '</span>\n';
+
+   // Include clearing div in case image floating left or right (needed to
+   // expand parent div and its border).
+   new_htm += '<div style="clear: both;"></div>\n';
+
+   if (debug[1]) {
+      console.log ('[process_question] new_htm: ', new_htm);
+   }
+
+   // Check that one and only one choice is marked correct.
+   if (n_correct == 0) {
+      errmsgs.push ('No choice was marked correct: qwiz ' + (1 + i_qwiz) + ', question ' + (1 + i_question));
+   } else if (n_correct > 1) {
+      errmsgs.push ('More than one choice was marked correct: qwiz ' + (1 + i_qwiz) + ', question ' + (1 + i_question));
+   }
+
+   // . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+   // Find feedback alternatives for this question, make into alternative divs.
+   // Feedback html -- from opening tags before first [f] through end.
+   var feedback_html = remaining_htm.match (/(<[^\/][^>]*?>\s*)*?\[f\][\s\S]*/m);
+
+   // Take off initial "[f]".
+   if (! feedback_html) {
+      errmsgs.push ('Did not find feedback ("[f]") for qwiz ' + (i_qwiz + 1) + ', question ' + (i_question + 1));
+      feedback_html = '';
+   } else {
+      feedback_html = feedback_html[0].replace ('[f]', '');
+   }
+
+   // Split into individual items.
+   var feedback_items = feedback_html.split (/\[f\]/);
+   var n_feedback_items = feedback_items.length;
+   if (debug[2]) {
+      console.log ('[process_question] n_feedback_items: ', n_feedback_items);
+   }
+
+   // Check that number of feedback items matches number of choices.
+   if (n_choices != n_feedback_items) {
+      errmsgs.push ('Number of feedback items does not match number of choices: qwiz ' + (1 + i_qwiz) + ', question ' + (1 + i_question));
+   }
+
+   // Capture any opening tags before each "[f]" tag.
+   var matches = htm.match (/(<[^\/][^>]*?>\s*)*?\[f\]/gm);
+   var f_opening_tags = [];
+   for (var i_item=0; i_item<n_feedback_items; i_item++) {
+      var len = matches[i_item].length;
+      f_opening_tags.push (matches[i_item].substr (0, len-3));
+   }
+   if (debug[0]) {
+      console.log ('[process_question] f_opening_tags: ', f_opening_tags.join (', '));
+   }
+
+   // Create a div for each "[f]".
+   var feedback_divs = [];
+   for (var i_item=0; i_item<n_feedback_items; i_item++) {
+      feedback_divs.push (create_feedback_div_html (i_qwiz, i_question, i_item,
+                                                    feedback_items[i_item],
+                                                    f_opening_tags[i_item]));
+   }
+
+   new_htm += feedback_divs.join ('\n');
+   if (debug[2]) {
+      console.log ('[process_question] new_htm: ', new_htm)
+   }
+
+   // Close question div.
+   new_htm += '</div>\n';
+
+   return new_htm;
+}
+
+
+// -----------------------------------------------------------------------------
+function tags_to_pat (tags) {
+   var tags_pat = '(' + tags.join (')|(') + ')';
+   tags_pat = tags_pat.replace (/([\[\]\*])/g, '\\$1');
+   tags_pat = '((' + tags_pat + ')\\s*)';
+   
+   return tags_pat;
+}
+
+
+// -----------------------------------------------------------------------------
+// Parse out block of html -- from opening tags, through one of qwiz/qcard
+// "tags" up to any opening tags of next qwiz/qcard tags.
+function parse_html_block (htm, qtags, qnext_tags) {
+
+   // Include opening tags before the qwiz/qcard tags in each case.
+   var opening_pat = '(<[^/][^>]*?>\\s*)*?'; 
+   var tags_pat = opening_pat + tags_to_pat (qtags);
+   var next_tags_pat = opening_pat + tags_to_pat (qnext_tags);
+
+   // Final term collects any immediate closing tags after next qtags.
+   var closing_pat = '((</[^>]*?>\\s*)*)';
+   var re = new RegExp ('([\\s\\S]*?)(' + tags_pat + '[\\s\\S]*?)' + next_tags_pat + closing_pat, 'im');
+   var htm_match = htm.match (re);
+   var htm_block = '';
+   var closing_tags = '';
+   if (htm_match) {
+      htm_block = htm_match[2];
+
+      // If htm is only tags and whitespace, set to empty string.
+      var htm_wo_tags = htm_block.replace (/<[^>]+>/gm, '');
+      if (htm_wo_tags.search (/\S/) == -1) {
+         htm_block = '';
+      } else {
+         var i_qnext_tag = 7 + qtags.length;
+         var qnext_tag = htm_match[i_qnext_tag];
+         if (qnext_tag && qnext_tag[1] == '/') {
+            htm_block += qnext_tag;
+         }
+         var i_closing_tags = i_qnext_tag + 2 + qnext_tags.length;
+         var closing_tags = htm_match[i_closing_tags];
+         if (closing_tags) {
+            htm_block += closing_tags;
+         }
+      }
+   } else {
+
+      // Didn't find tag-closing tag combo.
+      htm_block = 'NA';
+   }
+   if (debug[0]) {
+      console.log ('[parse_html_block] htm_block: ', htm_block);
+   }
+
+   return htm_block;
+}
+
+
+// -----------------------------------------------------------------------------
+// If [h] (or [H]), capture header tag/text, including opening tags before
+// [h], up to intro ([i]) if allowed, or question ([q]).  Delete header from
+// intro.
+function process_header (htm, i_qwiz, i_question, intro_b) {
+   var qtags = ['[h]'];
+   var qnext_tags = ['[q]', '[q '];
+   if (intro_b != undefined) {
+      qnext_tags.push ('[i]');
+   }
+
+   // Global variable.
+   header_html = parse_html_block (htm, qtags, qnext_tags);
+   if (header_html != 'NA' && header_html != '') {
+
+      // Error if text before [h].
+      if (htm.substr (0, 5) != header_html.substr (0, 5)) {
+         errmsgs.push ('Text before header [h] - qwiz ' + (i_qwiz + 1));
+      }
+
+      // Delete header from htm.
+      htm = htm.replace (header_html, '');
+
+      // See if [h] (header this page only) or [H] (persistent, but only until
+      // next header given -- an empty header erases).
+      //header_persist_b = (header_html.search ('[H]') != -1);
+
+      // Delete [h] from header.
+      header_html = header_html.replace (/\[h\]/ig, '');
+   }
+
+   return htm;
+}
+
+
+// -----------------------------------------------------------------------------
+function display_summary_and_exit (i_qwiz) {
+
+   var report_html = [];
+
+   // Overall.
+   var n_questions = qwizdata[i_qwiz].n_questions;
+   var n_correct   = qwizdata[i_qwiz].n_correct;
+   var n_incorrect = qwizdata[i_qwiz].n_incorrect;
+
+   if (qwizdata[i_qwiz].repeat_incorrect_b) {
+      report_html.push ('<p><b>Congratulations, you\'re done!</b></p>');
+      if (n_incorrect == 0) {
+         report_html.push ('<p>In this ' + number_to_word (n_questions) + '-question quiz, you answered every question correctly on the first try!</p>');
+      } else {
+         report_html.push ('<p>In finishing this ' + number_to_word (n_questions) + '-question quiz, you entered ' + number_to_word (n_incorrect) + ' incorrect ' + plural ('answer', n_incorrect) + '.</p>');
+      }
+   } else {
+      if (n_incorrect == 0) {
+         report_html.push ('<p>Congratulations, you answered all questions correctly.</p>');
+      } else {
+         report_html.push ('<p>Your score is ' + number_to_word (n_correct) + ' out of ' + number_to_word (n_questions) + ' questions.</p>');
+      }
+   }
+
+   var n_topics = qwizdata[i_qwiz].topics.length;
+   if (n_topics == 1) {
+      var topic = qwizdata[i_qwiz].topics[0];
+      var all_both_n;
+      if (n_questions == 2) {
+         all_both_n = 'Both';
+      } else {
+         all_both_n = 'All '+ number_to_word (n_questions);
+      }
+      report_html.push ('<p>' + all_both_n + ' ' + plural ('question', n_questions) + ' were about topic &ldquo;' + topic + '.&rdquo;</p>');
+   } else if (n_topics > 1) {
+
+      // By topic.
+      report_html.push ('<ul>');
+      for (var i_topic=0; i_topic<n_topics; i_topic++) {
+         var topic = qwizdata[i_qwiz].topics[i_topic];
+         var n_topic_correct = qwizdata[i_qwiz].topic_statistics[topic].n_correct;
+         var n_topic_incorrect = qwizdata[i_qwiz].topic_statistics[topic].n_incorrect;
+         var n_topic_items = n_topic_correct + n_topic_incorrect;
+         if (n_topic_items > 0) {
+            var topic_html = '<li>';
+            topic_html += 'For topic &ldquo;' + topic + '&rdquo; there ' + plural ('was', n_topic_items) + ' ' + number_to_word (n_topic_items) + ' ' + plural ('question', n_topic_items) + '.&nbsp;';
+            if (n_topic_incorrect == 0) {
+               if (n_topic_items > 2) {
+                  topic_html += 'You answered all of these questions correctly';
+               } else if (n_topic_items == 2) {
+                  topic_html += 'You answered both of these questions correctly';
+               } else {
+                  topic_html += 'You answered this question correctly';
+               }
+               if (qwizdata[i_qwiz].repeat_incorrect_b) {
+                  topic_html += ' on the first try.';
+               } else {
+                  topic_html += '.';
+               }
+            } else {
+               if (qwizdata[i_qwiz].repeat_incorrect_b) {
+                  var n_tries = n_topic_items + n_topic_incorrect;
+                  topic_html += 'It took you ' + number_to_word (n_tries) + ' ' + plural ('try', n_tries) + ' to answer ' + plural ('this', n_topic_items) + ' ' + plural ('question', n_topic_items) + ' correctly.';
+               } else {
+                  topic_html += 'Your score is ' + number_to_word (n_topic_correct) + ' correct out of ' + number_to_word (n_topic_items) + '.';
+               }
+            }
+            topic_html += '</li>';
+            report_html.push (topic_html);
+         }
+      }
+      report_html.push ('</ul>');
+   }
+
+   // Place in report div.
+   $('#summary_report-qwiz' + i_qwiz).html (report_html.join ('\n'));
+
+   // Show summary div.
+   $('#summary-qwiz' + i_qwiz).show ();
+}
+
+
+// -----------------------------------------------------------------------------
+function check_qwiz_tag_pairs (htm) {
+
+   // Match "[qwiz]" or "[/qwiz]".
+   var matches = htm.match (/\[qwiz|\[\/qwiz\]/gm);
+   if (matches) {
+      var n_tags = matches.length;
+      var error_b = false;
+
+      if (n_tags % 2 != 0) {
+         error_b = true;
+      } else {
+
+         // Check proper pairs.
+         for (var i=0; i<n_tags; i++) {
+            var tag = matches[i];
+            if (i % 2 == 0) {
+               if (matches[i] != '[qwiz') {
+                  error_b = true;
+                  break;
+               }
+            } else {
+               if (matches[i] != '[/qwiz]') {
+                  error_b = true;
+                  break;
+               }
+            }
+         }
+      }
+      if (error_b){
+         alert        ('Unmatched [qwiz] - [/qwiz] pairs.');
+         errmsgs.push ('Unmatched [qwiz] - [/qwiz] pairs.');
+      }
+   }
+}
+
+
+// -----------------------------------------------------------------------------
+function create_radio_button_html (i_qwiz, i_question, i_choice, choice_tag) {
+   var htm = '';
+
+   // Data attribute to mark correct choice.
+   var data_correct = '';
+   var correct = 0;
+   if (choice_tag == '[c*]') {
+      data_correct = 'data-correct="1" ';
+      correct = 1;
+   }
+   htm += '<input type="radio" id="radio-qwiz' + i_qwiz + '-q' + i_question + '-a' + i_choice + '" name="qwiz' + i_qwiz + '-q' + i_question + '" ' + data_correct + ' onclick="' + qname + '.process_choice (\'qwiz' + i_qwiz + '-q' + i_question + '-a' + i_choice + '\')" />\n';
+
+   if (debug[1]) {
+      console.log ('[create_radio_button_html] htm: ', htm);
+   }
+
+   return [correct, htm];
+}
+
+
+// -----------------------------------------------------------------------------
+this.process_choice = function (feedback_id) {
+
+   // Hide others, show this one.
+   // feedback_id looks like:  qwiz0-q0-a0
+   //                          (qwiz #, question #, answer #).
+   // Identify quiz and question.  Greedy search matches to final "-".
+   var matches = feedback_id.match (/(.*)-/);
+   qwizq_id = matches[1];
+
+   // Qwiz number.  Non-greedy search.
+   qwiz_id = feedback_id.match (/(.*?)-/)[1];
+   i_qwiz = parseInt (qwiz_id.substr (4));
+   if (debug[0]) {
+      console.log ('[process_choice] feedback_id: ', feedback_id, ', qwizq_id: ', qwizq_id, ', i_qwiz: ', i_qwiz);
+   }
+
+   // Don't do if already disabled.
+   var disabled = $('input[name=' + qwizq_id + ']').attr ('disabled');
+   if (disabled != 'disabled') {
+
+      $('#' + qwizq_id + ' .qwiz-feedback').hide ();
+      $('#' + feedback_id).show ();
+
+      // In case clicked on text rather than radio, show radio as clicked.
+      // For some reason, jQuery method not working!
+      //$('#radio-' + feedback_id).attr ('checked', true);
+      var elm = document.getElementById ('radio-' + feedback_id);
+      elm.checked = true;
+
+      // Disable further radio clicks for this question.
+      $('input[name=' + qwizq_id + ']').attr ('disabled', true);
+
+      // Also, don't show pointer cursor on paragraphs, and turn off highlighting.
+      $('.choices-' + qwizq_id).on('mouseover', function () {
+         $(this).css ({'cursor': 'text', 'color': 'black'})
+      });
+
+      // Record statistics.
+      var correct_f = $('#radio-' + feedback_id).data ('correct');
+      if (correct_f) {
+         qwizdata[i_qwiz].n_correct++;
+
+         // Also, mark this question as correct.
+         $('#' + qwizq_id).data ('answered_correctly', 1);
+
+      } else {
+
+         // Record number of incorrect responses.
+         qwizdata[i_qwiz].n_incorrect++;
+
+         // If not repeating incorrect, record incorrect response.
+         if (! qwizdata[i_qwiz].repeat_incorrect_b) {
+            $('#' + qwizq_id).data ('answered_correctly', 0);
+         }
+      }
+
+      // If topics, statistics by topics this question.
+      var i_question = feedback_id.match (/-q([0-9]+)-/)[1];
+      var question_topics = qwizdata[i_qwiz].question_topics[i_question];
+      if (question_topics) {
+         for (var ii=0; ii<question_topics.length; ii++) {
+            var topic = question_topics[ii];
+            if (correct_f) {
+               qwizdata[i_qwiz].topic_statistics[topic].n_correct++;
+            } else {
+               qwizdata[i_qwiz].topic_statistics[topic].n_incorrect++;
+            }
+         }
+      }
+
+      // Update progress and show next button -- only if more than one question.
+      if (qwizdata[i_qwiz].n_questions > 1) {
+         display_progress (i_qwiz);
+
+         // "next" button.  If finished, change text.
+         var n_done = qwizdata[i_qwiz].n_correct;
+         if (! qwizdata[i_qwiz].repeat_incorrect_b) {
+            n_done += qwizdata[i_qwiz].n_incorrect;
+         }
+         if (n_done == qwizdata[i_qwiz].n_questions) {
+            $('#next_button_text-' + qwiz_id).html ('View summary report');
+         }
+         $('#next_button-' + qwiz_id).show ();
+      }
+   }
+};
+
+
+// -----------------------------------------------------------------------------
+function display_progress (i_qwiz) {
+
+   var progress_html;
+   var n_attempts = qwizdata[i_qwiz].n_correct + qwizdata[i_qwiz].n_incorrect;
+   var n_done = qwizdata[i_qwiz].n_correct;
+   if (! qwizdata[i_qwiz].repeat_incorrect_b) {
+      n_done += qwizdata[i_qwiz].n_incorrect;
+   }
+   var n_to_go = qwizdata[i_qwiz].n_questions - n_done;
+
+   if (n_attempts == 0) {
+      progress_html = 'Questions in this quiz: ' + n_to_go;
+   } else {
+      progress_html = qwizdata[i_qwiz].n_questions + ' questions, ' + n_attempts + ' ' + plural ('response', n_attempts) + ', ' + qwizdata[i_qwiz].n_correct + ' correct, ' + qwizdata[i_qwiz].n_incorrect + ' incorrect, ' + n_to_go + ' to go';
+   }
+   $('#progress-' + qwiz_id).html (progress_html);
+}
+
+
+// -----------------------------------------------------------------------------
+function create_feedback_div_html (i_qwiz, i_question, i_item, item, opening_tags) {
+
+   var htm = '';
+   htm += '<div class="qwiz-feedback" id="qwiz' + i_qwiz + '-q' + i_question + '-a' + i_item + '">\n';
+   htm += '<hr />\n';
+   htm += opening_tags + item;
+
+   // Include clearing div in case image floating left or right.
+   htm += '<div style="clear: both;"></div>\n';
+   htm += '</div>\n';
+   if (debug[2]) {
+      console.log ('[create_feedback_div_html] htm: ', htm)
+   }
+
+   return htm;
+}
+
+
+var number_word = ['zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten'];
+// -----------------------------------------------------------------------------
+function number_to_word (number) {
+   var word;
+   if (number > 9) {
+      word = number;
+   } else {
+      word = number_word[number];
+   }
+
+   return word;
+}
+
+
+// -----------------------------------------------------------------------------
+function plural (word, n) {
+   var new_word;
+   if (n == 1) {
+      new_word = word;
+   } else {
+
+      // Specials first.
+      if (word == 'was') {
+         new_word = 'were';
+
+      } else if (word == 'this') {
+         new_word = 'these';
+
+      } else if (word == 'try') {
+         new_word = 'tries';
+
+      } else {
+
+         // The simple case.
+         new_word = word + 's';
+      }
+   }
+
+   return new_word;
+}
+
+
+// -----------------------------------------------------------------------------
+// IE 8 does not have trim () method for strings.
+function trim (s) {
+   if ('a'.trim) {
+      s = s.trim ();
+   } else {
+      s = s.replace (/^\s+|\s+$/g, '');
+   }
+
+   return s;
+}
+
+
+// =============================================================================
+// Close - isolate namespace.
+};
+
+
+// -----------------------------------------------------------------------------
+qwizf.call (qwiz_);
+
+// Do-nothing function for old IE.
+if (! window.console) {
+   window.console = {log: function(){} };
+}
+
+// =============================================================================
+// Isolate namespace.
+qcard_ = {};
+var qcardf = function () {
+// =============================================================================
+
+var qname = 'qcard_';
+
+// Debug settings.
+debug = [];
+debug.push (false);    // 0 - general.
+debug.push (false);    // 1 - process_card_input ().
+debug.push (false);    // 2 - answer (card back) html.
+debug.push (false);    // 3 - old/new html dump.
+debug.push (false);    // 4 - card tags/topics.
+debug.push (false);    // 5 - "next" buttons, element objects.
+
+$ = jQuery;
+
+// Private data, but global to this qcard instance.
+var q = this;
+
+// The identifier -- including qualifiers like "#" -- of the page content (that
+// perhaps contains inline qwizcard decks) on WordPress.
+var content = 'div.entry-content';
+//var content = 'main';
+
+var errmsgs = [];
+
+var n_decks = 0;
+var no_intro_b = [];
+
+var deck_id;
+var deckdata = [];
+
+// ----------------------
+// DKTMP: needs to be by deck
+
+// Array of topics (will check that individual card entries are in this list).
+// Short names.
+var topics = [];
+var n_topics;
+
+// Topic description for summary report.
+var topic_descriptions = new Object;
+
+// Statistics by topic.
+var topic_statistics = new Object;
+
+
+// -----------------------------------------------------------------------------
+$(document).ready (function () {
+
+   // Add default styles for qcard divs to page.
+   add_style ();
+
+   process_html ();
+
+   // Error messages, if any.
+   if (errmsgs.length) {
+      alert (plural ('Error', errmsgs.length) + ' found:\n\n' + errmsgs.join ('\n'));
+   }
+
+   if (n_decks) {
+      for (var i_deck=0; i_deck<n_decks; i_deck++) {
+
+         init_element_pointers (i_deck);
+         init_card_order (i_deck);
+
+         // If no intro for a deck or single-card deck, move immediately to
+         // first card.  Otherwise, set header and show introductory html along
+         // with button to start deck.
+         // Set header so there's something in it (measure height).
+         set_header (i_deck, 'front', true);
+         if (no_intro_b[i_deck] || deckdata[i_deck].n_cards == 1) {
+            q.set_next_buttons (i_deck);
+            q.process_card (i_deck);
+         } else {
+            deckdata[i_deck].el_qcard_card_front.html (deckdata[i_deck].intro_html);
+         }
+
+         // Do it again to set proper width.
+         var qcard_width = set_header (i_deck, 'front', true);
+         set_container_width_height (i_deck, qcard_width);
+      }
+   }
+
+});
+
+
+// -----------------------------------------------------------------------------
+function process_html () {
+
+   // Ignore qcard-tag pairs inside <xmp></xmp> pairs.
+   // Loop over tags (if any), save html, replace (temporarily) with null html.
+   var xmp_htmls = [];
+   $('xmp').each (function () {
+      xmp_htmls.push ($(this).html ());
+      $(this).html ('');
+   });
+
+   // Read WordPress user content divs, look for inline qcard "tags", loop
+   // over tag pairs.
+   $(content).each (function () {
+      var htm = $(this).html ();
+      if (! htm) {
+
+         //errmsgs.push ('Did not find page content (looking for div "' + content + '")');
+      } else {
+
+         // See if there is a deck or decks.
+         var qdeck_pos = htm.search ('[qdeck]');
+         if (qdeck_pos != -1) {
+
+            // Delete comments -- don't want to process [qdeck][/qdeck] pairs or any other
+            // deck-related tags that are in comments.
+            var new_html = htm.replace (/<!--[\s\S]*?-->/gm, '');
+
+            // [!]...[\!] will count as comments, too.
+            new_html = new_html.replace (/\[!\][\s\S]*?\[\/!\]/gm, '');
+
+            // Check that there are pairs.
+            check_qdeck_tag_pairs (new_html);
+
+            // Get text, including beginning and ending tags.
+            // "." does not match line-ends (!), so use the whitespace/not-whitespace
+            // construct.  Non-greedy search, global, multiline.
+            var qdeck_matches = new_html.match (/\[qdeck[\s\S]*?\[\/qdeck\]/gm);
+            if (qdeck_matches) {
+               n_decks = qdeck_matches.length;
+               if (debug[0]) {
+                  console.log ('[process_html] n_decks: ', n_decks);
+                  console.log ('               qdeck_matches[0]: ', qdeck_matches[0]);
+               }
+
+               // Loop over qdeck-tag pairs.
+               for (var i_deck=0; i_deck<n_decks; i_deck++) {
+                  var new_deck_html = process_qdeck_pair (qdeck_matches[i_deck], i_deck);
+                  new_html = new_html.replace (/\[qdeck[\s\S]*?\[\/qdeck\]/m, new_deck_html);
+               }
+            }
+
+            // Replace content html.
+            $(this).html (new_html);
+         }
+      }
+   });
+
+   // Restore <xmp> content.
+   if (xmp_htmls.length) {
+      $('xmp').each (function (i) {
+         $(this).html (xmp_htmls[i]);
+      });
+   }
+}
+
+
+// -----------------------------------------------------------------------------
+function add_style () {
+
+   var s = [];
+
+   s.push ('<style type="text/css">');
+
+   /* The "canvas" for each item: question, answers (choices), feedback. */
+   s.push ('.qcard_window {');
+   s.push ('   position:            relative;');
+   s.push ('}');
+
+   s.push ('.qcard_progress {');
+   s.push ('   text-align:          right;');
+   s.push ('}');
+
+   s.push ('.qcard_progress p {');
+   s.push ('   font-size:           90%;');
+   s.push ('   color:               gray;');
+   s.push ('   margin:              0px;');
+   s.push ('}');
+
+   s.push ('div.qcard_header {');
+   s.push ('   color:           white;');
+   s.push ('   background:      black;');
+   s.push ('   margin:          0px;');
+   s.push ('   padding:         0px;');
+   s.push ('}');
+
+   /* Any sub-elements of header have zero margin. */
+   s.push ('div.qcard_header * {');
+   s.push ('   margin:          0px;');
+                             /* top right bot left */
+   s.push ('   padding:         0px 5px 0px 5px;');
+   s.push ('}');
+
+            /* Card */
+   s.push ('.qcard_card {');
+   s.push ('   position:            relative;');
+   s.push ('}');
+
+   s.push ('.qcard_textentry {');
+   s.push ('   font-size:           13pt;');
+   s.push ('   font-weight:         bold;');
+   s.push ('   color:               blue;');
+   s.push ('}');
+
+   s.push ('.qcard_card .front {');
+   s.push ('   min-height:          280px;');
+   s.push ('}');
+
+   s.push ('.qcard_card td.center {');
+   s.push ('   padding:             5px;');
+   s.push ('   text-align:          center;');
+   s.push ('   vertical-align:      middle;');
+   s.push ('   font-size:           12pt;');
+   s.push ('   font-weight:         bold;');
+   s.push ('}');
+
+   s.push ('.qcard_card img {');
+   s.push ('   border:              0px;');
+   s.push ('   box-shadow:          none;');
+   s.push ('}');
+
+   s.push ('.qcard_card .back .center {');
+   s.push ('   background-image: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAf4AAAE2CAIAAAAPtmerAAAACXBIWXMAAA7EAAAOxAGVKw4bAAAEnklEQVR4nO3YMW1AMRQEwTgyf3ix9Mm8sLCLnUFw1Ra3ZuYHgJLf1wMAuE36AXKkHyBH+gFypB8gR/oBcqQfIEf6AXKkHyBH+gFypB8gR/oBcqQfIEf6AXKkHyBH+gFypB8gR/oBcqQfIEf6AXKkHyBH+gFypB8gR/oBcqQfIEf6AXKkHyBH+gFypB8gR/oBcqQfIEf6AXKkHyBH+gFypB8gR/oBcqQfIEf6AXKkHyBH+gFypB8gR/oBcqQfIEf6AXKkHyBH+gFypB8gR/oBcqQfIGf//P293gDAVWtmXm8A4CqHD0CO9APkSD9AjvQD5Eg/QI70A+RIP0CO9APkSD9AjvQD5Eg/QI70A+RIP0CO9APkSD9AjvQD5Eg/QI70A+RIP0CO9APkSD9AjvQD5Eg/QI70A+Ts883rDQBctWakH6DF4QOQI/0AOdIPkCP9ADnSD5Aj/QA50g+QI/0AOdIPkCP9ADnSD5Aj/QA50g+QI/0AOdIPkCP9ADnSD5Aj/QA50g+QI/0AOdIPkCP9ADnSD5Aj/QA5+3zzegMAV60Z6QdocfgA5Eg/QI70A+RIP0CO9APkSD9AjvQD5Eg/QI70A+RIP0CO9APkSD9AjvQD5Eg/QI70A+RIP0CO9APkSD9AjvQD5Eg/QI70A+RIP0CO9APkSD9Azj7fvN4AwFVrRvoBWhw+ADnSD5Aj/QA50g+QI/0AOdIPkCP9ADnSD5Aj/QA50g+QI/0AOdIPkCP9ADnSD5Aj/QA50g+QI/0AOdIPkCP9ADnSD5Aj/QA50g+QI/0AOdIPkLPPN683AHDVmpF+gBaHD0CO9APkSD9AjvQD5Eg/QI70A+RIP0CO9APkSD9AjvQD5Eg/QI70A+RIP0CO9APkSD9AjvQD5Eg/QI70A+RIP0CO9APkSD9AjvQD5Eg/QI70A+Ts883rDQBctWakH6DF4QOQI/0AOdIPkCP9ADnSD5Aj/QA50g+QI/0AOdIPkCP9ADnSD5Aj/QA50g+QI/0AOdIPkCP9ADnSD5Aj/QA50g+QI/0AOdIPkCP9ADnSD5Aj/QA5+3zzegMAV60Z6QdocfgA5Eg/QI70A+RIP0CO9APkSD9AjvQD5Eg/QI70A+RIP0CO9APkSD9AjvQD5Eg/QI70A+RIP0CO9APkSD9AjvQD5Eg/QI70A+RIP0CO9APkSD9Azj7fvN4AwFVrRvoBWhw+ADnSD5Aj/QA50g+QI/0AOdIPkCP9ADnSD5Aj/QA50g+QI/0AOdIPkCP9ADnSD5Aj/QA50g+QI/0AOdIPkCP9ADnSD5Aj/QA50g+QI/0AOdIPkLPPN683AHDVmpF+gBaHD0CO9APkSD9AjvQD5Eg/QI70A+RIP0CO9APkSD9AjvQD5Eg/QI70A+RIP0CO9APkSD9AjvQD5Eg/QI70A+RIP0CO9APkSD9AjvQD5Eg/QI70A+Ts883rDQBctWakH6DF4QOQI/0AOdIPkCP9ADnSD5Aj/QA50g+QI/0AOdIPkCP9ADnSD5Aj/QA50g+QI/0AOdIPkCP9ADnSD5Aj/QA50g+QI/0AOdIPkCP9ADnSD5Aj/QA5/8mNPTHI1j+2AAAAAElFTkSuQmCC);');
+   s.push ('   background-repeat:   no-repeat;');
+   s.push ('   background-size:     contain;');
+   s.push ('   background-position: center;');
+   s.push ('   min-height:          280px;');
+   s.push ('   line-height:         25px;');
+   s.push ('   font-size:           12pt;');
+   s.push ('}');
+   s.push ('.qcard_card .back .center p {');
+   s.push ('   margin-top:          25px;');
+   s.push ('   padding-top:         12.5px;');
+   s.push ('   margin-bottom:       25.5px;');
+   s.push ('}');
+   s.push ('.qcard_card .cbutton {');
+   s.push ('   display:          none;');
+   s.push ('}');
+   s.push ('.qcard_next_buttons {');
+   s.push ('   position:            relative;');
+   s.push ('   margin-top:          5px;');
+   s.push ('   text-align:          center;');
+   s.push ('}');
+   s.push ('.qbutton {');
+   s.push ('   margin-bottom: 10px;');
+   s.push ('   border-top: 1px solid #96d1f8;');
+   s.push ('   background: #65a9d7;');
+   s.push ('   background: -webkit-gradient(linear, left top, left bottom, from(#3e779d), to(#65a9d7));');
+   s.push ('   background: -webkit-linear-gradient(top, #3e779d, #65a9d7);');
+   s.push ('   background: -moz-linear-gradient(top, #3e779d, #65a9d7);');
+   s.push ('   background: -ms-linear-gradient(top, #3e779d, #65a9d7);');
+   s.push ('   background: -o-linear-gradient(top, #3e779d, #65a9d7);');
+   s.push ('   padding: 5px 10px;');
+   s.push ('   -webkit-border-radius: 8px;');
+   s.push ('   -moz-border-radius: 8px;');
+   s.push ('   border-radius: 8px;');
+   s.push ('   -webkit-box-shadow: rgba(0,0,0,1) 0 1px 0;');
+   s.push ('   -moz-box-shadow: rgba(0,0,0,1) 0 1px 0;');
+   s.push ('   box-shadow: rgba(0,0,0,1) 0 1px 0;');
+   s.push ('   text-shadow: rgba(0,0,0,.4) 0 1px 0;');
+   s.push ('   color: white;');
+   s.push ('   font-size: 14px;');
+   s.push ('   font-weight: bold;');
+   s.push ('   font-family: arial, verdana, sans-serif;');
+   s.push ('   text-decoration: none;');
+   s.push ('   vertical-align: middle;');
+   s.push ('}');
+   s.push ('.qcard_next_buttons .qbutton:hover {');
+   s.push ('   border-top-color: #28597a;');
+   s.push ('   background: #28597a;');
+   s.push ('   color: #ccc;');
+   s.push ('}');
+   s.push ('.qcard_next_buttons .qbutton:active {');
+   s.push ('   border-top-color: #1b435e;');
+   s.push ('   background: #1b435e;');
+   s.push ('}');
+   s.push ('.clear {');
+   s.push ('   clear:               both;');
+   s.push ('}');
+   s.push ('// flipCard_v2.css.');
+   s.push ('div.fc_card-container img{');
+   s.push ('        position: static !important;');
+   s.push ('}');
+            /* === CARD CONTAINER === */
+   s.push ('div.card-container {');
+   s.push ('   position: relative;');
+   s.push ('   display: block;');
+   s.push ('   padding: 0;');
+   s.push ('   margin: 0;');
+   s.push ('        ');
+   s.push ('   -webkit-perspective: 1000px;');
+   s.push ('      -moz-perspective: 1000px;');
+   s.push ('        -o-perspective: 1000px;');
+   s.push ('       -ms-perspective: 1000px;');
+   s.push ('           perspective: 1000px;');
+   s.push ('}');
+            /* === CARD === */
+   s.push ('.card-container .card {');
+   s.push ('   border-radius: 0px;');
+   s.push ('   width: 100%;');
+   s.push ('   height: 100%;');
+   s.push ('   position: absolute;');
+   s.push ('   display: inline-block;');
+   s.push ('   padding: 0;');
+   s.push ('   margin: 0;');
+   s.push ('   -webkit-transition: -webkit-transform .7s;');
+   s.push ('    -moz-transition: -moz-transform .7s;');
+   s.push ('      -o-transition: -o-transform .7s;');
+   s.push ('     -ms-transition: -o-transform .7s;');
+   s.push ('         transition: transform .7s;');
+   s.push ('   -webkit-transform-style: preserve-3d;');
+   s.push ('      -moz-transform-style: preserve-3d;');
+   s.push ('        -o-transform-style: preserve-3d;');
+   s.push ('       -ms-transform-style: preserve-3d;');
+   s.push ('           transform-style: preserve-3d;');
+   s.push ('}');
+            /* === STYLE FOR THE FRONT & BACK SIDE === */
+   s.push ('.card-container .card>div{	');
+   s.push ('   border-radius: 0px;');
+   s.push ('   ');
+   s.push ('   height: 100%;');
+   s.push ('   width: 100%;');
+   s.push ('   position: absolute;');
+   s.push ('   background: #FFFFFF;');
+   s.push ('   text-align: center;');
+   s.push ('   ');
+   s.push ('   margin: 0;');
+   s.push ('   -webkit-box-sizing:border-box;');
+   s.push ('      -moz-box-sizing:border-box;');
+   s.push ('       -ms-box-sizing:border-box;');
+   s.push ('           box-sizing:border-box;');
+   s.push ('   -webkit-backface-visibility: hidden;');
+   s.push ('      -moz-backface-visibility: hidden;');
+   s.push ('        -o-backface-visibility: hidden;');
+   s.push ('       -ms-backface-visibility: hidden;');
+   s.push ('           backface-visibility: hidden;');
+   s.push ('}');
+            /* === BEGINNING EFFECT === */
+   s.push ('.card-container .card[data-direction="top"] .back, .card-container .card[data-direction="bottom"] .back{');
+   s.push ('   -webkit-transform: rotateX(180deg);');
+   s.push ('      -moz-transform: rotateX(180deg);');
+   s.push ('        -o-transform: rotateX(180deg);');
+   s.push ('       -ms-transform: rotateX(180deg);');
+   s.push ('           transform: rotateX(180deg);');
+   s.push ('}');
+   s.push ('.card-container .card[data-direction="right"] .back, .card-container .card[data-direction="left"] .back{');
+   s.push ('        -webkit-transform: rotateY(180deg);');
+   s.push ('         -moz-transform: rotateY(180deg);');
+   s.push ('           -o-transform: rotateY(180deg);');
+   s.push ('          -ms-transform: rotateY(180deg);');
+   s.push ('              transform: rotateY(180deg);');
+   s.push ('}');
+            /* === EFFECT DIRECTIONS === */
+   s.push ('.flipping-right {');
+   s.push (' -webkit-transform: rotateY(180deg);');
+   s.push ('    -moz-transform: rotateY(180deg);');
+   s.push ('      -o-transform: rotateY(180deg);');
+   s.push ('     -ms-transform: rotateY(180deg);');
+   s.push ('         transform: rotateY(180deg);');
+   s.push ('}');
+   s.push ('.flipping-left {');
+   s.push ('   -webkit-transform: rotateY(-180deg);');
+   s.push ('    -moz-transform: rotateY(-180deg);');
+   s.push ('      -o-transform: rotateY(-180deg);');
+   s.push ('     -ms-transform: rotateY(-180deg);');
+   s.push ('         transform: rotateY(-180deg);');
+   s.push ('}');
+   s.push ('.flipping-top {');
+   s.push ('   -webkit-transform: rotateX(180deg);');
+   s.push ('      -moz-transform: rotateX(180deg);');
+   s.push ('        -o-transform: rotateX(180deg);');
+   s.push ('       -ms-transform: rotateX(180deg);');
+   s.push ('           transform: rotateX(180deg);');
+   s.push ('}');
+   s.push ('.flipping-bottom {');
+   s.push ('   -webkit-transform: rotateX(-180deg);');
+   s.push ('    -moz-transform: rotateX(-180deg);');
+   s.push ('      -o-transform: rotateX(-180deg);');
+   s.push ('     -ms-transform: rotateX(-180deg);');
+   s.push ('         transform: rotateX(-180deg);');
+   s.push ('}');
+   s.push ('.noCSS3Container{');
+   s.push ('        -webkit-perspective: none !important;');
+   s.push ('           -moz-perspective: none !important;');
+   s.push ('                 -o-perspective: none !important;');
+   s.push ('            -ms-perspective: none !important;');
+   s.push ('                        perspective: none !important; ');
+   s.push ('}');
+   s.push ('.noCSS3Card{');
+   s.push ('   -webkit-transition: none !important;');
+   s.push ('      -moz-transition: none !important;');
+   s.push ('        -o-transition: none !important;');
+   s.push ('       -ms-transition: none !important;');
+   s.push ('                    transition: none !important;');
+   s.push ('   -webkit-transform-style: none !important;');
+   s.push ('      -moz-transform-style: none !important;');
+   s.push ('        -o-transform-style: none !important;');
+   s.push ('       -ms-transform-style: none !important;');
+   s.push ('           transform-style: none !important;');
+   s.push ('}');
+   s.push ('.noCSS3Sides{');
+   s.push ('   -webkit-backface-visibility: visible !important;');
+   s.push ('      -moz-backface-visibility: visible !important;');
+   s.push ('        -o-backface-visibility: visible !important;');
+   s.push ('       -ms-backface-visibility: visible !important;');
+   s.push ('           backface-visibility: visible !important;');
+   s.push ('   -webkit-transform: none !important;');
+   s.push ('      -moz-transform: none !important;');
+   s.push ('        -o-transform: none !important;');
+   s.push ('       -ms-transform: none !important;');
+   s.push ('           transform: none !important;');
+   s.push ('}');
+   s.push ('</style>');
+
+   $(s.join ('\n')).appendTo ('head');
+}
+
+
+// -----------------------------------------------------------------------------
+function process_qdeck_pair (htm, i_deck) {
+
+   // Data object for this deck.
+   deckdata.push ({});
+
+   // Array of cards ("cards").
+   deckdata[i_deck].cards = [];
+
+   deckdata[i_deck].showing_front_b = true;
+
+   deckdata[i_deck].i_card = 0;
+
+   deckdata[i_deck].n_reviewed = 0;
+   deckdata[i_deck].n_got_it   = 0;
+
+   deckdata[i_deck].exit_html = '';
+
+   // Include any opening tags (e.g., "<p>" in WordPress).
+   var qdeck_tag = htm.match (/(<[^>\/]*?>\s*)*?\[qdeck[^\]]*\]/m)[0];
+
+   var n_decks = 0;
+   var new_html = '';
+   var no_intro_i_b = false;
+
+   // Is deck encoded?  Decode if necessary.
+   htm = decode_qdeck (htm, qdeck_tag);
+
+   // Capture any initial closing tags after [qdeck ...] -- will put them in
+   // front of <div> that replaces [qdeck ...].
+   var m = htm.match (/\[qdeck[^\]]*\]((<\/[^>]*?>\s*)*)/m, '');
+   if (m) {
+      var initial_closing_tags = m[1];
+      new_html += initial_closing_tags;
+   }
+
+   // Delete [qdeck], any initial closing tags.
+   htm = htm.replace (/\[qdeck[^\]]*\]((<\/[^>]*?>\s*)*)/m, '');
+
+   // Delete any initial whitespace.
+   htm = trim (htm);
+
+   // Make sure there's at least one question.
+   if (htm.search (/\[q([^\]]*)\]/m) == -1) {
+      errmsgs.push ('Did not find question tags ("[q]") for qdeck ' + (i_deck + 1));
+   } else {
+
+      // See if header.  Sets deckdata[i_deck].header_html.
+      htm = process_header (htm, i_deck, 0, true);
+
+      // See if intro.
+      var intro_html = parse_html_block (htm, ['[i]'], ['[q]', '[q ']);
+
+      // See if no [i].
+      if (intro_html == 'NA') {
+         
+         // No [i] -- intro may be text before [q].  See if there is.
+         intro_html = parse_html_block (htm, ['^'], ['[q]', '[q ']);
+      }
+
+      // See if intro was just tags and whitespace.
+      if (intro_html == '') {
+         no_intro_i_b = true;
+      } else {
+         // Error if text before [i].
+         if (htm.substr (0, 5) != intro_html.substr (0, 5)) {
+            errmsgs.push ('Text before intro [i] - qdeck ' + (i_deck + 1));
+         }
+
+         // Delete [i] from intro.
+         intro_html = intro_html.replace ('[i]', '');
+
+         // If there's a [start] tag, replace with start button html.  Otherwise
+         // add start button html.
+         var start_button_html = '<button class="qbutton" onclick="' + qname + '.start_deck (' + i_deck + ')">Start reviewing cards</button>';
+         if (intro_html.indexOf ('[start]') != -1) {
+            intro_html = intro_html.replace ('[start]', start_button_html);
+         } else {
+            intro_html += start_button_html;
+         }
+
+         // Save introductory html.
+         deckdata[i_deck].intro_html = intro_html;
+      }
+
+      // card_html -- everything from first [q] on.
+      var card_html = htm.match (/\[q [^\]]*\][\s\S]*|\[q\][\s\S]*/m)[0];
+
+      // Find topic attributes, if any, for card.  First get [q] tags.
+      var card_tags = card_html.match (/\[q[^\]]*\]/gm);
+      if (debug[4]) {
+         console.log ('[process_qdeck_pair] card_tags[0]: ', card_tags[0]);
+      }
+      var n_cards = card_tags.length;
+      if (debug[0]) {
+         console.log ('[process_qdeck_pair] n_cards: ', n_cards);
+      }
+
+      // Topic or topics each card.
+      deckdata[i_deck].card_topics = new Array (n_cards);
+
+      // List of all topics.
+      deckdata[i_deck].topics = [];
+
+      process_topics (i_deck, card_tags);
+
+      // Capture any opening tags before each "[q...] tag.  Skip "[qdeck]".
+      var matches = htm.match (/(<[^>\/]*?>\s*)*?\[q[ \]]/gm);
+      var q_opening_tags = [];
+      for (var i_card=0; i_card<n_cards; i_card++) {
+         var len = matches[i_card].length;
+         q_opening_tags.push (matches[i_card].substr (0, len-3));
+      }
+      if (debug[0]) {
+         console.log ('[process_qdeck_pair] q_opening_tags: ', q_opening_tags.join (', '));
+      }
+
+      // Take off initial "[q]" (or "[q topic=...]" and closing "[/qdeck]".
+      var start = card_html.search (/\]/) + 1;
+      var len = card_html.length;
+      card_html = card_html.substring (start, len-8);
+
+      // If there's exit html, capture for summary report.
+      var exit_html = card_html.match (/\[x\]([\s\S]*)/m);
+      if (exit_html) {
+
+         // If "[restart]" tag there, replace with restart button html.
+         var restart_button_html =
+                          '    <button class="qbutton"'
+                        + '            onclick="' + qname + '.start_deck (' + i_deck + ')">\n'
+                        + '       Review this flashcard stack again\n'
+                        + '    </button>\n';
+         exit_html = exit_html[1].replace ('[restart]', restart_button_html);
+         deckdata[i_deck].exit_html = exit_html;
+
+         // Delete exit html from card html.
+         card_html = card_html.replace (/\[x\][\s\S]*/m, '');
+      }
+
+      // Split into individual cards -- [q] (fronts) and [a] (backs).
+      var cards_html = card_html.split (/\[q [^\]]*\]|\[q\]/);
+
+      // Save each card and answer html in data array.
+      for (var i_card=0; i_card<n_cards; i_card++) {
+         card = process_card_input (i_deck, i_card, cards_html[i_card],
+                                    q_opening_tags[i_card]);
+         deckdata[i_deck].cards.push (card);
+      }
+
+   }
+   no_intro_b.push (no_intro_i_b);
+   deckdata[i_deck].n_cards = n_cards;
+   deckdata[i_deck].n_to_go = n_cards;
+
+   // First [qdeck] tag becomes start of container for card.  Add additional
+   // div elements (progress, summary div, "next" buttons).
+   new_html = create_qdeck_divs (i_deck, qdeck_tag);
+
+   if (debug[3]) {
+      console.log ('                    new_html: ', new_html);
+   }
+
+   return new_html;
+}
+
+
+// -----------------------------------------------------------------------------
+// Get card front and card back html, put into data array.
+function process_card_input (i_deck, i_card, htm, opening_tags) {
+
+   // Object for this card.
+   var card = new Object;
+   card.got_it = false;
+
+   // Start with any opening tags that preceded "[q]" tag.
+   var card_front_html = opening_tags + htm;
+
+   // Get rid of everything from "[a]" (card back) on.
+   card_front_html = card_front_html.replace (/\[a\][\s\S]*/m, '');
+   if (debug[1]) {
+      console.log ('[process_card_input] card_front_html: ', card_front_html);
+   }
+
+   // If [textentry], change to html equivalent.  Save flag if there.
+   var new_card_front_html = card_front_textentry_html (card_front_html, i_deck);
+   card.card_front = new_card_front_html;
+   var front_textentry_b = new_card_front_html != card_front_html;
+
+
+   // ..........................................................................
+   // Find card back html.
+   var card_back_html = htm.match (/\[a\][\s\S]*/m);
+   if (debug[0]) {
+      console.log ('[process_card_input] card_back_html: ', card_back_html);
+   }
+
+   // Take off initial "[a]".
+   if (! card_back_html) {
+      errmsgs.push ('Did not find answer ("[a]") -- card back -- for qdeck ' + (i_deck + 1) + ', card ' + (i_card + 1) + '\n' + htm);
+      card_back_html = '';
+   } else {
+      card_back_html = card_back_html[0].substring (3);
+   }
+
+   // Split into individual items.  Should be just one.
+   var card_back_items = card_back_html.split (/\[a\]/);
+   if (card_back_items.length != 1) {
+      errmsgs.push ('Got more than one card back ("[a]") for: qdeck ' + (1 + i_deck) + ', card ' + (1 + i_card) + '\n' + htm);
+   }
+
+   // Capture any opening tags before "[a]" tag.
+   var a_opening_tags;
+   var m = htm.match (/(<[^>\/]*?>\s*)*?\[a\]/m);
+   if (m && m[1]) {
+      a_opening_tags = m[1];
+      if (debug[0]) {
+         console.log ('[process_card_input] a_opening_tags: ', a_opening_tags);
+      }
+   } else {
+      a_opening_tags = '';
+   }
+
+   // Save html for "[a]".
+   card.card_back = create_card_back_html (i_deck, i_card, card_back_items[0],
+                                           a_opening_tags, front_textentry_b);
+   return card;
+}
+
+
+// -----------------------------------------------------------------------------
+function create_card_back_html (i_deck, i_card, htm, opening_tags, front_textentry_b) {
+
+   var new_html = opening_tags + htm;
+
+   // See if '[textentry]' present.
+   if (htm.search (/\[.*textentry.*/) != -1) {
+
+      // Yes.  Error if no textentry on front.
+      if (! front_textentry_b) {
+         errmsg.push ('[textentry] on back of card, but not on front - deck ' + (i_deck+1) + ', card ' (i_card+1));
+      }
+
+      // Convert to equivalent html.
+      new_html = card_back_textentry_html (new_html);
+   } else {
+
+      // No.  If there was textentry on front, create default echo.
+      if (front_textentry_b) {
+         var prepend_html = '<span id="back_textentry_clause-qdeck' + i_deck + '">You wrote &ldquo;<span id="back_textentry-qdeck' + i_deck + '" class="qcard_textentry"></span>&rdquo;<br /><br /></span>';
+         new_html = prepend_html + '\n' + new_html;
+      }
+   }
+   if (debug[2]) {
+      console.log ('[create_card_back_html] new_html:', new_html);
+   }
+
+   return opening_tags + new_html;
+}
+
+
+// -----------------------------------------------------------------------------
+function tags_to_pat (tags) {
+   var tags_pat = '(' + tags.join (')|(') + ')';
+   tags_pat = tags_pat.replace (/([\[\]\*])/g, '\\$1');
+   tags_pat = '((' + tags_pat + ')\\s*)';
+   
+   return tags_pat;
+}
+
+
+// -----------------------------------------------------------------------------
+// Parse out block of html -- from opening tags, through one of qwiz/qcard
+// "tags" up to any opening tags of next qwiz/qcard tags.
+function parse_html_block (htm, qtags, qnext_tags) {
+
+   // Include opening tags before the qwiz/qcard tags in each case.
+   var opening_pat = '(<[^/][^>]*?>\\s*)*?'; 
+   var tags_pat = opening_pat + tags_to_pat (qtags);
+   var next_tags_pat = opening_pat + tags_to_pat (qnext_tags);
+
+   // Final term collects any immediate closing tags after next qtags.
+   var closing_pat = '((</[^>]*?>\\s*)*)';
+   var re = new RegExp ('([\\s\\S]*?)(' + tags_pat + '[\\s\\S]*?)' + next_tags_pat + closing_pat, 'im');
+   var htm_match = htm.match (re);
+   var htm_block = '';
+   var closing_tags = '';
+   if (htm_match) {
+      htm_block = htm_match[2];
+
+      // If htm is only tags and whitespace, set to empty string.
+      var htm_wo_tags = htm_block.replace (/<[^>]+>/gm, '');
+      if (htm_wo_tags.search (/\S/) == -1) {
+         htm_block = '';
+      } else {
+         var i_qnext_tag = 7 + qtags.length;
+         var qnext_tag = htm_match[i_qnext_tag];
+         if (qnext_tag && qnext_tag[1] == '/') {
+            htm_block += qnext_tag;
+         }
+         var i_closing_tags = i_qnext_tag + 2 + qnext_tags.length;
+         var closing_tags = htm_match[i_closing_tags];
+         if (closing_tags) {
+            htm_block += closing_tags;
+         }
+      }
+   } else {
+
+      // Didn't find tag-closing tag combo.
+      htm_block = 'NA';
+   }
+   if (debug[0]) {
+      console.log ('[parse_html_block] htm_block: ', htm_block);
+   }
+
+   return htm_block;
+}
+
+
+// -----------------------------------------------------------------------------
+// If [h] (or [H]), capture header tag/text, including opening tags before
+// [h], up to intro ([i]) if allowed, or question ([q]).  Delete header from
+// intro.
+function process_header (htm, i_deck, i_question, intro_b) {
+   var qtags = ['[h]'];
+   var qnext_tags = ['[q]', '[q '];
+   if (intro_b != undefined) {
+      qnext_tags.push ('[i]');
+   }
+
+   var header_html = parse_html_block (htm, qtags, qnext_tags);
+   if (header_html != 'NA' && header_html != '') {
+
+      // Error if text before [h].
+      if (htm.substr (0, 5) != header_html.substr (0, 5)) {
+         errmsgs.push ('Text before header [h] - qdeck ' + (i_deck + 1));
+      }
+
+      // Delete header from htm.
+      htm = htm.replace (header_html, '');
+
+      // See if [h] (header this page only) or [H] (persistent, but only until
+      // next header given -- an empty header erases).
+      //header_persist_b = (header_html.search ('[H]') != -1);
+
+      // Delete [h] from header.
+      header_html = header_html.replace (/\[h\]/ig, '');
+   }
+   deckdata[i_deck].header_html = header_html;
+
+   return htm;
+}
+
+
+// -----------------------------------------------------------------------------
+// Divs for card, progress, "next" buttons.
+function create_qdeck_divs (i_deck, qdeck_tag) {
+
+   // Capture any style info or other attributes provided.  If styles not set
+   // for width, height, and border do so now.  (Do as style in order to
+   // override WordPress class for <table>).
+   var m = qdeck_tag.match (/\[qdeck([^\]]*)\]/m);
+   var attributes = m[1];
+   var default_style = ' style="width: 500px; height: 300px; border: 2px solid black;"';
+   if (! attributes) {
+      attributes = default_style;
+   } else {
+      if (attributes.search (/style\s*?=/m) == -1) {
+         attributes += default_style;
+      } else {
+         if (attributes.search ('width') == -1) {
+            attributes = attributes.replace (/(style\s*?=\s*?["'])/m, '$1width: 500px; ');
+         }
+         if (attributes.search ('height') == -1) {
+            attributes = attributes.replace (/(style\s*?=\s*?["'])/m, '$1height: 300px; ');
+         }
+         if (attributes.search ('border') == -1) {
+            attributes = attributes.replace (/(style\s*?=\s*?["'])/m, '$1border: 2px solid black; ');
+         }
+      }
+   }
+
+   if (debug[0]) {
+      console.log ('[create_qdeck_divs] attributes: ', attributes);
+   }
+
+   var divs = [];
+
+   // Add z-index, so if large graphic expands card, will stay on top of decks
+   // farther down the page.
+   divs.push ('<div id="qcard_window-qdeck' + i_deck + '" class="qcard_window" style="z-index: ' + (20 - i_deck) + ';">');
+   divs.push ('   <div id="qcard_progress-qdeck' + i_deck + '" class="qcard_progress">');
+   divs.push ('   </div>');
+   divs.push ('   <div id="qcard_header-qdeck' + i_deck + '" class="qcard_header">');
+   divs.push ('   </div>');
+   divs.push ('   <div class="card-container"> ');
+   divs.push ('      <div id="qcard_card-qdeck' + i_deck + '" class="qcard_card card" data-direction="right"> <button class="cbutton-qdeck' + i_deck + ' cbutton">Flip</button>');
+   divs.push ('         <div class="front">');
+   divs.push ('            <table class="qcard_table" ' + attributes + ' cellspacing="0" cellpadding="0">');
+   divs.push ('               <tr>');
+   divs.push ('                  <td class="center">');
+   divs.push ('                  </td>');
+   divs.push ('               </tr>');
+   divs.push ('            </table>');
+   divs.push ('         </div>');
+   divs.push ('         <div class="back">');
+   divs.push ('            <table class="qcard_table" ' + attributes + ' cellspacing="0" cellpadding="0">');
+   divs.push ('               <tr>');
+   divs.push ('                  <td class="center">');
+   divs.push ('                  </td>');
+   divs.push ('               </tr>');
+   divs.push ('            </table>');
+   divs.push ('         </div>');
+   divs.push ('      </div>');
+   divs.push ('   </div>');
+   divs.push ('   <div id="qcard_next_buttons-qdeck' + i_deck + '" + class="qcard_next_buttons">');
+   divs.push ('   </div>');
+   divs.push ('</div>');
+
+   return divs.join ('\n');
+}
+
+
+// -----------------------------------------------------------------------------
+function process_topics (i_deck, card_tags) {
+
+   // Loop over tags.
+   var n_cards_w_topics = 0;
+   var n_cards = card_tags.length;
+   for (var i_card=0; i_card<n_cards; i_card++) {
+      var card_tag = card_tags[i_card];
+
+      // See if any attribute.
+      var matches = card_tag.match (/\[q +([^\]]*)\]/);
+      if (matches && matches[1].substr (0, 7) == 'topic="') {
+         var attribute = matches[1].substr (7);
+         var matches = attribute.match (/([^"]*)"/);
+         if (matches) {
+            var card_topics = trim (matches[1]);
+            if (debug[4]) {
+               console.log ('[process_topics] card_topics: ', card_topics);
+            }
+
+            // Multiple topics for a card - separated by semicolon (and
+            // optional space).  Split into array.
+            card_topics = card_topics.split (/; */);
+            deckdata[i_deck].card_topics[i_card] = card_topics;
+            n_cards_w_topics++;
+
+            // Add topics to list of topics if not already in list.
+            for (var i=0; i<card_topics.length; i++) {
+               var topic = card_topics[i];
+               if (deckdata[i_deck].topics.indexOf (topic) == -1) {
+                  deckdata[i_deck].topics.push (topic);
+               }
+            }
+         }
+      }
+   }
+
+   if (n_cards_w_topics > 0) {
+
+      // If any topics given, every card must have at least one topic.
+      if (n_cards_w_topics != n_cards) {
+         errmsgs.push ('Topic(s) were given for at least one card, but at least one card doesn\'t have a topic.');
+      }
+      if (debug[4]) {
+         console.log ('[process_topics] topics: ' + deckdata[i_deck].topics.join ('; '));
+      }
+
+      // Set up statistics by topic.  Object of objects (list of lists).
+      deckdata[i_deck].topic_statistics = {};
+      var n_topics = deckdata[i_deck].topics.length;
+      for (var i_topic=0; i_topic<n_topics; i_topic++) {
+         var topic = deckdata[i_deck].topics[i_topic];
+         deckdata[i_deck].topic_statistics[topic] = {};
+         deckdata[i_deck].topic_statistics[topic].n_correct = 0;
+         deckdata[i_deck].topic_statistics[topic].n_incorrect = 0;
+      }
+   }
+}
+
+
+// -----------------------------------------------------------------------------
+this.start_deck = function (i_deck) {
+   deckdata[i_deck].i_card = 0;
+   deckdata[i_deck].n_got_it = 0;
+   deckdata[i_deck].n_reviewed = 0;
+
+   var n_cards = deckdata[i_deck].n_cards;
+   deckdata[i_deck].n_to_go = n_cards;
+
+   q.set_next_buttons (i_deck);
+
+   for (var ii_card=0; ii_card<n_cards; ii_card++) {
+      deckdata[i_deck].cards[ii_card].got_it = false;
+   }
+
+   for (var i_topic=0; i_topic<n_topics; i_topic++) {
+      var topic = deckdata[i_deck].topics[i_topic];
+      deckdata[i_deck].topic_statistics[topic].n_got_it = 0;
+   }
+
+   init_card_order (i_deck);
+   q.process_card (i_deck);
+};
+
+
+// -----------------------------------------------------------------------------
+function check_qdeck_tag_pairs (htm) {
+
+   // Match "[qdeck]" or "[/qdeck]".
+   var matches = htm.match (/\[qdeck|\[\/qdeck\]/gm);
+   if (matches) {
+      var n_tags = matches.length;
+      var error_b = false;
+
+      if (n_tags % 2 != 0) {
+         error_b = true;
+      } else {
+
+         // Check proper pairs.
+         for (var i=0; i<n_tags; i++) {
+            var tag = matches[i];
+            if (i % 2 == 0) {
+               if (matches[i] != '[qdeck') {
+                  error_b = true;
+                  break;
+               }
+            } else {
+               if (matches[i] != '[/qdeck]') {
+                  error_b = true;
+                  break;
+               }
+            }
+         }
+      }
+      if (error_b){
+         alert        ('Unmatched [qdeck] - [/qdeck] pairs.');
+         errmsgs.push ('Unmatched [qdeck] - [/qdeck] pairs.');
+      }
+   }
+}
+
+
+// -----------------------------------------------------------------------------
+function card_front_textentry_html (htm, i_deck) {
+
+   // Change '[textentry]' to appropriate htm.
+   var new_html = htm.replace ('[textentry]', '<input type="text" id="textentry-qdeck' + i_deck + '" class="qcard_textentry" />');
+   if (debug[1]) {
+      console.log ('[card_front_textentry_html] new_html: ', new_html);
+   }
+   return new_html;
+}
+
+
+// -----------------------------------------------------------------------------
+function card_back_textentry_html (htm, i_deck) {
+
+   // Change to appropriate html.
+   // Spec is either
+   //    (1) [optional text textentry more optional text]
+   // or (2) [optional text <span id="back_textentry" class="qdeck_textentry" etc.></span> more optional text]
+   //
+   // If user does not make an entry on front of card, then nothing within
+   // square brackets is shown when flip to back.
+
+   // Change id="back_textentry" to id="textentry-qdeck...", otherwise expand to
+   // equivalent.
+   if (htm.indexOf ('id="back_textentry"') != -1) {
+      htm = htm.replace ('back_textentry', 'back_textentry-qdeck' + i_deck);
+   } else {
+      htm = htm.replace ('textentry', '<span id="back_textentry-qdeck' + i_deck + '" class="qdeck_textentry"></span>');
+   }
+
+   // Convert "[" and "]" to span.
+   htm = htm.replace (/\[([^[]*textentry.*?)\]/, '<span id="back_textentry_clause-qdeck' + i_deck + '">$1</span>');
+
+   return htm;
+}
+
+
+// -----------------------------------------------------------------------------
+function check_and_init_topics () {
+
+   var errmsg = [];
+
+   // Collect topics from cards, see if we have a topic description.
+   for (var ii_card=0; ii_card<n_cards; ii_card++) {
+      var card_topics = cards[ii_card].topics;
+      for (var ii=0; ii<card_topics.length; ii++) {
+         topic = card_topics[ii];
+         if (topics.indexOf (topic) == -1) {
+
+            // Add to list.
+            topics.push (topic);
+         }
+
+         // Did we get a topic description?
+         if (! topic_descriptions.hasOwnProperty (topic)) {
+            errmsg.push ('Did not get topic/description for topic ' + topic);
+         }
+      }
+   }
+   n_topics = topics.length;
+
+   // Set up statistics by topic.  Object of objects (list of lists).
+   for (var i_topic=0; i_topic<n_topics; i_topic++) {
+      var topic = topics[i_topic];
+      topic_statistics[topic] = new Object;
+      topic_statistics[topic].n_got_it = 0;
+   }
+
+   return errmsg;
+}
+
+
+// -----------------------------------------------------------------------------
+function init_element_pointers (i_deck) {
+
+   // jQuery element objects for this deck.
+   deckdata[i_deck].el_qcard_container  = $('#qcard_window-qdeck' + i_deck + ' div.card-container');
+   deckdata[i_deck].el_flip             = $('.cbutton-qdeck' + i_deck);
+   deckdata[i_deck].el_progress         = $('#qcard_progress-qdeck' + i_deck);
+   deckdata[i_deck].el_header           = $('#qcard_header-qdeck' + i_deck);
+   deckdata[i_deck].el_qcard_card       = $('#qcard_card-qdeck' + i_deck);
+   deckdata[i_deck].el_qcard_card_front = $('#qcard_card-qdeck' + i_deck + ' div.front td.center');
+   deckdata[i_deck].el_qcard_card_back  = $('#qcard_card-qdeck' + i_deck + ' div.back  td.center');
+   deckdata[i_deck].el_next_buttons     = $('#qcard_next_buttons-qdeck' + i_deck);
+
+   if (debug[5]) {
+      console.log ('[init_element_pointers] el_next_buttons:', deckdata[i_deck].el_next_buttons);
+   }
+}
+
+
+// -----------------------------------------------------------------------------
+function init_card_order (i_deck) {
+   var n_cards = deckdata[i_deck].n_cards;
+   deckdata[i_deck].card_order = new Array (n_cards);
+   for (var i=0; i<n_cards; i++) {
+      deckdata[i_deck].card_order[i] = i;
+   }
+}
+
+
+// -----------------------------------------------------------------------------
+// Needs to be available publicly -- e.g., as qcard.set_next_buttons () -- for
+// onclick ().  "this" for "this qcard instance".
+this.set_next_buttons = function (i_deck) {
+   var htm = '';
+   htm += '<button class="qbutton" onclick="' + qname + '.got_it (' + i_deck + ')" title="Remove this card from the stack">Got it!</button> &nbsp; ';
+   if (deckdata[i_deck].n_to_go > 1) {
+      htm += '<button class="qbutton next_card-qdeck' + i_deck + '" onclick="' + qname + '.next_card (' + i_deck + ')" title="Put this card at the bottom of stack, show the next card">Need more practice</button> &nbsp; ';
+   }
+   htm += '<button class="qbutton" onclick="' + qname + '.flip (' + i_deck + ')" title="Show the other side">Flip</button> &nbsp; ';
+   if (deckdata[i_deck].n_to_go > 1) {
+      htm += '<button class="qbutton shuffle-qdeck' + i_deck + '" onclick="' + qname + '.shuffle_order (' + i_deck + ')" title="Randomly shuffle the remaining cards">Shuffle</button> &nbsp; ';
+   }
+   if (debug[5]) {
+      console.log ('[set_next_buttons] htm:', htm);
+   }
+
+   deckdata[i_deck].el_next_buttons.html (htm);
+};
+
+
+// -----------------------------------------------------------------------------
+// Needs to be available publicly -- e.g., as qcard.process_card () -- for
+// onclick ().  "this" for "this qcard instance".
+this.process_card = function (i_deck) {
+
+   // Keep running through cards until got_it true for all.
+   if (deckdata[i_deck].n_to_go == 0) {
+      done (i_deck);
+   } else {
+
+      var i_card = deckdata[i_deck].i_card;
+      while (true) {
+
+         // Display only those cards not yet marked got_it.
+         var ii_card = deckdata[i_deck].card_order[i_card];
+         if (! deckdata[i_deck].cards[ii_card].got_it) {
+
+            // Display card.  If only one to go, disable and gray out
+            // more practice/next card and shuffle buttons.
+            if (deckdata[i_deck].n_to_go == 1) {
+               $('.next_card-qdeck' + i_deck).attr ('disabled', true);
+               $('.next_card-qdeck' + i_deck).css ({color: '#e6e6e6', background: '#cccccc', 'border-top-color': '#cccccc', 'text-shadow': 'none', 'box-shadow': 'none'});
+
+               $('.shuffle-qdeck' + i_deck).attr ('disabled', true);
+               $('.shuffle-qdeck' + i_deck).css ({color: '#e6e6e6', background: '#cccccc', 'border-top-color': '#cccccc', 'text-shadow': 'none', 'box-shadow': 'none'});
+            }
+            deckdata[i_deck].i_card = i_card;
+            deckdata[i_deck].n_reviewed++;
+            q.set_card_front_and_back (i_deck);
+            break;
+         } else {
+            i_card++;
+            if (i_card >= deckdata[i_deck].n_cards) {
+               i_card = 0;
+            }
+         }
+      }
+   }
+};
+
+// -----------------------------------------------------------------------------
+function done (i_deck) {
+
+   // If showing back, change to front.
+   if (! deckdata[i_deck].showing_front_b) {
+      q.flip (i_deck);
+   }
+
+   deckdata[i_deck].el_progress.html ('');
+   deckdata[i_deck].el_qcard_card_back.html ('');
+   deckdata[i_deck].el_next_buttons.html ('');
+
+   var report_html = [];
+
+   // Overall.
+   if (deckdata[i_deck].n_reviewed == deckdata[i_deck].n_cards) {
+      report_html.push ('<p>In this ' + number_to_word (deckdata[i_deck].n_cards) + '-flashcard stack, you marked every card &lsquo;got it&rsquo; on the first try.</p>');
+   } else {
+      report_html.push ('<p>This flashcard stack had ' + deckdata[i_deck].n_cards + ' cards.  It took you ' + deckdata[i_deck].n_reviewed + ' tries until you felt comfortable enough to to mark &lsquo;got it&rsquo; for each card.</p>');
+   }
+
+   // See if more than one topic in this deck.
+   /*
+   var multiple_topics_b = false;
+   var first_topic = cards[0].topics[0];
+   for (var ii_card=0; ii_card<n_cards; ii_card++) {
+      var card_topics = cards[ii_card].topics;
+      for (var ii=0; ii<card_topics.length; ii++) {
+         if (card_topics[ii] != first_topic) {
+            multiple_topics_b = true;
+            break;
+         }
+      }
+      if (multiple_topics_b) {
+         break;
+      }
+   }
+   if (! multiple_topics_b) {
+      report_html.push ('<p>All ' + number_to_word (n_cards) + ' ' + plural ('question', deckdata[i_deck].n_cards) + ' were about ' + topic_descriptions[first_topic] + '.</p>');
+   } else {
+
+      // By topic.
+      report_html.push ('<ul>');
+      for (var i_topic=0; i_topic<n_topics; i_topic++) {
+         var topic = topics[i_topic];
+         var n_topic_cards = topic_statistics[topic].n_got_it;
+         if (n_topic_cards > 0) {
+            var topic_html = '<li>There ' + plural ('was', n_topic_cards) + ' ' + number_to_word (n_topic_cards) + ' ' + plural ('question', n_topic_cards) + ' about ' +  topic_descriptions[topic] + '.&nbsp;';
+            if (n_topic_incorrect == 0) {
+               if (n_topic_cards > 2) {
+                  topic_html += 'You answered all of these questions correctly on the first try.';
+               } else if (n_topic_cards == 2) {
+                  topic_html += 'You answered both of these questions correctly on the first try.';
+               } else {
+                  topic_html += 'You answered this question correctly on the first try.';
+               }
+            } else if (n_topic_cards == 1) {
+               topic_html += 'It took you ' + number_to_word (n_topic_cards + n_topic_incorrect) + ' tries to answer this question correctly.';
+            } else {
+               topic_html += 'It took you ' + number_to_word (n_topic_cards + n_topic_incorrect) + ' tries to answer these ' + number_to_word (n_topic_cards) + ' questions correctly.';
+            }
+            topic_html += '</li>';
+            report_html.push (topic_html);
+         }
+      }
+      report_html.push ('</ul>');
+   }
+   */
+
+   // Show exit text.
+   report_html.push (deckdata[i_deck].exit_html);
+
+   deckdata[i_deck].el_qcard_card_front.html (report_html.join ('\n'));
+}
+
+
+// -----------------------------------------------------------------------------
+function display_progress (i_deck) {
+   var progress_html;
+   progress_html = '<p>' + deckdata[i_deck].n_cards + ' cards total, ' + deckdata[i_deck].n_reviewed + ' ' + plural ('card', deckdata[i_deck].n_reviewed) + ' reviewed, ' + deckdata[i_deck].n_to_go + ' ' + plural ('card', deckdata[i_deck].n_to_go) + ' to go</p>';
+   deckdata[i_deck].el_progress.html (progress_html);
+}
+
+
+// -----------------------------------------------------------------------------
+this.flip = function (i_deck) {
+
+   // If there's a text entry box...
+   var el_textentry = $('#textentry-qdeck' + i_deck);
+
+   var set_front_back;
+   if (deckdata[i_deck].showing_front_b) {
+
+      // Hide front text box, in case "shows through" (Safari).
+      if (el_textentry.length) {
+         el_textentry.css ('visibility', 'hidden');
+
+         // If something entered, then set back-side element to what
+         // was entered.
+         var textentry = el_textentry.val ();
+         if (textentry) {
+
+            // Show clause within square brackets, insert user entry.
+            $('#back_textentry_clause-qdeck' + i_deck).show ();
+            $('#back_textentry-qdeck' + i_deck).html (textentry);
+         } else {
+
+            // No entry on front. Don't display any of clause on back.
+            $('#back_textentry_clause-qdeck' + i_deck).hide ();
+         }
+      }
+      set_front_back = 'back';
+   } else {
+      set_front_back = 'front';
+   }
+
+   // Set the widths of the progress, header, and next-button divs to match
+   // card front/back.
+   set_header (i_deck, set_front_back);
+
+   deckdata[i_deck].el_flip.trigger ('click');
+
+   // Closure for setTimeout ().
+   var showFrontElements = function () {
+      //el_textentry.show ();
+      el_textentry.css ('visibility', 'visible');
+   };
+
+   // In case was hidden, show front text box and buttons, but wait till after
+   // flip completes ("flashing" in Chrome).  (Time equal to that in
+   // flipCard.css.)
+   if (! deckdata[i_deck].showing_front_b) {
+      setTimeout (showFrontElements, 700);
+   }
+
+   // Keep track whether showing front or back.
+   deckdata[i_deck].showing_front_b = ! deckdata[i_deck].showing_front_b;
+};
+
+
+// -----------------------------------------------------------------------------
+function set_header (i_deck, front_back, init_b) {
+
+   // If no initial header, hide.
+   if (init_b != undefined) {
+      var header_html = deckdata[i_deck].header_html;
+      if (header_html == '' || header_html == 'NA') {
+         deckdata[i_deck].el_header.hide ();
+      } else {
+         deckdata[i_deck].el_header.html (header_html);
+      }
+   }
+
+   // Set the widths of the progress div and header div to match card front.
+   var qcard_width = $('#qcard_card-qdeck' + i_deck + ' div.' + front_back + ' table.qcard_table').outerWidth ();
+   if (debug[0]) {
+      console.log ('[set_header] qcard_width: ', qcard_width);
+   }
+   deckdata[i_deck].el_progress.width (qcard_width);
+   deckdata[i_deck].el_header.width (qcard_width);
+   deckdata[i_deck].el_next_buttons.width (qcard_width);
+
+   return qcard_width;
+}
+
+
+// -----------------------------------------------------------------------------
+this.set_card_front_and_back = function (i_deck) {
+
+   var card_front_back = ['card_front', 'card_back'];
+
+   // Show progress.
+   display_progress (i_deck);
+
+   var i_card = deckdata[i_deck].i_card;
+   var ii_card = deckdata[i_deck].card_order[i_card];
+   var card = deckdata[i_deck].cards[ii_card];
+
+   for (var i_side=0; i_side<2; i_side++) {
+      var side = card_front_back[i_side];
+
+      // Card front/back text.
+      if (side == 'card_front') {
+         deckdata[i_deck].el_qcard_card_front.html (card[side]);
+      } else {
+         deckdata[i_deck].el_qcard_card_back.html (card[side]);
+      }
+   }
+
+   // Set focus to textentry box, if there is one.
+   $('#textentry-qdeck' + i_deck).focus ();
+
+   // Set the widths of the progress, header, and next-button divs to match
+   // card front.
+   var qcard_width = set_header (i_deck, 'front');
+
+   set_container_width_height (i_deck, qcard_width);
+};
+
+
+// -----------------------------------------------------------------------------
+function set_container_width_height (i_deck, qcard_width) {
+
+   // Get height of front and back, set height of container to larger of the
+   // two.
+   var height_front = deckdata[i_deck].el_qcard_card_front.outerHeight ();
+   var height_back  = deckdata[i_deck].el_qcard_card_back.outerHeight ();
+   var max_height = Math.max (height_front, height_back);
+
+   if (debug[0]) {
+      var header_height = deckdata[i_deck].el_header.height ();
+      console.log ('[set_card_front_and_back] height_front: ', height_front, ', height_back: ', height_back, ', header_height: ', header_height);
+   }
+
+   // Add height of header, progress div and "next" buttons.
+   deckdata[i_deck].el_qcard_container.height (max_height);
+   deckdata[i_deck].el_qcard_container.width (qcard_width);
+}
+
+
+// -----------------------------------------------------------------------------
+// Mark card, increment counters, go to next card.
+this.got_it = function (i_deck) {
+
+   var i_card = deckdata[i_deck].i_card;
+   var ii_card = deckdata[i_deck].card_order[i_card];
+   deckdata[i_deck].cards[ii_card].got_it = true;
+   deckdata[i_deck].n_to_go--;
+   q.next_card (i_deck);
+};
+
+
+var directions = ['right', 'left', 'top', 'bottom'];
+// -----------------------------------------------------------------------------
+// Go to next card.
+this.next_card = function (i_deck) {
+
+   // If showing back, change to front.
+   if (! deckdata[i_deck].showing_front_b) {
+      q.flip (i_deck);
+   }
+
+   // Randomly pick a new flip direction.
+   var i = Math.floor (Math.random () * 4.0);
+   var new_direction = directions[i];
+   deckdata[i_deck].el_qcard_card.attr ('data-direction', new_direction);
+   deckdata[i_deck].el_qcard_card.data('direction', new_direction);
+
+   deckdata[i_deck].i_card++;
+   if (deckdata[i_deck].i_card >= deckdata[i_deck].n_cards) {
+      deckdata[i_deck].i_card = 0;
+   }
+   setTimeout (qname + '.process_card (' + i_deck + ')', 375);
+};
+
+
+// -----------------------------------------------------------------------------
+function decode_qdeck (htm, qdeck_tag) {
+
+   // Get html after [qdeck] tag and before [/qdeck] tag.
+   var len = htm.length;
+   htm = htm.substring (qdeck_tag.length, htm.length-8);
+   while (true) {
+
+      // See if non-base64 character (blank, for now) in html.
+      var cpos = htm.search (' ');
+      if (cpos != -1) {
+         break;
+      } else {
+         htm = atob (htm);
+      }
+   }
+
+   // Add back [qdeck] [/qdeck] tags.
+   htm = qdeck_tag + htm + '[/qdeck]';
+
+   return htm;
+}
+
+
+// -----------------------------------------------------------------------------
+this.shuffle_order = function (i_deck) {
+
+   // Shuffle, but make sure current card changes!
+   var i_card = deckdata[i_deck].i_card;
+   var ii_card = deckdata[i_deck].card_order[i_card];
+   while (true) {
+      var new_ii_card = deckdata[i_deck].card_order[i_card];
+      if (new_ii_card != ii_card && ! deckdata[i_deck].cards[new_ii_card].got_it) {
+         break;
+      }
+      deckdata[i_deck].card_order = shuffle (deckdata[i_deck].card_order);
+   }
+
+   // If showing back, change to front.
+   if (! deckdata[i_deck].showing_front_b) {
+      q.flip (i_deck);
+   }
+
+   // Do not increment number reviewed -- "undo" increment in process_card ().
+   deckdata[i_deck].n_reviewed--;
+   q.process_card (i_deck);
+};
+
+
+// -----------------------------------------------------------------------------
+function shuffle (array) {
+  var currentIndex = array.length
+    , temporaryValue
+    , randomIndex
+    ;
+
+  // While there remain elements to shuffle...
+  while (0 !== currentIndex) {
+
+    // Pick a remaining element...
+    randomIndex = Math.floor (Math.random() * currentIndex);
+    currentIndex -= 1;
+
+    // And swap it with the current element.
+    temporaryValue = array[currentIndex];
+    array[currentIndex] = array[randomIndex];
+    array[randomIndex] = temporaryValue;
+  }
+
+  return array;
+}
+
+
+// -----------------------------------------------------------------------------
+var number_word = ['zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten'];
+
+function number_to_word (number) {
+   var word;
+   if (number > 9) {
+      word = number;
+   } else {
+      word = number_word[number];
+   }
+
+   return word;
+}
+
+
+// -----------------------------------------------------------------------------
+function plural (word, n) {
+   var new_word;
+   if (n == 1) {
+      new_word = word;
+   } else {
+
+      // Specials first.
+      if (word == 'was') {
+         new_word = 'were';
+
+      } else if (word == 'this') {
+         new_word = 'these';
+
+      } else {
+
+         // The simple case.
+         new_word = word + 's';
+      }
+   }
+
+   return new_word;
+}
+
+
+// -----------------------------------------------------------------------------
+// IE 8 does not have trim () method for strings.
+function trim (s) {
+   if ('a'.trim) {
+      s = s.trim ();
+   } else {
+      s = s.replace (/^\s+|\s+$/g, '');
+   }
+
+   return s;
+}
+
+
+// =============================================================================
+// Close - isolate namespace.
+};
+
+
+// -----------------------------------------------------------------------------
+qcardf.call (qcard_);
+
+// =============================================================================
+// =============================================================================
+/* ======================================================= 
+ * Flipping Cards 3D
+ * By David Blanco
+ *
+ * Contact: http://codecanyon.net/user/davidbo90
+ *
+ * Created: January 2013
+ *
+ * Copyright (c) 2013, David Blanco. All rights reserved.
+ * Released under CodeCanyon License http://codecanyon.net/
+ *
+ * ======================================================= */
+
+(function($){
+   $(document).ready(function(){
+
+      // CHECKS FOR FALLBACK -----------------------
+      var debug = false;
+      var fallback = false;
+      var dk_fallback = false;
+      var supportsPerspective;
+      var testDiv;
+      var is_chrome;
+      var is_safari;
+
+      // -----------------------------------------------------------------------
+      function getInternetExplorerVersion()
+      // Returns the version of Windows Internet Explorer or a -1
+      // (indicating the use of another browser).
+      {
+         var rv = -1; // Return value assumes failure.
+         if (navigator.appName == 'Microsoft Internet Explorer');
+         {
+            var ua = navigator.userAgent;
+            var re = new RegExp("MSIE ([0-9]{1,}[\.0-9]{0,})");
+            if (re.exec(ua) != null)
+               rv = parseFloat( RegExp.$1 );
+         }
+
+         var isAtLeastIE11 = !!(navigator.userAgent.match(/Trident/) && !navigator.userAgent.match(/MSIE/));
+         if(isAtLeastIE11){
+               rv = 11; //if it is IE 11 
+         }
+
+         return rv;
+      }
+      // -----------------------------------------------------------------------
+
+
+      if( getInternetExplorerVersion() != -1 ){ //IF IS IE
+         fallback = true;
+         dk_fallback = true;
+      }
+
+
+      // -----------------------------------------------------------------------
+      var supports = (function() {  
+         var   div = document.createElement('div'),  
+           vendors = 'Khtml Ms O Moz Webkit'.split(' '),  
+               len = vendors.length;  
+
+         return function(prop) {  
+           if ( prop in div.style ) return true;  
+
+           prop = prop.replace(/^[a-z]/, function(val) {  
+              return val.toUpperCase();  
+           });  
+
+           while(len--) {  
+              if ( vendors[len] + prop in div.style ) {  
+                 // browser supports box-shadow. Do what you need.  
+                 // Or use a bang (!) to test if the browser doesn't.  
+                 return true;  
+              }   
+           }  
+           return false;  
+         };  
+      })();  
+      // -----------------------------------------------------------------------
+
+
+      if ( !supports('backfaceVisibility') ) { //IF IT DOES NOT SUPPORT BACKFACE VISIBILITY
+         if (debug) {
+            alert ('!backfaceVisibility');
+         }
+         fallback = true;
+      }
+
+
+      is_chrome = navigator.userAgent.toLowerCase().indexOf('chrome') > -1 && !!window.chrome;
+      is_safari =  navigator.userAgent.toLowerCase().indexOf('safari') > -1 && !window.chrome;
+
+      // If is Chrome or Safari, set up div to test 3D support.
+      if (is_chrome || is_safari) {
+         testDiv = document.createElement('div');
+         var properties = ['perspectiveProperty', 'WebkitPerspective'];
+         for (var i = properties.length - 1; i >= 0; i--){
+            supportsPerspective = supportsPerspective ? supportsPerspective : testDiv.style[properties[i]] != undefined;
+         };
+         if (! supportsPerspective) {
+            fallback = true;
+            if (debug) {
+               alert ('!perspectiveProperty');
+            }
+         } else {
+            var testStyle = document.createElement('style');
+            testStyle.textContent = '@media (-webkit-transform-3d){#test3d{height:3px}}';
+            document.getElementsByTagName('head')[0].appendChild(testStyle);
+            testDiv.id = 'test3d';
+            document.body.appendChild(testDiv);
+         }
+      }
+
+      setTimeout (part2, 100);
+
+
+      // -----------------------------------------------------------------------
+      function part2 () {
+
+         // If is Chrome or is Safari, and good so far, check if supports
+         // 3D transform.
+         if (is_chrome || is_safari){
+            if (! fallback) {
+               retOffsetHeight = testDiv.offsetHeight === 3;
+               if (! retOffsetHeight) {
+                  fallback = true;
+                  if (debug) {
+                     alert ('!3D_transform');
+                  }
+               }
+
+               // Clean-up.
+               testStyle.parentNode.removeChild(testStyle);
+               testDiv.parentNode.removeChild(testDiv);
+            }
+         }
+
+
+         //fallback = dk_fallback;
+         if( fallback ){
+            jQuery('div.card-container').addClass('noCSS3Container');
+
+            jQuery('.card').addClass('noCSS3Card');
+
+            jQuery('.card').children('div').addClass('noCSS3Sides');
+
+            jQuery('.back').hide();
+         }
+
+         $('.over').parents('.card-container').on('mouseenter',function(){
+            $this = $(this);
+
+            if(!$this.hasClass('mouseenter')){
+               $this.addClass('mouseenter');
+            }
+            
+            direction($this.find('.over'));
+
+         });
+
+         $('.over').parents('.card-container').on('mouseleave',function(){
+            $this = $(this);
+
+            if($this.hasClass('mouseenter')){
+               direction($this.find('.over'));
+            }
+
+         });
+
+         $('.click').on('click', function(){
+            $this = $(this);
+
+            direction($this);
+
+         });
+
+         //Stop propagation
+         $('.click').on('click', '.ignoreEvent', function(e){
+            e.stopPropagation();
+         });
+
+         $('.card').on('click', '.cbutton', function(e){
+            e.preventDefault();
+            $this = $(this);
+
+            direction($this.parents('.card'));
+         });
+
+         var intervals = Array();
+
+         function direction($this, index){
+
+            $this.stop(true, true);
+            
+            if($this.data('autoflip') != undefined && index != undefined){
+               intervals[index] = setTimeout(function(){
+                                 direction($this, index);
+                              }, $this.data('autoflip'));
+            }  
+
+            //In auto flip feature if it has a mouseover
+            if($this.data('mouse') == 'true'){
+               return;
+            }
+
+            if( fallback ){
+               $this.find('div.front').fadeToggle();
+               $this.find('div.back').fadeToggle();
+               return;
+            }
+
+            if($this.data('direction') === 'right'){
+               
+               $this.toggleClass('flipping-right');
+
+            }else if($this.data('direction') === 'left'){
+               
+               $this.toggleClass('flipping-left');
+
+            }else if($this.data('direction') === 'top'){
+               
+               $this.toggleClass('flipping-top');
+               
+            }else if($this.data('direction') === 'bottom'){
+               
+               $this.toggleClass('flipping-bottom');
+               
+            }
+            
+         }
+
+
+         //AUTO FLIP FEATURE ----------------------->
+
+         var card = $('.card[data-autoflip]');
+
+         function start(){
+            card.each(function(index){
+               $this = $(this);
+
+               (function(c){
+
+                     var autoStart = c.data('start');
+
+                     if(autoStart == undefined){
+                        autoStart = c.data('autoflip');
+                     }
+
+                     intervals[index] = setTimeout(function(){
+                                       direction(c, index);
+                                    }, autoStart); 
+
+                  })($this);
+
+            });
+         }
+
+         start();
+
+         var restart = function() {
+             //clear all intervals and start again
+             for(var i=0; i<intervals.length; i++){
+               clearTimeout(intervals[i]);
+             }
+
+             card.removeClass('flipping-right');
+             card.removeClass('flipping-left');
+             card.removeClass('flipping-top');
+             card.removeClass('flipping-bottom');
+
+             start();
+         };
+
+         if (window.addEventListener){
+           window.addEventListener('focus', restart, false); 
+         } else if (window.attachEvent){
+           window.attachEvent('onfocus', restart);
+         }
+
+
+         card.on('mouseenter', function(){
+            $(this).data('mouse', 'true');
+         });
+
+         card.on('mouseleave', function(){
+            $(this).data('mouse', 'false');
+         });
+      }
+   });
+})(jQuery);
 
 ENDQ;
    print "</script>\n";
