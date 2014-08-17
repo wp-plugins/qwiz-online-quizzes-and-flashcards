@@ -1,4 +1,7 @@
 /*
+ * Version 1.02 2014-08-16
+ * Turn of debugs!
+ *
  * Version 1.01 2014-08-16
  * Remove <p>s and headers that contain only [!] ... [/!] comments.  Paragraph 
  * marks that remained after comments were deleted were taking space.
@@ -23,12 +26,12 @@ var qname = 'qcard_';
 
 // Debug settings.
 debug = [];
-debug.push (true );    // 0 - general.
-debug.push (true );    // 1 - process_card_input ().
-debug.push (true );    // 2 - answer (card back) html.
-debug.push (true );    // 3 - old/new html dump.
-debug.push (true );    // 4 - card tags/topics.
-debug.push (true );    // 5 - "next" buttons, element objects.
+debug.push (false);    // 0 - general.
+debug.push (false);    // 1 - process_card_input ().
+debug.push (false);    // 2 - answer (card back) html.
+debug.push (false);    // 3 - old/new html dump.
+debug.push (false);    // 4 - card tags/topics.
+debug.push (false);    // 5 - "next" buttons, element objects.
 
 $ = jQuery;
 

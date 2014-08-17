@@ -2,7 +2,7 @@
 Contributors: dan_kirshner
 Tags: interactive quiz, quiz, flashcards
 Tested up to: 3.9.1
-Stable tag: 1.01
+Stable tag: 1.02
 License: GPL2
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
@@ -19,6 +19,10 @@ Activate the plugin through the 'Plugins' menu in WordPress
 == Screenshots ==
 
 == Changelog ==
+
+= 1.02 =
+2014-08-16
+Turn off debugs!
 
 = 1.01 =
 2014-08-16
