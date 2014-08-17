@@ -2,7 +2,7 @@
 Contributors: dan_kirshner
 Tags: interactive quiz, quiz, flashcards
 Tested up to: 3.9.1
-Stable tag: 1.0
+Stable tag: 1.01
 License: GPL2
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
@@ -20,7 +20,14 @@ Activate the plugin through the 'Plugins' menu in WordPress
 
 == Changelog ==
 
-= 1.0 =
-* Initial WordPress release 2014-07-31
+= 1.01 =
+2014-08-16
+Remove <p>s and headers that contain only [!] ... [/!] comments.  Paragraph marks that remained after comments were deleted were taking space.
 
+qwizcards: Remove <br />s after textentry.
+
+qwizcards: Remove spacing/margins from back side.
+
+= 1.0 =
+Initial WordPress release 2014-07-31
 
