@@ -26,9 +26,9 @@ Turn off debugs!
 
 = 1.01 =
 2014-08-16
-Remove <p>s and headers that contain only [!] ... [/!] comments.  Paragraph marks that remained after comments were deleted were taking space.
+Remove paragraph marks and headers that contain only [!] ... [/!] comments.  Paragraph marks that remained after comments were deleted were taking space.
 
-qwizcards: Remove <br />s after textentry.
+qwizcards: Remove breaks after textentry.
 
 qwizcards: Remove spacing/margins from back side.
 
