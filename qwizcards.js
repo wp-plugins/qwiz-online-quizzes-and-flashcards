@@ -1,6 +1,11 @@
 /*
+ * Version 1.1b01 2014-09-07
+ * Chrome on Mac: fallback for Flashcards; others: prevent sub/sup showing 
+ * through.
+ * Don't focus on textarea if first Flashcard initially displayed.
+ *
  * Version 1.02 2014-08-16
- * Turn of debugs!
+ * Turn off debugs!
  *
  * Version 1.01 2014-08-16
  * Remove <p>s and headers that contain only [!] ... [/!] comments.  Paragraph 
@@ -1143,7 +1148,7 @@ this.process_card = function (i_deck) {
             }
             deckdata[i_deck].i_card = i_card;
             deckdata[i_deck].n_reviewed++;
-            q.set_card_front_and_back (i_deck);
+            q.set_card_front_and_back (i_deck, i_card);
             break;
          } else {
             i_card++;
@@ -1242,17 +1247,24 @@ function display_progress (i_deck) {
 // -----------------------------------------------------------------------------
 this.flip = function (i_deck) {
 
-   // If there's a text entry box...
-   var el_textentry = $('#textentry-qdeck' + i_deck);
+   var el_textentry = $ ('#textentry-qdeck' + i_deck);
+   var el_front = $ ('#qcard_card-qdeck' + i_deck + ' div.front');
 
    var set_front_back;
    if (deckdata[i_deck].showing_front_b) {
 
-      // Hide front text box, in case "shows through" (Safari).
+      // Hide superscripts and subscripts (!) (shows through in Safari, Chrome,
+      // "flashing" in Chrome on Mac).
+      el_front.find ('sup, sub').css ('visibility', 'hidden');
+
+      // If there's a text entry box...
       if (el_textentry.length) {
+
+         // Hide it (shows through in Safari, Chrome, "flashing" in Chrome on
+         // Mac.
          el_textentry.css ('visibility', 'hidden');
 
-         // If something entered, then set back-side element to what
+         // If something entered in text box, then set back-side element to what
          // was entered.
          var textentry = el_textentry.val ();
          if (textentry) {
@@ -1279,12 +1291,14 @@ this.flip = function (i_deck) {
 
    // Closure for setTimeout ().
    var showFrontElements = function () {
-      //el_textentry.show ();
-      el_textentry.css ('visibility', 'visible');
+      if (el_textentry.length) {
+         el_textentry.css ('visibility', 'visible');
+      }
+      el_front.find ('sup, sub').css ('visibility', 'visible');
    };
 
-   // In case was hidden, show front text box and buttons, but wait till after
-   // flip completes ("flashing" in Chrome).  (Time equal to that in
+   // In case was hidden, show front text box and super/subscripts, but wait 
+   // till after flip completes ("flashing" in Chrome).  (Time equal to that in
    // flipCard.css.)
    if (! deckdata[i_deck].showing_front_b) {
       setTimeout (showFrontElements, 700);
@@ -1322,7 +1336,7 @@ function set_header (i_deck, front_back, init_b) {
 
 
 // -----------------------------------------------------------------------------
-this.set_card_front_and_back = function (i_deck) {
+this.set_card_front_and_back = function (i_deck, i_card) {
 
    var card_front_back = ['card_front', 'card_back'];
 
@@ -1344,8 +1358,11 @@ this.set_card_front_and_back = function (i_deck) {
       }
    }
 
-   // Set focus to textentry box, if there is one.
-   $('#textentry-qdeck' + i_deck).focus ();
+   // Set focus to textentry box, if there is one.  Don't do if first card and
+   // no intro (avoid scrolling page to this flashcard deck).
+   if (i_card != 0 || ! no_intro_b[i_deck]) {
+      $('#textentry-qdeck' + i_deck).focus ();
+   }
 
    // Set the widths of the progress, header, and next-button divs to match
    // card front.
@@ -1366,7 +1383,7 @@ function set_container_width_height (i_deck, qcard_width) {
 
    if (debug[0]) {
       var header_height = deckdata[i_deck].el_header.height ();
-      console.log ('[set_card_front_and_back] height_front: ', height_front, ', height_back: ', height_back, ', header_height: ', header_height);
+      console.log ('[set_container_width_height] height_front: ', height_front, ', height_back: ', height_back, ', header_height: ', header_height);
    }
 
    // Add height of header, progress div and "next" buttons.
@@ -1670,6 +1687,13 @@ qcardf.call (qcard_);
          // 3D transform.
          if (is_chrome || is_safari){
             if (! fallback) {
+
+               // If Chrome on Mac, give up.  DK 2014-09-05.
+               var is_mac = navigator.platform.toLowerCase().indexOf('mac') != -1;
+               if (is_chrome && is_mac) {
+                  fallback = true;
+               }
+
                retOffsetHeight = testDiv.offsetHeight === 3;
                if (! retOffsetHeight) {
                   fallback = true;
@@ -1684,8 +1708,6 @@ qcardf.call (qcard_);
             }
          }
 
-
-         //fallback = dk_fallback;
          if( fallback ){
             jQuery('div.card-container').addClass('noCSS3Container');
 
@@ -1753,8 +1775,29 @@ qcardf.call (qcard_);
             }
 
             if( fallback ){
+
+               var div_front = $this.find ('div.front');
+               var div_back  = $this.find ('div.back');
+
+               var toggle_front = function () {
+                  div_front.toggle ('clip');
+               };
+               var toggle_back = function () {
+                  div_back.toggle ('clip');
+               };
+
+               if (div_front.is (':visible')) {
+                  toggle_front ();
+                  setTimeout (toggle_back, 500);
+               } else {
+                  toggle_back ();
+                  setTimeout (toggle_front, 500);
+               }
+
+               /*
                $this.find('div.front').fadeToggle();
                $this.find('div.back').fadeToggle();
+               */
                return;
             }
 

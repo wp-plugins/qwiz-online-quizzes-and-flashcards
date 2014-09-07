@@ -2,7 +2,7 @@
 Contributors: dan_kirshner
 Tags: interactive quiz, quiz, flashcards
 Tested up to: 3.9.1
-Stable tag: 1.02
+Stable tag: 1.1b01
 License: GPL2
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
@@ -19,6 +19,13 @@ Activate the plugin through the 'Plugins' menu in WordPress
 == Screenshots ==
 
 == Changelog ==
+
+= 1.1b01 =
+2014-09-07
+Labeled-diagrams capability, including interactive editing.
+Chrome on Mac: fallback for Flashcards; others: prevent sub/sup showing 
+through.
+Don't focus on textarea if first Flashcard initially displayed.
 
 = 1.02 =
 2014-08-16
