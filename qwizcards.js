@@ -1,8 +1,9 @@
 /*
- * Version 1.1b01 2014-09-07
+ * Version 1.1b03 2014-09-07
+ * Labeled-diagrams capability, including interactive editing.
  * Chrome on Mac: fallback for Flashcards; others: prevent sub/sup showing 
  * through.
- * Don't focus on textarea if first Flashcard initially displayed.
+ * Don't focus on textarea if first flashcard initially displayed.
  *
  * Version 1.02 2014-08-16
  * Turn off debugs!

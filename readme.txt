@@ -2,11 +2,11 @@
 Contributors: dan_kirshner
 Tags: interactive quiz, quiz, flashcards
 Tested up to: 3.9.1
-Stable tag: 1.1b01
+Stable tag: 1.1b03
 License: GPL2
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
-Qwiz lets you create quizzes and flashcard decks using simple shortcodes (such as "[q]" for a question) that you include in your page or post.
+Qwiz lets you create quizzes and flashcard decks using simple shortcodes (such as "[q]" for a question) that you include in your page/post.
 
 
 == Description ==
@@ -20,7 +20,7 @@ Activate the plugin through the 'Plugins' menu in WordPress
 
 == Changelog ==
 
-= 1.1b01 =
+= 1.1b01/2/3 =
 2014-09-07
 Labeled-diagrams capability, including interactive editing.
 Chrome on Mac: fallback for Flashcards; others: prevent sub/sup showing 

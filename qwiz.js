@@ -1,11 +1,13 @@
-/* Version 1.1b01 2014-09-07
+/* Version 1.1b03 2014-09-07
  * Labeled-diagrams capability, including interactive editing.
+ * Chrome on Mac: fallback for Flashcards; others: prevent sub/sup showing 
+ * through.
  *
  * Version 1.02 2014-08-16
  * Turn off debugs!
  *
  * Version 1.01 2014-08-16
- * Remove <p>s and headers that contain only [!] ... [/!] comments.  Paragraph
+ * Remove <p>s and headers that contain only [!] ... [/!] comments.  Paragraph 
  * marks that remained after comments were deleted were taking space.
  *
  * Version 1.0 2014-07-31
@@ -519,7 +521,7 @@ function add_style () {
    s.push ('   height:          28px;');
    s.push ('   margin-right:     -124px;');
    s.push ('   margin-bottom:   -32px;');
-   s.push ('   position:        relative;');
+   s.push ('   position:        absolute;');
    s.push ('}');
 
    s.push ('span.qwizzled_target {');
