@@ -27,9 +27,12 @@
 
 function add_qwiz_js () {
    $qwiz      = plugins_url ('qwiz.js',      __FILE__);
+   $qwizcards = 'http://berkeleyballet.org/qwizcards.js';
    $qwizcards = plugins_url ('qwizcards.js', __FILE__);
-   wp_enqueue_script ('qwiz_handle',     $qwiz,      array (), '1.0', true);
-   wp_enqueue_script ('qwizcard_handle', $qwizcards, array (), '1.0', true);
+   $jquery_ui = plugins_url ('jquery-ui.min.js', __FILE__);
+   wp_enqueue_script ('qwiz_handle',      $qwiz,      array (), '1.1', true);
+   wp_enqueue_script ('qwizcard_handle',  $qwizcards, array (), '1.1', true);
+   wp_enqueue_script ('jquery_ui_handle', $jquery_ui, array (), '1.1', true);
 }
 
 
@@ -52,22 +55,6 @@ function add_qwizzled_button ($plugin_array) {
      return $plugin_array;
 }
 
-
-/*
-function qwizzled_admin_head () {
-    $plugin_url = plugins_url( '/', __FILE__ );
-    ?>
-        <!-- Creates global var? -->
-        <script type="text/javascript">
-            var qwizzled_plugin = {
-                'url': '<?php echo $plugin_url; ?>',
-            };
-            alert ('qwizzled_plugin: ' + qwizzled_plugin);
-        </script>
-
-    <?php
-}
- */
 
 function qwizzled_plugin_url () {
    $plugin_url = plugins_url( '/', __FILE__ );
