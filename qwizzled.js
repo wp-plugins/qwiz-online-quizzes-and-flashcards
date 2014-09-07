@@ -1,5 +1,5 @@
 /*
- * Version 1.1b01 2014-09-07
+ * Version 1.1b03 2014-09-07
  * Labeled-diagrams capability, including interactive editing.
  */
 
@@ -52,6 +52,8 @@ var bwidth  = '2px';
 var bstyles = ['dotted', 'dashed', 'solid'];
 var bcolors = ['red', 'magenta', 'blue', 'aqua'];
    
+horizontal_margin_adjust = 4;
+vertical_margin_adjust   = 4;
 
 
 // -----------------------------------------------------------------------------
@@ -168,7 +170,7 @@ this.show_main_menu = function (ed, qwiz_button_b) {
          // (resized) width and height of the div (kludge to enable use of
          // relative positioning rather than absolute, which gets extra
          // "drag handle" in Firefox).
-         $ (this).css ({'margin-right': -(ui_obj.size.width + 4) + 'px', 'margin-bottom': -(ui_obj.size.height + 4) + 'px'});
+         $ (this).css ({'margin-right': -(ui_obj.size.width + horizontal_margin_adjust) + 'px', 'margin-bottom': -(ui_obj.size.height + vertical_margin_adjust) + 'px'});
       }
    }).removeAttr ('data-mce-style');
 
@@ -291,7 +293,7 @@ function add_style_edit_area () {
    s.push ('div.qwizzled_canvas {');
    s.push ('   position:        relative;');
    s.push ('   min-height:      250px;');
-   s.push ('   border:          2px solid black;');
+   s.push ('   outline:         2px solid black;');
    s.push ('   padding:         5px;');
    s.push ('}');
 
@@ -688,12 +690,17 @@ this.target_text_selected = function (e) {
          }
          img_wrapper_style += '" ';
 
+         // TinyMCE has style that adds padding to image, but this isn't present
+         // in page display.  Add style to set padding to zero.  Editor also puts
+         // border around image.  Nix that, too.
+         img_attributes = add_attr_value ('style', 'padding: 0px; border: none; max-width: 100%;', img_attributes);
+
          // Take away alignleft, aligncenter, etc.  Messes things up when
          // display page.
-         selected_text = selected_text.replace (/align(left|center|right|none)/m, '');
+         img_attributes = img_attributes.replace (/align(left|center|right|none)/m, '');
 
          // Add class or to class.
-         var new_txt = '<div ' + img_wrapper_id + img_wrapper_style + img_wrapper_attributes + '>' + selected_text + '</div>';
+         var new_txt = '<div ' + img_wrapper_id + img_wrapper_style + img_wrapper_attributes + '><img ' + img_attributes + ' /></div>';
          new_txt = add_attr_value ('class', 'qwizzled_image', new_txt);
          if (debug[0]) {
             console.log ('[target_text_selected] new_txt: ' + new_txt);
@@ -808,7 +815,7 @@ this.target_text_selected = function (e) {
             // (resized) width and height of the div (kludge to enable use of
             // relative positioning rather than absolute, which gets extra
             // "drag handle" in Firefox).
-            $ (this).css ({'margin-right': -(ui_obj.size.width + 4) + 'px', 'margin-bottom': -(ui_obj.size.height + 4) + 'px'});
+            $ (this).css ({'margin-right': -(ui_obj.size.width + horizontal_margin_adjust) + 'px', 'margin-bottom': -(ui_obj.size.height + vertical_margin_adjust) + 'px'});
          }
       });
 
@@ -1063,7 +1070,7 @@ function process_labels (question_html, label_start_tags, find_wrapped_b) {
    var label_next_tags  = ['[l]', '[x]]',
                            '<div{^>}#?class\\s#=\\s#"{^"}#?qwizzled_label'];
    var feedback_start_tags = ['[f*]', '[fx]'];
-   var feedback_next_tags = ['[f*]', '[fx]', '[hint]', '[x]'];
+   var feedback_next_tags = ['[l]', '[f*]', '[fx]', '[hint]', '[x]'];
 
    // Look for labels in question html.  Do for each [l] found.
    var any_new_html_b = false;
@@ -1124,9 +1131,8 @@ function process_labels (question_html, label_start_tags, find_wrapped_b) {
                style     = ' style="display: inline;"';
             }
             new_label_html = '<div class="qwizzled_label' + highlight + '"' + style + '>' + new_label_html + '</div>'; 
-            new_question_html = new_question_html.replace (label_html, new_label_html);
 
-            // Now check feedback.
+            // Now check feedback for this label.
             var fc_b = false;
             var fx_b = false;
             var f_len = feedback_htmls.length;
@@ -1152,7 +1158,8 @@ function process_labels (question_html, label_start_tags, find_wrapped_b) {
             if (debug[0]) {
                console.log ('[process_labels] feedback_htmls:', feedback_htmls.join (''));
             }
-            new_question_html += feedback_htmls.join ('');
+            new_label_html += feedback_htmls.join ('');
+            new_question_html = new_question_html.replace (label_html, new_label_html);
          }
       }
 
@@ -1233,16 +1240,6 @@ function check_qwiz_tag_pairs (htm) {
    } else {
       alert ('Did not find [qwiz]...[/qwiz] shortcodes.');
    }
-}
-
-
-// -----------------------------------------------------------------------------
-// Wrap image in div so can position targets relative to image.
-function wrap_image (image_obj) {
-
-   // Transfer attributes from image to div.  ? Delete from image?
-
-   // Add association id to div.
 }
 
 
