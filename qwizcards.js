@@ -31,7 +31,7 @@ var qcardf = function () {
 var qname = 'qcard_';
 
 // Debug settings.
-debug = [];
+var debug = [];
 debug.push (false);    // 0 - general.
 debug.push (false);    // 1 - process_card_input ().
 debug.push (false);    // 2 - answer (card back) html.

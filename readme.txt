@@ -1,8 +1,8 @@
 === Qwiz - online quizzes and flashcards ===
 Contributors: dan_kirshner
-Tags: interactive quiz, quiz, flashcards
+Tags: interactive quiz, quiz, flashcards, labeled diagrams
 Tested up to: 3.9.1
-Stable tag: 1.1b04
+Stable tag: 1.1b05
 License: GPL2
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
@@ -19,6 +19,14 @@ Activate the plugin through the 'Plugins' menu in WordPress
 == Screenshots ==
 
 == Changelog ==
+
+= 1.1b05=
+2014-09-12
+While editing, mark bottom border of labeled-diagram question.
+Cancel fadeout of instruction if new click.
+In labeled diagrams, ignore max-width of images set by WordPress.
+Make WordPress consistent in use of standard box-sizing model.
+Position editing menu fixed.
 
 = 1.1b01-4 =
 2014-09-07

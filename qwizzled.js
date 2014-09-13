@@ -21,7 +21,7 @@ var qwizzledf = function () {
 var qname = 'qwizzled';
 
 // Debug settings.
-debug = [];
+var debug = [];
 debug.push (false);    // 0 - general.
 
 $ = jQuery;
@@ -206,11 +206,11 @@ function add_style () {
    s.push ('<style type="text/css">\n');
 
    s.push ('#qwizzled_main_menu {');
-   s.push ('   position:        absolute;');
+   s.push ('   position:        fixed;');
    s.push ('   width:           19rem;');
    s.push ('   z-index:         5;');
-   s.push ('   left:            400px;');
-   s.push ('   top:             100px;');
+   s.push ('   left:            750px;');
+   s.push ('   top:             300px;');
    s.push ('   border:          2px solid rgba(79, 112, 153, 1);');
    s.push ('}');
 
@@ -289,6 +289,21 @@ function add_style_edit_area () {
    var s = [];
 
    s.push ('<style type="text/css">\n');
+
+   s.push ('div.qwizzled_question {');
+   s.push ('   position:        relative;');
+   s.push ('   border:          1px dotted blue;');
+   s.push ('}');
+
+   s.push ('div.qwizzled_question_bottom_border_title {');
+   s.push ('   position:        absolute;');
+   s.push ('   width:           100%;');
+   s.push ('   height:          10px;');
+   s.push ('   left:            0px;');
+   s.push ('   bottom:          -7px;');
+   s.push ('   cursor:          help;');
+   s.push ('   font-size:       0.1px;');
+   s.push ('}');
 
    s.push ('div.qwizzled_canvas {');
    s.push ('   position:        relative;');
@@ -406,6 +421,7 @@ this.create_target2 = function () {
    // If any labels not yet wrapped in an inline-block span element, do so.
    var qwiz_matches = htm.match (/\[qwiz[\s\S]*?\[\/qwiz\]/gm);
    if (! qwiz_matches) {
+      report_errors ();
       return;
    }
    n_qwizzes = qwiz_matches.length;
@@ -471,6 +487,15 @@ this.create_target2 = function () {
       //edit_area.find ('div.qwizzled_target').html ('');
    }
 
+   // For all images within qwizzled divs, ignore max-width set by WordPress.
+   // User will have to resize smaller.  Take care of padding and border, too.
+   var qwizzled_imgs_obj = edit_area.find ('div.qwizzled_question img');
+   if (debug[0]) {
+      console.log ('[create_target2] qwizzled_imgs_obj: ', qwizzled_imgs_obj);
+      console.log ('                 length: ', qwizzled_imgs_obj.length);
+   }
+   qwizzled_imgs_obj.css ({'max-width': 'none', padding: '0px', border: '0px'});
+
    // Find any images inside labels -- set margins to zero.
    var label_imgs_obj = edit_area.find ('*.qwizzled_label img');
    if (debug[0]) {
@@ -493,7 +518,10 @@ this.create_target2 = function () {
                           +    'label'
                           + '</span>'
                           + '<img src="' + qwizzled_plugin.url + 'images/icon_exit_bw.jpg" class="click_on_a_label_exit" onclick="qwizzled.exit_click_on_a_label ()" />';
-   qwizzled_main_menu_feedback.html (click_on_a_label).show ();
+
+   // First cancel any previous action (fadeout of "You can position..."
+   // instruction).
+   qwizzled_main_menu_feedback.stop ().html (click_on_a_label).show ();
 
    // Hide spinner -- we're ready.
    $ ('#create_target_spinner').css ('visibility', 'hidden');
@@ -693,7 +721,7 @@ this.target_text_selected = function (e) {
          // TinyMCE has style that adds padding to image, but this isn't present
          // in page display.  Add style to set padding to zero.  Editor also puts
          // border around image.  Nix that, too.
-         img_attributes = add_attr_value ('style', 'padding: 0px; border: none; max-width: 100%;', img_attributes);
+         //img_attributes = add_attr_value ('style', 'padding: 0px; border: none; ', img_attributes);
 
          // Take away alignleft, aligncenter, etc.  Messes things up when
          // display page.
@@ -1032,9 +1060,14 @@ function process_questions (qwiz_html, question_start_tags, find_wrapped_b) {
       if (new_new_question_html) {
          any_new_html_b = true;
 
-         // Add wrapper for question only if not wrapped already.
+         // Add wrapper for question only if not wrapped already.  Include div
+         // at bottom for title for div bottom border.
          if (! find_wrapped_b) {
-            new_new_question_html = '<div class="qwizzled_question">' + new_new_question_html + '</div>';
+            new_new_question_html =   '<div class="qwizzled_question">'
+                                    +    new_new_question_html 
+                                    +    '<div class="qwizzled_question_bottom_border_title" title="End of labeled-diagram question">'
+                                    +    '</div>'
+                                    + '</div>';
          }
          new_qwiz_html = new_qwiz_html.replace (question_html, new_new_question_html);
          if (debug[0]) {

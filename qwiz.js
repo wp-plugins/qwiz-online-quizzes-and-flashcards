@@ -1,4 +1,8 @@
-/* Version 1.1b03 2014-09-07
+/*
+ * Version 1.1b05 2014-09-12
+ * Make WordPress consistent in use of standard box-sizing model.
+ *
+ * Version 1.1b03 2014-09-07
  * Labeled-diagrams capability, including interactive editing.
  * Chrome on Mac: fallback for Flashcards; others: prevent sub/sup showing 
  * through.
@@ -29,7 +33,7 @@ var qwizf = function () {
 var qname = 'qwiz_';
 
 // Debug settings.
-debug = [];
+var debug = [];
 debug.push (false);    // 0 - general.
 debug.push (false);    // 1 - radio/choices html.
 debug.push (false);    // 2 - feedback html.
@@ -168,8 +172,8 @@ function process_html () {
             // Replace content html.
             $ (this).html (new_htm);
 
-            // If any labeled diagrams in this content div, set up drag and
-            // drop.
+            // If any labeled diagrams in this content div, do prep: targets
+            // no longer draggable, targets, size image wrappers.
             if (qwizzled_b) {
                init_qwizzled ($ (this));
             }
@@ -522,6 +526,8 @@ function add_style () {
    s.push ('   margin-right:     -124px;');
    s.push ('   margin-bottom:   -32px;');
    s.push ('   position:        absolute;');
+   s.push ('   box-sizing:      content-box;');
+   s.push ('   -moz-box-sizing: content-box;');
    s.push ('}');
 
    s.push ('span.qwizzled_target {');
@@ -546,6 +552,10 @@ function add_style () {
 
    s.push ('.qwizzled_label a {');
    s.push ('   cursor:          move;');
+   s.push ('}');
+
+   s.push ('div.qwizzled_question_bottom_border_title {');
+   s.push ('   display:         none;');
    s.push ('}');
 
    // Summary also hidden.
@@ -724,16 +734,22 @@ function process_qwiz_pair (htm) {
       var exit_html = question_html.match (/\[x\]([\s\S]*)/m);
       if (exit_html) {
          exit_html = exit_html[1];
+
+         // Error if a [q] tag inside exit text.
+         if (exit_html.search (/\[q[ \]]|<div class="qwizzled_question">/) != -1) {
+            errmsgs.push ('[x] (exit text) must be last');
+         } else {
+            question_html = question_html.replace (/\[x\][\s\S]*/m, '');
+         }
       } else {
          exit_html = '';
       }
-      question_html = question_html.replace (/\[x\][\s\S]*/m, '');
 
       // Split into individual items.  Include search for qwizzled_question
       // divs.
       var questions_html = question_html.split (/\[q [^\]]*\]|\[q\]|<div class="qwizzled_question">/);
       if (debug[0]) {
-         console.log ('[process_qwiz_pair] questions_html:', questions_html);
+         console.log ('[process_qwiz_pair] questions_html:', questions_html.join ('//\n\n'));
       }
 
       // Create a div for each.
