@@ -1,5 +1,5 @@
 /*
- * Version 1.11 2014-09-14
+ * Version 2.00 2014-09-14
  * "Took n tries" feedback on labeled diagram.
  * Border around labels; labels bulleted.
  *

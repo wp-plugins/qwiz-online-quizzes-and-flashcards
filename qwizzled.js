@@ -1,5 +1,5 @@
 /*
- * Version 1.11 2014-09-14
+ * Version 2.00 2014-09-14
  * Position targets where click.
  * Error message if no questions when click menu.
  * Raise menu z-index (TinyMCE 4.0).
