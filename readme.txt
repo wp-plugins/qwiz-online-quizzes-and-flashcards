@@ -1,8 +1,8 @@
 === Qwiz - online quizzes and flashcards ===
 Contributors: dan_kirshner
 Tags: interactive quiz, quiz, flashcards, labeled diagrams
-Tested up to: 3.9.1
-Stable tag: 1.1b05
+Tested up to: 4.0
+Stable tag: 1.1b06
 License: GPL2
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
@@ -20,7 +20,15 @@ Activate the plugin through the 'Plugins' menu in WordPress
 
 == Changelog ==
 
-= 1.1b05=
+= 1.1b06 =
+2014-09-14
+Position targets where click.
+Error message if no questions when click menu.
+Raise menu z-index (TinyMCE 4.0).
+"Took n tries" feedback on labeled diagram.
+Border around labels; labels bulleted.
+
+= 1.1b05 =
 2014-09-12
 While editing, mark bottom border of labeled-diagram question.
 Cancel fadeout of instruction if new click.

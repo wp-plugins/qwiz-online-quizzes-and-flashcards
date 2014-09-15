@@ -1,4 +1,9 @@
 /*
+ * Version 1.1b06 2014-09-14
+ * Position targets where click.
+ * Error message if no questions when click menu.
+ * Raise menu z-index (TinyMCE 4.0).
+ *
  * Version 1.1b03 2014-09-07
  * Labeled-diagrams capability, including interactive editing.
  */
@@ -51,7 +56,7 @@ var assoc_id;
 var bwidth  = '2px';
 var bstyles = ['dotted', 'dashed', 'solid'];
 var bcolors = ['red', 'magenta', 'blue', 'aqua'];
-   
+
 horizontal_margin_adjust = 4;
 vertical_margin_adjust   = 4;
 
@@ -80,7 +85,7 @@ this.show_main_menu = function (ed, qwiz_button_b) {
       // If auto-started (not Q button press) in qwiz_tinymce.js, see if [qwiz]
       // with [l] on page.  Show menu only if it is.
       if (! qwiz_button_b) {
-         var contains_obj = edit_area.find ('*:contains("[qwiz]")');
+         var contains_obj = edit_area.find ('*:contains("[qwiz")');
          if (debug[0]) {
             console.log ('[show_main_menu] contains_obj:', contains_obj);
          }
@@ -208,7 +213,9 @@ function add_style () {
    s.push ('#qwizzled_main_menu {');
    s.push ('   position:        fixed;');
    s.push ('   width:           19rem;');
-   s.push ('   z-index:         5;');
+
+   // Want to beat TinyMCE toolbars at 999.
+   s.push ('   z-index:         1000;');
    s.push ('   left:            750px;');
    s.push ('   top:             300px;');
    s.push ('   border:          2px solid rgba(79, 112, 153, 1);');
@@ -253,6 +260,7 @@ function add_style () {
 
    s.push ('.qwizzled_main_menu_item:hover {');
    s.push ('   border:          1px solid gray;');
+   s.push ('   cursor:          pointer;');
    s.push ('}');
 
    s.push ('.qwizzled_main_menu_item:active {');
@@ -430,6 +438,7 @@ this.create_target2 = function () {
    }
 
    // Loop over qwiz-tag pairs, and over [q] questions within pair.
+   var no_q_code_b = true;
    var any_labeled_diagram_questions_b = false;
    var any_new_html_b = false;
    for (i_qwiz=0; i_qwiz<n_qwizzes; i_qwiz++) {
@@ -461,11 +470,22 @@ this.create_target2 = function () {
 
       if (any_wrapped_question_has_labels_b || any_notwrapped_question_has_labels_b) {
          any_labeled_diagram_questions_b = true;
+      } else {
+
+         // See if reason for no labeled diagrams is no [q] shortcodes.
+         if (qwiz_matches[i_qwiz].search (/<div class="qwizzled_question|\[q[ \]]/m) != -1) {
+            no_q_code_b = false;
+         }
       }
    }
 
    if (! any_labeled_diagram_questions_b) {
-      errmsgs.push ('Did not find any labels [l] within [qwiz]...[/qwiz] shortcode pairs');
+
+      if (no_q_code_b) {
+         errmsgs.push ('Did not find any questions [q] within [qwiz]...[/qwiz] shortcode pairs');
+      } else {
+         errmsgs.push ('Did not find any labels [l] within [qwiz]...[/qwiz] shortcode pairs');
+      }
    }
 
    if (any_new_html_b) {
@@ -601,7 +621,7 @@ this.label_clicked = function (local_el_label_div) {
    if (create_target_b) {
 
       // Prompt to select target.
-      qwizzled_main_menu_feedback.html ('Select text or image that will be target "drop zone" for this label').show ();
+      qwizzled_main_menu_feedback.html ('Select the text or click on the image (you may have to click twice) where you want the target "drop zone" for this label').show ();
 
       // Wait for selection.
       waiting_for_target_select_b = true;
@@ -619,11 +639,15 @@ this.label_clicked = function (local_el_label_div) {
 this.target_text_selected = function (e) {
 
    var selected_text = tinymce_ed.selection.getContent ();
+   var node = tinymce_ed.selection.getNode ();
+   var node_obj = $ (node);
+   var node_obj_offset = node_obj.offset ();
+   var target_left = e.clientX - node_obj_offset.left;
+   var target_top  = e.clientY - node_obj_offset.top;
    if (debug[0]) {
       console.log ('[target_text_selected] selected_text: ' + selected_text);
-      var node = tinymce_ed.selection.getNode ();
-      var node_obj = $ (node);
-      console.log ('[target_text_selected] node_obj: ' + node_obj);
+      console.log ('[target_text_selected] node_obj:', node_obj);
+      console.log ('target_left:', target_left, 'target_top:', target_top);
    }
 
    // Ignore if just a click.
@@ -772,7 +796,7 @@ this.target_text_selected = function (e) {
                console.log ('inserted wrapper before p_obj:', p_obj);
                console.log ('p_obj.html ():', p_obj.html ());
             }
-            
+
          } else {
             tinymce_ed.selection.setContent (new_txt);
          }
@@ -780,7 +804,7 @@ this.target_text_selected = function (e) {
          // Use jQuery to get wrapper object.
          img_wrapper = edit_area.find ('#qwizzled_img_wrapper-' + assoc_id);
 
-         // If image link, check that it's now empty.  If parent is <p>, 
+         // If image link, check that it's now empty.  If parent is <p>,
          // see if just image link and "data-mce-bogus" element.  If so, delete
          // paragraph.
          if (img_href) {
@@ -819,10 +843,17 @@ this.target_text_selected = function (e) {
          }
       }
 
-      // Add target to span.  Position the target near the top left.
-      // Target height and width set in add_style_edit_area ().  Give it border
-      // to match label border.
-      var style = 'left: 40px; top: 50px; ';
+      // Add target to span.  Position the target where clicked.
+      // clientX and Y are relative to document -- body in iframe in this case.
+      // node_obj is our image, with jQuery offset () also relative to body in
+      // iframe.  So subtraction should give us click position in image.
+      if (debug[0]) {
+         console.log ('[target_text_selected] e.clientX:', e.clientX, ', e.clientY:', e.clientY);
+      }
+      var style = 'left: ' + target_left + 'px; top: ' + target_top + 'px; ';
+
+      // Target height and width set in add_style_edit_area ().  Give target
+      // border to match label border.
       if (label_border_style) {
          style += label_border_style;
       } else {
@@ -1052,7 +1083,7 @@ function process_questions (qwiz_html, question_start_tags, find_wrapped_b) {
       }
 
       // Look for not-yet-wrapped labels in this question.  If not followed by
-      // [f*] and [fx], add empty (= canned response) shortcodes after wrap.
+      // [f*] and [fx], add shortcodes and canned responses after wrap.
       label_start_tags = ['[l]'];
       var r = process_labels (new_question_html, label_start_tags, false);
       var any_notwrapped_labels_b = r.any_labels_b;
@@ -1189,9 +1220,9 @@ function process_labels (question_html, label_start_tags, find_wrapped_b) {
                feedback_htmls.push (canned_feedback (true));
             }
             if (debug[0]) {
-               console.log ('[process_labels] feedback_htmls:', feedback_htmls.join (''));
+               console.log ('[process_labels] feedback_htmls:', feedback_htmls.join ('\n'));
             }
-            new_label_html += feedback_htmls.join ('');
+            new_label_html += feedback_htmls.join ('\n');
             new_question_html = new_question_html.replace (label_html, new_label_html);
          }
       }
@@ -1226,6 +1257,7 @@ function canned_feedback (correct_b) {
       var i = Math.floor (Math.random () * incorrect.length);
       response = '[fx] ' + incorrect[i] + '&nbsp; Please try again.';
    }
+   response = '<p style="font-weight: bold;">' + response + '</p>';
 
    if (debug[0]) {
       console.log ('[canned_feedback] response:', response);

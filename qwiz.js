@@ -1,4 +1,8 @@
 /*
+ * Version 1.1b06 2014-09-14
+ * "Took n tries" feedback on labeled diagram.
+ * Border around labels; labels bulleted.
+ *
  * Version 1.1b05 2014-09-12
  * Make WordPress consistent in use of standard box-sizing model.
  *
@@ -78,10 +82,6 @@ $ (document).ready (function () {
    }
 
    if (n_qwizzes) {
-
-      // Hide feedback.
-      $ ('.qwiz-feedback').hide ();
-
       for (var i_qwiz=0; i_qwiz<n_qwizzes; i_qwiz++) {
 
          // If no intro for a quiz or single-question quiz, move immediately to
@@ -275,6 +275,8 @@ this.label_dropped = function (target_obj, label_obj) {
       console.log ('[label_dropped] question_selector:', question_selector);
    }
 
+   // Increment number of tries.
+   qwizdata[i_qwiz].n_label_attempts++;
    // Hide previous feedback, if any.  
    $ ('[id^=qwiz' + i_qwiz + '-q' + i_question + '-a]').hide ();
 
@@ -292,10 +294,9 @@ this.label_dropped = function (target_obj, label_obj) {
       label_obj.find ('.qwizzled_highlight_label').css ('cursor', 'default');
 
       // Do-it-myself snap to target.  Make copy of label into child of the
-      // target.  First make original label invisible (don't modify label list
-      // positioning/spacing).
+      // target.  Gray-out original label, move to original position.
       var label_copy_obj = label_obj.clone (true);
-      label_obj.css ('visibility', 'hidden');
+      label_obj.css ({color: 'lightgray', left: '0px', top: '0px'});
       label_copy_obj.appendTo (target_obj);
       label_copy_obj.css ({position: 'absolute', left: '4px', top: '', bottom:  '0px'});
 
@@ -309,9 +310,19 @@ this.label_dropped = function (target_obj, label_obj) {
       qwizdata[i_qwiz].n_labels_correct++;
       if (qwizdata[i_qwiz].n_labels_correct == qwizdata[i_qwiz].n_labels) {
 
-         // Done.  Exit text if this is a single-question qwiz and there is exit
-         // text.  Mark correct, show next button.
+         // Done with labeled diagram.  Show summary, final feedback DKTMP.
+         var n_tries = qwizdata[i_qwiz].n_label_attempts;
+         var n_labels = qwizdata[i_qwiz].n_labels;
+         var qwizzled_summary;
+         if (n_tries == n_labels) {
+            qwizzled_summary = 'You placed all of the items correctly on the first try!';
+         } else {
+            qwizzled_summary = 'It took you ' + number_to_word (n_tries) + ' ' + plural ('try', n_tries) + ' to place ' + plural ('this', n_labels) + ' ' + plural ('item', n_labels) + ' correctly.';
+         }
+         $ ('#qwiz' + i_qwiz + '-q' + i_question + '-ff').html (qwizzled_summary).show ();
 
+         // Exit text if this is a single-question qwiz and there is exit
+         // text.  Mark correct, show next button.
          qwizdata[i_qwiz].n_correct++;
          if (qwizdata[i_qwiz].finished_diagram_div) {
 
@@ -456,6 +467,10 @@ function add_style () {
    s.push ('   margin-bottom:   0.5em;');
    s.push ('}');
 
+   s.push ('.qwiz-feedback {');
+   s.push ('   display:         none;');
+   s.push ('}');
+
    s.push ('.qwiz-feedback p {');
    s.push ('   margin-bottom:   0.3em;');
    s.push ('}');
@@ -475,6 +490,7 @@ function add_style () {
    s.push ('td.qwizzled_canvas {');
    s.push ('   width:           75%;');
    s.push ('   border:          none;');
+   s.push ('   padding:         0px;');
    //s.push ('   border-right:    1px solid black;');
    s.push ('}');
 
@@ -484,6 +500,13 @@ function add_style () {
    s.push ('   min-width:       125px;');
    s.push ('   vertical-align:  middle;');
    s.push ('   border:          none;');
+   s.push ('   padding:         0px;');
+   s.push ('}');
+
+   // Box around labels.
+   s.push ('div.qwizzled_labels_border {');
+   s.push ('   border:          1px solid black;');
+   s.push ('   padding:         3px;');
    s.push ('}');
 
    s.push ('p.qwizzled_label_head {');
@@ -494,9 +517,15 @@ function add_style () {
    s.push ('   margin-bottom:   0.5rem;');
    s.push ('}');
 
+   // Bulleted labels indent.
+   s.push ('td.qwizzled_labels li {');
+   s.push ('   margin-left:     -1.5rem;');
+   s.push ('}');
+
    // Labeled-diagram labels feedback cell.
    s.push ('td.qwizzled_feedback {');
    s.push ('   border:          none;');
+   s.push ('   padding:         0px;');
    //s.push ('   border-top:      1px solid black;');
    s.push ('}');
 
@@ -1094,6 +1123,7 @@ function display_question (i_qwiz, i_question) {
    // If a labeled diagram, reset progress bar.
    if (qwizq_obj.hasClass ('qwizzled')) {
       qwizdata[i_qwiz].n_labels_correct = 0;
+      qwizdata[i_qwiz].n_label_attempts = 0;
       qwizdata[i_qwiz].n_labels = qwizq_obj.find ('div.qwizzled_label').length;
       display_qwizzled_progress (i_qwiz);
    } else {
@@ -1310,7 +1340,7 @@ function process_qwizzled (i_qwiz, i_question, question_htm, opening_tags) {
    }
 
    // Add on label cell and feedback cell.
-   table_html +=      '<td class="qwizzled_labels">Q-LABELS-Q</td>'
+   table_html +=      '<td class="qwizzled_labels"><div class="qwizzled_labels_border">Q-LABELS-Q</div></td>'
                  + '</tr>'
                  + '<tr>'
                  +    '<td class="qwizzled_feedback" colspan="2">QWIZZLED-FEEDBACK-Q</td>'
@@ -1340,9 +1370,9 @@ function process_qwizzled (i_qwiz, i_question, question_htm, opening_tags) {
       }
       var label_div = find_matching_block (remaining_htm.substr (label_div_pos));
 
-      // Number the labels with id.
-      var new_label_div = '<div id="label-qwiz' + i_qwiz + '-q' + i_question + '-a' + i_label + '"'
-                          + label_div.substr (4);
+      // Number the labels with id.  Make bulleted list.
+      var new_label_div = '<li><div id="label-qwiz' + i_qwiz + '-q' + i_question + '-a' + i_label + '"'
+                          + label_div.substr (4) + '</li>';
       label_divs.push (new_label_div);
       remaining_htm = remaining_htm.replace (label_div, '');
       i_label++;
@@ -1355,7 +1385,7 @@ function process_qwizzled (i_qwiz, i_question, question_htm, opening_tags) {
 
    // Put labels in labels area.
    var label_head = '<p class="qwizzled_label_head">Move each item to its correct <span class="qwizzled_target_border">place</span></p>';
-   new_htm = new_htm.replace ('Q-LABELS-Q', label_head + label_divs.join ('\n'));
+   new_htm = new_htm.replace ('Q-LABELS-Q', label_head + '<ul>' + label_divs.join ('\n') + '</ul>');
 
    // ..........................................................................
    // Process feedback -- [f*] (label correctly placed) and [fx] (label not
@@ -1409,6 +1439,9 @@ function process_qwizzled (i_qwiz, i_question, question_htm, opening_tags) {
       errmsgs.push ('Number of feedback items (' + n_feedback_items + ') does not match number of labels (' + n_labels + '): qwiz ' + (1 + i_qwiz) + ', question ' + (1 + i_question) + ' labeled diagram');
    }
 
+   // Add final feedback div.
+   var htm = '<div class="qwiz-feedback" id="qwiz' + i_qwiz + '-q' + i_question + '-ff"></div>\n';
+   feedback_divs.push (htm);
 
    new_htm = new_htm.replace ('QWIZZLED-FEEDBACK-Q', feedback_divs.join (''));
 
