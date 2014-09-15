@@ -1,5 +1,5 @@
 /*
- * Version 1.1b03 2014-09-07
+ * Version 1.10b03 2014-09-07
  * Labeled-diagrams capability, including interactive editing.
  * Chrome on Mac: fallback for Flashcards; others: prevent sub/sup showing 
  * through.
