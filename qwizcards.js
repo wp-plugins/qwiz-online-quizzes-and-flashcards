@@ -124,12 +124,12 @@ function process_html () {
    });
 
    // Delete paragraphs and headers that contain only [!] ... [/!] comments
-   // and whitespace.  Two "contains": both [!] and [/!] must be present.
+   // and whitespace/tags outside.
    $ ('p:contains("[!]"), :header:contains("[!]")').each (function () {
 
       // See if only whitespace outside [!] ... [/!].
       var comment_htm = $ (this).html ();
-      if (comment_htm.search (/\s*\[!\][\s\S]*\[\/!\]\s*/m) == 0) {
+      if (comment_htm.search (/\s*(<.+?>)*\s*\[!\][\s\S]*\[\/!\]\s*(<.+?>)*\s*/m) == 0) {
          $ (this).remove ();
       }
    });

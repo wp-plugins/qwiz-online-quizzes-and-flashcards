@@ -1,4 +1,8 @@
 /*
+ * Version 2.01 2014-09-16
+ * Fix highlighting of choices when no intro.
+ * If question with only one choice, "Show the answer" button, not radio. 
+ *
  * Version 2.00 2014-09-14
  * "Took n tries" feedback on labeled diagram.
  * Border around labels; labels bulleted.
@@ -107,12 +111,12 @@ function process_html () {
    });
 
    // Delete paragraphs and headers that contain only [!] ... [/!] comments
-   // and whitespace.
+   // and whitespace/tags outside.
    $ ('p:contains("[!]"), :header:contains("[!]")').each (function () {
 
       // See if only whitespace outside [!] ... [/!].
       var comment_htm = $ (this).html ();
-      if (comment_htm.search (/\s*\[!\][\s\S]*\[\/!\]\s*/m) == 0) {
+      if (comment_htm.search (/\s*(<.+?>)*\s*\[!\][\s\S]*\[\/!\]\s*(<.+?>)*\s*/m) == 0) {
          $ (this).remove ();
       }
    });
@@ -460,6 +464,11 @@ function add_style () {
    s.push ('   position:        relative;');
    s.push ('}');
 
+   s.push ('.qwiz-choice:hover {');
+   s.push ('   cursor:          pointer;');
+   s.push ('   color:           #045FB4;');
+   s.push ('}');
+
    s.push ('.qwiz-choices p {');
    s.push ('   padding-left:    1.6em;');
    s.push ('   text-indent:     -1.6em;');
@@ -518,8 +527,13 @@ function add_style () {
    s.push ('}');
 
    // Bulleted labels indent.
+   s.push ('td.qwizzled_labels ul {');
+   s.push ('   padding:         0px;');
+   s.push ('}');
+
    s.push ('td.qwizzled_labels li {');
-   s.push ('   margin-left:     -1.5rem;');
+   s.push ('   margin-left:     1rem;');
+   s.push ('   margin:          0 0 0 1rem;');
    s.push ('}');
 
    // Labeled-diagram labels feedback cell.
@@ -723,12 +737,6 @@ function process_qwiz_pair (htm) {
       if (debug[0]) {
          console.log ('[process_qwiz_pair] n_questions: ', n_questions);
       }
-
-      // Topic or topics each question.
-      qwizdata[i_qwiz].question_topics = new Array (n_questions);
-
-      // List of all topics.
-      qwizdata[i_qwiz].topics = [];
 
       process_topics (i_qwiz, question_tags);
 
@@ -956,6 +964,12 @@ function create_qwiz_divs (i_qwiz, qwiz_tag, htm, exit_html) {
 // -----------------------------------------------------------------------------
 function process_topics (i_qwiz, question_tags) {
 
+   // Topic or topics each question, if any.
+   qwizdata[i_qwiz].question_topics = new Array (n_questions);
+
+   // List of all topics.
+   qwizdata[i_qwiz].topics = [];
+
    // Loop over tags.
    var n_questions_w_topics = 0;
    var n_questions = question_tags.length;
@@ -963,10 +977,10 @@ function process_topics (i_qwiz, question_tags) {
       var question_tag = question_tags[i_question];
 
       // See if any attribute.
-      var matches = question_tag.match (/\[q +([^\]]*)\]/);
-      if (matches && matches[1].substr (0, 7) == 'topic="') {
-         var attribute = matches[1].substr (7);
-         var matches = attribute.match (/([^"]*)"/);
+      var matches = question_tag.match (/\[q\s+([^\]]*)\]/);
+      if (matches && matches[1].substr (0, 5) == 'topic') {
+         var attribute = matches[1].substr (5);
+         var matches = attribute.match (/"([^"]*)"/);
          if (matches) {
             var question_topics = trim (matches[1]);
             if (debug[4]) {
@@ -986,6 +1000,10 @@ function process_topics (i_qwiz, question_tags) {
                   qwizdata[i_qwiz].topics.push (topic);
                }
             }
+         } else {
+
+            // Have '[q topic', say, but didn't find double quotes.
+            errmsgs.push ('Did not find topic within double quotes for qwiz ' + i_qwiz + ', question ' + i_question);
          }
       }
    }
@@ -1198,14 +1216,23 @@ function process_question (i_qwiz, i_question, htm, opening_tags) {
       var choice_html = parse_html_block (remaining_htm, qtags, qnext_tags);
       remaining_htm = remaining_htm.substr (choice_html.length);
 
-      // Replace [c] or [c*] with radio button.
-      var radio_button_html = create_radio_button_html (i_qwiz, i_question, i_choice, choice_tags[i_choice]);
-      n_correct += radio_button_html[0];
-      choice_html = choice_html.replace (/\[c\*{0,1}\]/m, radio_button_html[1]);
+      if (n_choices > 1) {
 
-      // Assemble with span to make choice clickable and highlight on mouseover.
-      new_htm += '<span class="choices-qwiz' + i_qwiz + '-q' + i_question + '" onclick="' + qname + '.process_choice (\'qwiz' + i_qwiz + '-q' + i_question + '-a' + i_choice + '\')">\n'
-                 + choice_html + '</span>';
+         // Replace [c] or [c*] with radio button.
+         var radio_button_html = create_radio_button_html (i_qwiz, i_question, i_choice, choice_tags[i_choice]);
+         n_correct += radio_button_html[0];
+         choice_html = choice_html.replace (/\[c\*{0,1}\]/m, radio_button_html[1]);
+
+         // Assemble with span to make choice clickable and highlight on mouseover.
+         new_htm += '<span class="qwiz-choice choice choices-qwiz' + i_qwiz + '-q' + i_question + '" onclick="' + qname + '.process_choice (\'qwiz' + i_qwiz + '-q' + i_question + '-a' + i_choice + '\')">\n'
+                    + choice_html + '</span>';
+      } else {
+
+         // Only one choice - do as regular button rather than radio.
+         choice_html = choice_html.replace (/\[c\*{0,1}\]/m, '');
+         n_correct = 1;
+         new_htm += '<button class="qbutton" onclick="' + qname + '.process_choice (\'qwiz' + i_qwiz + '-q' + i_question + '-a' + i_choice + '\')">' + choice_html + '</button>\n'
+      }
    }
 
    // Close span for default indented paragraph style for choices.
@@ -1843,21 +1870,26 @@ this.process_choice = function (feedback_id) {
       $ ('#' + feedback_id).show ();
 
       // In case clicked on text rather than radio, show radio as clicked.
+      // If one-choice question, substituted button for radio, so skip.
       // For some reason, jQuery method not working!
       //$ ('#radio-' + feedback_id).attr ('checked', true);
+      var correct_f = true;
       var elm = document.getElementById ('radio-' + feedback_id);
-      elm.checked = true;
+      if (elm) {
+         elm.checked = true;
 
-      // Disable further radio clicks for this question.
-      $ ('input[name=' + qwizq_id + ']').attr ('disabled', true);
+         // Disable further radio clicks for this question.
+         $ ('input[name=' + qwizq_id + ']').attr ('disabled', true);
 
-      // Also, don't show pointer cursor on paragraphs, and turn off highlighting.
-      $ ('.choices-' + qwizq_id).on('mouseover', function () {
-         $ (this).css ({'cursor': 'text', 'color': 'black'})
-      });
+         // Also, don't show pointer cursor on paragraphs, and turn off highlighting.
+         $ ('.choices-' + qwizq_id).on('mouseover', function () {
+            $ (this).css ({'cursor': 'text', 'color': 'black'})
+         });
+
+         correct_f = $ ('#radio-' + feedback_id).data ('correct');
+      }
 
       // Record statistics.
-      var correct_f = $ ('#radio-' + feedback_id).data ('correct');
       if (correct_f) {
          qwizdata[i_qwiz].n_correct++;
 

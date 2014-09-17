@@ -1,4 +1,7 @@
 /*
+ * Version 2.01 2014-09-16
+ * Modify menu header for Safari on Mac.
+ *
  * Version 2.00 2014-09-14
  * Position targets where click.
  * Error message if no questions when click menu.
@@ -136,7 +139,9 @@ this.show_main_menu = function (ed, qwiz_button_b) {
    mm.push ('<div id="qwizzled_main_menu">');
    mm.push ('   <div id="qwizzled_main_menu_header">');
    mm.push ('      <img src="' + qwizzled_plugin.url + 'images/icon_qwiz.png" class="icon_qwiz" />');
-   mm.push ('      &emsp;&emsp;Qwiz - labeled diagram editing menu');
+   mm.push ('      <div id="qwizzled_main_menu_title">');
+   mm.push ('         Qwiz - labeled diagram editing menu');
+   mm.push ('      </div>');
    mm.push ('      <img src="' + qwizzled_plugin.url + 'images/icon_exit_red.png" class="icon_main_menu_exit" onclick="qwizzled.exit_main_menu ()" />');
    mm.push ('   </div>');
    mm.push ('   <div id="qwizzled_main_menu_items">');
@@ -227,7 +232,7 @@ function add_style () {
    s.push ('   color:           white;');
    s.push ('   background:      rgba(79, 112, 153, 1);');
    s.push ('   font-weight:     bold;');
-   s.push ('   vertical-align:  40%;');
+   //s.push ('   vertical-align:  40%;');
    s.push ('   cursor:          move;');
    s.push ('}');
 
@@ -235,6 +240,12 @@ function add_style () {
    s.push ('   position:        absolute;');
    s.push ('   background:      white;');
    s.push ('   border:          none;');
+   s.push ('}');
+
+   s.push ('#qwizzled_main_menu_title {');
+   s.push ('   position:        absolute;');
+   s.push ('   left:            24px;');
+   s.push ('   top:             0px;');
    s.push ('}');
 
    s.push ('.icon_main_menu_exit {');

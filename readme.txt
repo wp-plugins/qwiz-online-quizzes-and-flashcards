@@ -2,7 +2,7 @@
 Contributors: dan_kirshner
 Tags: interactive quiz, quiz, flashcards, labeled diagrams
 Tested up to: 4.0
-Stable tag: 2.00
+Stable tag: 2.01
 License: GPL2
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
@@ -19,6 +19,12 @@ Activate the plugin through the 'Plugins' menu in WordPress
 == Screenshots ==
 
 == Changelog ==
+
+= 2.01 =
+2014-09-16
+Fix highlighting of choices when no intro.
+If question with only one choice, "Show the answer" button, not radio. 
+Modify menu header for Safari on Mac.
 
 = 2.00 =
 2014-09-14
