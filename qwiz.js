@@ -1,4 +1,8 @@
 /*
+ * Version 2.02 2014-09-21
+ * Re-initialize diagrams (to clone of orig) on restart.
+ * Restart button correct in sinqle-question labeled diagram.
+ *
  * Version 2.01 2014-09-16
  * Fix highlighting of choices when no intro.
  * If question with only one choice, "Show the answer" button, not radio. 
@@ -221,6 +225,28 @@ function init_qwizzled (content_obj) {
       } else {
          console.log ('[init_qwizzled] Did not find image width');
       }
+   });
+
+   // Save deep copy of each qwizzled question -- in case restart quiz.
+   for (var i_qwiz=0; i_qwiz<n_qwizzes; i_qwiz++) {
+      if (qwizdata[i_qwiz].qwizzled_b) {
+         qwizdata[i_qwiz].qwizzled = {};
+      }
+   }
+
+   content_obj.find ('div.qwizzled').each (function () {
+
+      // Get qwiz number from id -- id looks like "qwiz0-q0".
+      var id = $ (this).attr ('id');
+      if (debug[0]) {
+         console.log ('[init_qwizzled] id:', id);
+      }
+      var fields = id.split ('-');
+      var i_qwiz     = parseInt (fields[0].substr (4));
+      if (debug[0]) {
+         console.log ('                i_qwiz:', i_qwiz);
+      }
+      qwizdata[i_qwiz].qwizzled[id] = $ (this).clone (true);
    });
 }
 
@@ -915,14 +941,7 @@ function create_qwiz_divs (i_qwiz, qwiz_tag, htm, exit_html) {
 
       // Summary div.  If exit text, replace "[restart]", if there, with restart
       // button html.
-      if (exit_html) {
-         var restart_button_html =
-                             '    <button onclick="' + qname + '.restart_quiz (' + i_qwiz + ')">\n'
-                           + '       Take the quiz again\n'
-                           + '    </button>\n';
-         exit_html = exit_html.replace ('[restart]', restart_button_html);
-      }
-
+      exit_html = create_restart_button (i_qwiz, exit_html);
       bottom_html +=   '<div id="summary-qwiz' + i_qwiz + '" class="summary">\n'
                      + '    <div id="summary_report-qwiz' + i_qwiz + '">'
                      + '    </div>\n'
@@ -933,6 +952,7 @@ function create_qwiz_divs (i_qwiz, qwiz_tag, htm, exit_html) {
       // Single-question quiz.  If labeled diagram, save exit text for feedback
       // area.  If not labeled diagram, don't take any space with progress bar.
       if (qwizdata[i_qwiz].qwizzled_b) {
+         exit_html = create_restart_button (i_qwiz, exit_html);
          qwizdata[i_qwiz].finished_diagram_div
                             =  '<div id="finished_diagram-qwiz' + i_qwiz + '">\n'
                              +    exit_html
@@ -958,6 +978,19 @@ function create_qwiz_divs (i_qwiz, qwiz_tag, htm, exit_html) {
    htm = top_html + progress_div_html + htm + bottom_html;
 
    return htm;
+}
+
+// -----------------------------------------------------------------------------
+function create_restart_button (i_qwiz, exit_html) {
+   if (exit_html) {
+      var restart_button_html =
+                          '    <button onclick="' + qname + '.restart_quiz (' + i_qwiz + ')">\n'
+                        + '       Take the quiz again\n'
+                        + '    </button>\n';
+      exit_html = exit_html.replace ('[restart]', restart_button_html);
+   }
+
+   return exit_html;
 }
 
 
@@ -1039,6 +1072,15 @@ this.restart_quiz = function (i_qwiz) {
 
    qwizdata[i_qwiz].n_correct = 0;
    qwizdata[i_qwiz].n_incorrect = 0;
+
+   // Reset qwizzled divs to original state (cloned in init_qwizzled ()).
+   for (var id in qwizdata[i_qwiz].qwizzled) {
+      $ ('div#' + id).replaceWith (qwizdata[i_qwiz].qwizzled[id]);
+
+      // For reasons beyond me, it's necessary to re-initialize the cloned object.
+      qwizdata[i_qwiz].qwizzled[id] = $ ('div#' + id).clone (true);
+   }
+
 
    for (var i_question=0; i_question<qwizdata[i_qwiz].n_questions; i_question++) {
       var qwizq_id = '#qwiz' + i_qwiz + '-q' + i_question;

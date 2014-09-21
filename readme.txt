@@ -2,7 +2,7 @@
 Contributors: dan_kirshner
 Tags: interactive quiz, quiz, flashcards, labeled diagrams
 Tested up to: 4.0
-Stable tag: 2.01
+Stable tag: 2.02
 License: GPL2
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
@@ -19,6 +19,11 @@ Activate the plugin through the 'Plugins' menu in WordPress
 == Screenshots ==
 
 == Changelog ==
+
+= 2.02 =
+2014-09-21
+Re-initialize diagrams (to clone of orig) on restart.
+Restart button correct in sinqle-question labeled diagram.
 
 = 2.01 =
 2014-09-16
