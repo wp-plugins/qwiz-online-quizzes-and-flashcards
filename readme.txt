@@ -2,7 +2,7 @@
 Contributors: dan_kirshner
 Tags: interactive quiz, quiz, flashcards, labeled diagrams
 Tested up to: 4.0
-Stable tag: 2.02
+Stable tag: 2.03
 License: GPL2
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
@@ -19,6 +19,11 @@ Activate the plugin through the 'Plugins' menu in WordPress
 == Screenshots ==
 
 == Changelog ==
+
+= 2.03 =
+2014-09-26
+Vertical-center labels in targets.
+jquery.ui.touch-punch for phone drag-and-drop.
 
 = 2.02 =
 2014-09-21

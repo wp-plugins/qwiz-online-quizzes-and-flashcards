@@ -1,4 +1,7 @@
 /*
+ * Version 2.03 2014-09-26
+ * Vertical-center labels in targets.
+ *
  * Version 2.02 2014-09-21
  * Re-initialize diagrams (to clone of orig) on restart.
  * Restart button correct in sinqle-question labeled diagram.
@@ -328,7 +331,7 @@ this.label_dropped = function (target_obj, label_obj) {
       var label_copy_obj = label_obj.clone (true);
       label_obj.css ({color: 'lightgray', left: '0px', top: '0px'});
       label_copy_obj.appendTo (target_obj);
-      label_copy_obj.css ({position: 'absolute', left: '4px', top: '', bottom:  '0px'});
+      label_copy_obj.css ({position: 'absolute', left: '4px', top: '50%', transform: 'translateY(-50%)'});
 
       // Target no longer droppable.  Use class with id so catch all siblings
       // (multiple spans of text-target).
