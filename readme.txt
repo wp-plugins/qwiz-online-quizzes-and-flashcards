@@ -2,7 +2,7 @@
 Contributors: dan_kirshner
 Tags: interactive quiz, quiz, flashcards, labeled diagrams
 Tested up to: 4.0
-Stable tag: 2.03
+Stable tag: 2.04
 License: GPL2
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
@@ -19,6 +19,13 @@ Activate the plugin through the 'Plugins' menu in WordPress
 == Screenshots ==
 
 == Changelog ==
+
+= 2.04 =
+2014-09-29
+Labels list vertical-align top.
+Fix label placement progress when multiple quizzes.
+-webkit-user-select none - improves Android Chrome drag.
+[qwizdemo] tags.
 
 = 2.03 =
 2014-09-26
