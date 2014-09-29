@@ -2,7 +2,7 @@
 Contributors: dan_kirshner
 Tags: interactive quiz, quiz, flashcards, labeled diagrams
 Tested up to: 4.0
-Stable tag: 2.04
+Stable tag: 2.05
 License: GPL2
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
@@ -19,6 +19,11 @@ Activate the plugin through the 'Plugins' menu in WordPress
 == Screenshots ==
 
 == Changelog ==
+
+= 2.05 =
+2014-09-29
+Apply gray-out to label children, too (overwrite specific settings).
+[qwizdemo] tags in qwizcards.js, too.
 
 = 2.04 =
 2014-09-29

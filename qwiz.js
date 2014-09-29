@@ -1,4 +1,7 @@
 /*
+ * Version 2.05 2014-09-29
+ * Apply gray-out to label children, too (overwrite specific settings).
+ *
  * Version 2.04 2014-09-29
  * Labels list vertical-align top.
  * Fix label placement progress when multiple quizzes.
@@ -339,9 +342,11 @@ this.label_dropped = function (target_obj, label_obj) {
       label_obj.find ('.qwizzled_highlight_label').css ('cursor', 'default');
 
       // Do-it-myself snap to target.  Make copy of label into child of the
-      // target.  Gray-out original label, move to original position.
+      // target.  Gray-out original label (apply to children, too, in case need 
+      // to overcome default), move to original position.
       var label_copy_obj = label_obj.clone (true);
       label_obj.css ({color: 'lightgray', left: '0px', top: '0px'});
+      label_obj.find ('*').css ({color: 'lightgray'});
       label_copy_obj.appendTo (target_obj);
       label_copy_obj.css ({position: 'absolute', left: '4px', top: '50%', transform: 'translateY(-50%)'});
 

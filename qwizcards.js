@@ -1,4 +1,7 @@
 /*
+ * Version 2.05 2014-09-29
+ * [qcarddemo] tags.
+ *
  * Version 2.00 2014-09-07
  * Labeled-diagrams capability, including interactive editing.
  * Chrome on Mac: fallback for Flashcards; others: prevent sub/sup showing 
@@ -32,12 +35,12 @@ var qname = 'qcard_';
 
 // Debug settings.
 var debug = [];
-debug.push (true );    // 0 - general.
-debug.push (true );    // 1 - process_card_input ().
-debug.push (true );    // 2 - answer (card back) html.
-debug.push (true );    // 3 - old/new html dump.
-debug.push (true );    // 4 - card tags/topics.
-debug.push (true );    // 5 - "next" buttons, element objects.
+debug.push (false);    // 0 - general.
+debug.push (false);    // 1 - process_card_input ().
+debug.push (false);    // 2 - answer (card back) html.
+debug.push (false);    // 3 - old/new html dump.
+debug.push (false);    // 4 - card tags/topics.
+debug.push (false);    // 5 - "next" buttons, element objects.
 
 $ = jQuery;
 
@@ -115,14 +118,6 @@ $(document).ready (function () {
 // -----------------------------------------------------------------------------
 function process_html () {
 
-   // Ignore qcard-tag pairs inside <xmp></xmp> pairs.
-   // Loop over tags (if any), save html, replace (temporarily) with null html.
-   var xmp_htmls = [];
-   $('xmp').each (function () {
-      xmp_htmls.push ($(this).html ());
-      $(this).html ('');
-   });
-
    // Delete paragraphs and headers that contain only [!] ... [/!] comments
    // and whitespace/tags outside.
    $ ('p:contains("[!]"), :header:contains("[!]")').each (function () {
@@ -146,6 +141,19 @@ function process_html () {
          // See if there is a deck or decks.
          var qdeck_pos = htm.search ('[qdeck]');
          if (qdeck_pos != -1) {
+
+            // Remove and save text inside [qcarddemo] ... [/qcarddemo] pairs.
+            // Replace with <qcarddemo></qcarddemo> pairs as placeholder.
+            var qcarddemo_re = new RegExp ('\\[qcarddemo\\][\\s\\S]*?\\[\\/qcarddemo\\]', 'gm');
+            var qcarddemos = htm.match (qcarddemo_re);
+            var n_qcarddemos = 0;
+            if (qcarddemos) {
+               n_qcarddemos = qcarddemos.length;
+               htm = htm.replace (qcarddemo_re, '<qcarddemo></qcarddemo>');
+               if (debug[0]) {
+                  console.log ('[process_html] n_qcarddemos: ', n_qcarddemos);
+               }
+            }
 
             // Delete comments -- don't want to process [qdeck][/qdeck] pairs or any other
             // deck-related tags that are in comments.
@@ -176,18 +184,19 @@ function process_html () {
                }
             }
 
+            // Restore examples, but without [qcarddemo] ... [/qcarddemo] tags.
+            for (var i_qcarddemo=0; i_qcarddemo< n_qcarddemos; i_qcarddemo++) {
+               var qcarddemo_i = qcarddemos[i_qcarddemo];
+               var len = qcarddemo_i.length;
+               qcarddemo_i = qcarddemo_i.substring (11, len - 12);
+               new_html = new_html.replace ('<qcarddemo></qcarddemo>', qcarddemo_i);
+            }
+
             // Replace content html.
             $(this).html (new_html);
          }
       }
    });
-
-   // Restore <xmp> content.
-   if (xmp_htmls.length) {
-      $('xmp').each (function (i) {
-         $(this).html (xmp_htmls[i]);
-      });
-   }
 }
 
 
