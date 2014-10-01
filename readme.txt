@@ -20,6 +20,10 @@ Activate the plugin through the 'Plugins' menu in WordPress
 
 == Changelog ==
 
+= 2.06 =
+2014-09-29
+Bug fix - lost "next" button.
+
 = 2.05 =
 2014-09-29
 Apply gray-out to label children, too (overwrite specific settings).
