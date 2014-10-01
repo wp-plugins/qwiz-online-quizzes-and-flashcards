@@ -1,4 +1,7 @@
 /*
+ * Version 2.06 2014-09-30
+ * Bug fix - lost "next" button.
+ *
  * Version 2.05 2014-09-29
  * Apply gray-out to label children, too (overwrite specific settings).
  *
@@ -2014,7 +2017,7 @@ function update_progress_show_next (i_qwiz) {
       if (n_done == qwizdata[i_qwiz].n_questions) {
          $ ('#next_button_text-qwiz' + i_qwiz).html ('View summary report');
       }
-      $ ('#next_button_text-qwiz' + i_qwiz).show ();
+      $ ('#next_button-qwiz' + i_qwiz).show ();
    }
 }
 
