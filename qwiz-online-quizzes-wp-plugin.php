@@ -9,7 +9,7 @@
  * License: GPL2
  */
 
-/*  Copyright 2014  Dan Kishner  (email : dan_kirshner@yahoo.com)
+/*  Copyright 2014  Dan Kirshner  (email : dan_kirshner@yahoo.com)
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License, version 2, as
