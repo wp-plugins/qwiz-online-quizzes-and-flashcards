@@ -1,4 +1,7 @@
 /*
+ * Version 2.07 2014-10-01
+ * Suppress errors, delete source in page/post excerpts.
+ *
  * Version 2.05 2014-09-29
  * [qcarddemo] tags.
  *
@@ -164,23 +167,27 @@ function process_html () {
             new_html = new_html.replace (/\[!\][\s\S]*?\[\/!\]/gm, '');
 
             // Check that there are pairs.
-            check_qdeck_tag_pairs (new_html);
+            var do_not_process_html = check_qdeck_tag_pairs (new_html);
+            if (do_not_process_html) {
+               new_html = do_not_process_html;
+            } else {
 
-            // Get text, including beginning and ending tags.
-            // "." does not match line-ends (!), so use the whitespace/not-whitespace
-            // construct.  Non-greedy search, global, multiline.
-            var qdeck_matches = new_html.match (/\[qdeck[\s\S]*?\[\/qdeck\]/gm);
-            if (qdeck_matches) {
-               n_decks = qdeck_matches.length;
-               if (debug[0]) {
-                  console.log ('[process_html] n_decks: ', n_decks);
-                  console.log ('               qdeck_matches[0]: ', qdeck_matches[0]);
-               }
+               // Get text, including beginning and ending tags.
+               // "." does not match line-ends (!), so use the whitespace/not-whitespace
+               // construct.  Non-greedy search, global, multiline.
+               var qdeck_matches = new_html.match (/\[qdeck[\s\S]*?\[\/qdeck\]/gm);
+               if (qdeck_matches) {
+                  n_decks = qdeck_matches.length;
+                  if (debug[0]) {
+                     console.log ('[process_html] n_decks: ', n_decks);
+                     console.log ('               qdeck_matches[0]: ', qdeck_matches[0]);
+                  }
 
-               // Loop over qdeck-tag pairs.
-               for (var i_deck=0; i_deck<n_decks; i_deck++) {
-                  var new_deck_html = process_qdeck_pair (qdeck_matches[i_deck], i_deck);
-                  new_html = new_html.replace (/\[qdeck[\s\S]*?\[\/qdeck\]/m, new_deck_html);
+                  // Loop over qdeck-tag pairs.
+                  for (var i_deck=0; i_deck<n_decks; i_deck++) {
+                     var new_deck_html = process_qdeck_pair (qdeck_matches[i_deck], i_deck);
+                     new_html = new_html.replace (/\[qdeck[\s\S]*?\[\/qdeck\]/m, new_deck_html);
+                  }
                }
             }
 
@@ -970,6 +977,8 @@ this.start_deck = function (i_deck) {
 // -----------------------------------------------------------------------------
 function check_qdeck_tag_pairs (htm) {
 
+   var new_htm = '';
+
    // Match "[qdeck]" or "[/qdeck]".
    var matches = htm.match (/\[qdeck|\[\/qdeck\]/gm);
    if (matches) {
@@ -997,10 +1006,26 @@ function check_qdeck_tag_pairs (htm) {
          }
       }
       if (error_b){
-         alert        ('Unmatched [qdeck] - [/qdeck] pairs.');
-         errmsgs.push ('Unmatched [qdeck] - [/qdeck] pairs.');
+
+         // If we're inside an excerpt, no error.  Delete from '[qdeck]' up to
+         // '<p class="more-link' if possible,  In any event non-null return
+         // signals not to process.
+         if (htm.search ('more-link') != -1) {
+
+            var pos_qdeck = htm.search (/\[qdeck/);
+            var pos_more  = htm.search ('<p class="more-link');
+            if (pos_more != -1) {
+               new_htm = htm.substring (0, pos_qdeck) + htm.substr (pos_more);
+            } else {
+               new_htm = htm;
+            }
+         } else {
+            alert ('Unmatched [qdeck] - [/qdeck] pairs.');
+         }
       }
    }
+
+   return new_htm;
 }
 
 

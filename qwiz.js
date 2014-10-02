@@ -1,4 +1,7 @@
 /*
+ * Version 2.07 2014-10-01
+ * Suppress errors, delete source in page/post excerpts.
+ *
  * Version 2.06 2014-09-30
  * Bug fix - lost "next" button.
  *
@@ -175,24 +178,28 @@ function process_html () {
             new_htm = new_htm.replace (/\[!\][\s\S]*?\[\/!\]/gm, '');
 
             // Check that there are pairs.
-            check_qwiz_tag_pairs (new_htm);
+            var do_not_process_htm = check_qwiz_tag_pairs (new_htm);
+            if (do_not_process_htm) {
+               new_htm = do_not_process_htm;
+            } else {
 
-            // Get text, including beginning and ending tags.  "." does not
-            // match line-ends (!), so use the whitespace/not-whitespace
-            // construct.  Non-greedy search, global, multiline.
-            qwizzled_b = false;
-            var qwiz_matches = new_htm.match (/\[qwiz[\s\S]*?\[\/qwiz\]/gm);
-            if (qwiz_matches) {
-               n_qwizzes = qwiz_matches.length;
-               if (debug[0]) {
-                  console.log ('[process_html] n_qwizzes: ', n_qwizzes);
-                  console.log ('               qwiz_matches[0]: ', qwiz_matches[0]);
-               }
+               // Get text, including beginning and ending tags.  "." does not
+               // match line-ends (!), so use the whitespace/not-whitespace
+               // construct.  Non-greedy search, global, multiline.
+               qwizzled_b = false;
+               var qwiz_matches = new_htm.match (/\[qwiz[\s\S]*?\[\/qwiz\]/gm);
+               if (qwiz_matches) {
+                  n_qwizzes = qwiz_matches.length;
+                  if (debug[0]) {
+                     console.log ('[process_html] n_qwizzes: ', n_qwizzes);
+                     console.log ('               qwiz_matches[0]: ', qwiz_matches[0]);
+                  }
 
-               // Loop over qwiz-tag pairs.
-               for (i_qwiz=0; i_qwiz<n_qwizzes; i_qwiz++) {
-                  var new_qwiz_html = process_qwiz_pair (qwiz_matches[i_qwiz]);
-                  new_htm = new_htm.replace (/(<[^\/][^>]*?>\s*)*?\[qwiz[\s\S]*?\[\/qwiz\]/m, new_qwiz_html);
+                  // Loop over qwiz-tag pairs.
+                  for (i_qwiz=0; i_qwiz<n_qwizzes; i_qwiz++) {
+                     var new_qwiz_html = process_qwiz_pair (qwiz_matches[i_qwiz]);
+                     new_htm = new_htm.replace (/(<[^\/][^>]*?>\s*)*?\[qwiz[\s\S]*?\[\/qwiz\]/m, new_qwiz_html);
+                  }
                }
             }
 
@@ -1861,6 +1868,8 @@ function display_summary_and_exit (i_qwiz) {
 // -----------------------------------------------------------------------------
 function check_qwiz_tag_pairs (htm) {
 
+   var new_htm = '';
+
    // Match "[qwiz]" or "[/qwiz]".
    var matches = htm.match (/\[qwiz|\[\/qwiz\]/gm);
    if (matches) {
@@ -1888,10 +1897,26 @@ function check_qwiz_tag_pairs (htm) {
          }
       }
       if (error_b){
-         alert        ('Unmatched [qwiz] - [/qwiz] pairs.');
-         errmsgs.push ('Unmatched [qwiz] - [/qwiz] pairs.');
+
+         // If we're inside an excerpt, no error.  Delete from '[qwiz]' up to
+         // '<p class="more-link' if possible,  In any event non-null return
+         // signals not to process.
+         if (htm.search ('more-link') != -1) {
+
+            var pos_qwiz = htm.search (/\[qwiz/);
+            var pos_more = htm.search ('<p class="more-link');
+            if (pos_more != -1) {
+               new_htm = htm.substring (0, pos_qwiz) + htm.substr (pos_more);
+            } else {
+               new_htm = htm;
+            }
+         } else {
+            alert ('Unmatched [qwiz] - [/qwiz] pairs.');
+         }
       }
    }
+
+   return new_htm;
 }
 
 
