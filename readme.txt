@@ -2,7 +2,7 @@
 Contributors: dan_kirshner
 Tags: interactive quiz, quiz, flashcards, labeled diagrams
 Tested up to: 4.0
-Stable tag: 2.07
+Stable tag: 2.08
 License: GPL2
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
@@ -19,6 +19,11 @@ Activate the plugin through the 'Plugins' menu in WordPress
 == Screenshots ==
 
 == Changelog ==
+
+= 2.08 =
+2014-10-05
+Add internationalization - use .po and .mo files.
+Add div.post-entry as page content location.
 
 = 2.07 =
 2014-10-01

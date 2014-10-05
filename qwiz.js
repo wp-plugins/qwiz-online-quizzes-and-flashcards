@@ -1,4 +1,8 @@
 /*
+ * Version 2.08 2014-10-05
+ * Add internationalization - use .po and .mo files.
+ * Add div.post-entry as page content location.
+ *
  * Version 2.07 2014-10-01
  * Suppress errors, delete source in page/post excerpts.
  *
@@ -77,7 +81,7 @@ var q = this;
 
 // The identifier -- including qualifiers like "#" -- of the page content (that
 // perhaps contains inline quizzes) on WordPress.
-var content = 'div.entry-content';
+var content = 'div.entry-content, div.post-entry';
 
 var errmsgs = [];
 
@@ -103,7 +107,7 @@ $ (document).ready (function () {
 
    // Error messages, if any.
    if (errmsgs.length) {
-      alert (plural ('Error', errmsgs.length) + ' found:\n\n' + errmsgs.join ('\n'));
+      alert (plural ('Error found', 'Errors found', errmsgs.length) + ':\n\n' + errmsgs.join ('\n'));
    }
 
    if (n_qwizzes) {
@@ -319,7 +323,9 @@ this.label_dropped = function (target_obj, label_obj) {
 
    // Is this the right target?  Get the id from the label.
    var assoc_id = label_obj.data ('label_target_id');
-   console.log ('[label_dropped] target_obj:', target_obj, ', assoc_id:', assoc_id);
+   if (debug[0]) {
+      console.log ('[label_dropped] target_obj:', target_obj, ', assoc_id:', assoc_id);
+   }
 
    // Get label id (so know which feedback to show).  Looks like
    // label-qwiz0-q0-a0.  Feedback id looks like qwiz0-q0-a0x.
@@ -377,7 +383,8 @@ this.label_dropped = function (target_obj, label_obj) {
          if (n_tries == n_labels) {
             qwizzled_summary = 'You placed all of the items correctly on the first try!';
          } else {
-            qwizzled_summary = 'It took you ' + number_to_word (n_tries) + ' ' + plural ('try', n_tries) + ' to place ' + plural ('this', n_labels) + ' ' + plural ('item', n_labels) + ' correctly.';
+            qwizzled_summary = plural ('It took you one try', 'It took you %s tries', n_tries) + ' ' + plural ('to place this label correctly', 'to place these labels correctly', n_labels) + '.';
+            qwizzled_summary = qwizzled_summary.replace ('%s', number_to_word (n_tries));
          }
          $ ('#qwiz' + i_qwiz + '-q' + i_question + '-ff').html (qwizzled_summary).show ();
 
@@ -635,6 +642,8 @@ function add_style () {
 
    s.push ('.qwizzled_target_border {');
    s.push ('   border:          2px dotted gray;');
+   s.push ('   padding-left:    2px;');
+   s.push ('   padding-right:   2px;');
    s.push ('}');
 
    s.push ('.qwizzled_target_hover {');
@@ -749,7 +758,7 @@ function process_qwiz_pair (htm) {
 
    // Make sure there's at least one question.
    if (htm.search (/\[(q|<code><\/code>q)([^\]]*)\]/m) == -1) {
-      errmsgs.push ('Did not find question tags ("[q]") for qwiz ' + (i_qwiz + 1));
+      errmsgs.push (T ('Did not find question tags ("[q]") for') + ' qwiz ' + (i_qwiz + 1));
    } else {
 
       // See if header.  Sets header_html global variable.
@@ -772,7 +781,7 @@ function process_qwiz_pair (htm) {
 
          // Error if text before [i].
          if (htm.substr (0, 5) != intro_html.substr (0, 5)) {
-            errmsgs.push ('Text before intro [i] - qwiz ' + (i_qwiz + 1));
+            errmsgs.push (T ('Text before intro') + ' [i] - qwiz ' + (i_qwiz + 1));
          }
 
          // Delete [i] from intro.
@@ -832,7 +841,7 @@ function process_qwiz_pair (htm) {
 
          // Error if a [q] tag inside exit text.
          if (exit_html.search (/\[q[ \]]|<div class="qwizzled_question">/) != -1) {
-            errmsgs.push ('[x] (exit text) must be last');
+            errmsgs.push ('[x] ' + T ('(exit text) must be last'));
          } else {
             question_html = question_html.replace (/\[x\][\s\S]*/m, '');
          }
@@ -868,7 +877,7 @@ function process_qwiz_pair (htm) {
          } else {
 
             // Error: didn't find choices or labels.
-            errmsgs.push ('Did not find choices ("[c]") or labels ("[l]") for qwiz ' + (i_qwiz + 1) + ', question ' + (i_question + 1));
+            errmsgs.push (T ('Did not find choices ("[c]") or labels ("[l]") for') + ' qwiz ' + (i_qwiz + 1) + ', question ' + (i_question + 1));
          }
          question_divs.push (question_div);
       }
@@ -955,8 +964,8 @@ function create_qwiz_divs (i_qwiz, qwiz_tag, htm, exit_html) {
    // Mode and progress divs.  (Set up in any case, in case single-question
    // qwiz consisting of a labeled diagram.)
    var progress_div_html = '<div>\n';
-   var learn_mode_title = 'Learn mode: questions repeat until answered correctly.';
-   var test_mode_title  = 'Test mode: incorrectly-answered questions do not repeat.';
+   var learn_mode_title = T ('Learn mode: questions repeat until answered correctly.');
+   var test_mode_title  = T ('Test mode: incorrectly-answered questions do not repeat.');
    var mode;
    var title;
    if (qwizdata[i_qwiz].repeat_incorrect_b) {
@@ -1073,7 +1082,7 @@ function process_topics (i_qwiz, question_tags) {
          } else {
 
             // Have '[q topic', say, but didn't find double quotes.
-            errmsgs.push ('Did not find topic within double quotes for qwiz ' + i_qwiz + ', question ' + i_question);
+            errmsgs.push (T ('Did not find topic within double quotes for') + ' qwiz ' + i_qwiz + ', question ' + i_question);
          }
       }
    }
@@ -1082,7 +1091,7 @@ function process_topics (i_qwiz, question_tags) {
 
       // If any topics given, every question must have at least one topic.
       if (n_questions_w_topics != n_questions) {
-         errmsgs.push ('Topic(s) were given for at least one question, but at least one question doesn\'t have a topic.');
+         errmsgs.push (T ('Topic(s) were given for at least one question, but at least one question doesn\'t have a topic.'));
       }
       if (debug[4]) {
          console.log ('[process_topics] topics: ' + qwizdata[i_qwiz].topics.join ('; '));
@@ -1245,7 +1254,7 @@ function process_question (i_qwiz, i_question, htm, opening_tags) {
    // any opening tags user put in before first "[c]".
    var span_pos = htm.search (/(<[^\/][^>]*?>\s*)*?\[c\*{0,1}\]/m);
    if (span_pos == -1) {
-      errmsgs.push ('Did not find choices ("[c]") for qwiz ' + (i_qwiz + 1) + ', question ' + (i_question + 1));
+      errmsgs.push (T ('Did not find choices ("[c]") for') + ' qwiz ' + (i_qwiz + 1) + ', question ' + (i_question + 1));
       new_htm = '';
       remaining_htm = '';
    } else {
@@ -1326,9 +1335,9 @@ function process_question (i_qwiz, i_question, htm, opening_tags) {
 
    // Check that one and only one choice is marked correct.
    if (n_correct == 0) {
-      errmsgs.push ('No choice was marked correct: qwiz ' + (1 + i_qwiz) + ', question ' + (1 + i_question));
+      errmsgs.push (T ('No choice was marked correct') + ': qwiz ' + (1 + i_qwiz) + ', question ' + (1 + i_question));
    } else if (n_correct > 1) {
-      errmsgs.push ('More than one choice was marked correct: qwiz ' + (1 + i_qwiz) + ', question ' + (1 + i_question));
+      errmsgs.push (T ('More than one choice was marked correct') + ': qwiz ' + (1 + i_qwiz) + ', question ' + (1 + i_question));
    }
 
    // . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
@@ -1341,7 +1350,7 @@ function process_question (i_qwiz, i_question, htm, opening_tags) {
    }
 
    if (! feedback_html) {
-      errmsgs.push ('Did not find feedback ("[f]") for qwiz ' + (i_qwiz + 1) + ', question ' + (i_question + 1));
+      errmsgs.push (T ('Did not find feedback ("[f]") for') + ' qwiz ' + (i_qwiz + 1) + ', question ' + (i_question + 1));
       feedback_html = '';
    } else {
 
@@ -1384,7 +1393,7 @@ function process_question (i_qwiz, i_question, htm, opening_tags) {
 
       // Check that number of feedback items matches number of choices.
       if (n_choices != n_feedback_items) {
-         errmsgs.push ('Number of feedback items does not match number of choices: qwiz ' + (1 + i_qwiz) + ', question ' + (1 + i_question));
+         errmsgs.push (T ('Number of feedback items does not match number of choices') + ': qwiz ' + (1 + i_qwiz) + ', question ' + (1 + i_question));
       }
 
       new_htm += feedback_divs.join ('\n');
@@ -1427,7 +1436,7 @@ function process_qwizzled (i_qwiz, i_question, question_htm, opening_tags) {
    // Turn "canvas" div into table cell.  Find extent of div.
    var canvas_div_pos = new_htm.search ('<div class="qwizzled_canvas">');
    if (canvas_div_pos == -1) {
-      errmsgs.push ('Did not find target "drop-zones" for labels.  Please check that all labels and target "drop zones" were correctly processed and saved during the edit of this page.');
+      errmsgs.push (T ('Did not find target "drop-zones" for labels.  Please check that all labels and target "drop zones" were correctly processed and saved during the edit of this page.'));
       return '';
    }
    var div_html = find_matching_block (new_htm.substr (canvas_div_pos));
@@ -1541,7 +1550,7 @@ function process_qwizzled (i_qwiz, i_question, question_htm, opening_tags) {
 
    // Check that number of feedback items corresponds to number of labels.
    if (n_labels*2 != n_feedback_items) {
-      errmsgs.push ('Number of feedback items (' + n_feedback_items + ') does not match number of labels (' + n_labels + '): qwiz ' + (1 + i_qwiz) + ', question ' + (1 + i_question) + ' labeled diagram');
+      errmsgs.push (T ('Number of feedback items') + ' (' + n_feedback_items + ') ' + T ('does not match number of labels') + ' (' + n_labels + '): qwiz ' + (1 + i_qwiz) + ', question ' + (1 + i_question) + ' labeled diagram');
    }
 
    // Add final feedback div.
@@ -1764,7 +1773,7 @@ function process_header (htm, i_qwiz, i_question, intro_b) {
 
       // Error if text before [h].
       if (htm.substr (0, 5) != header_html.substr (0, 5)) {
-         errmsgs.push ('Text before header [h] - qwiz ' + (i_qwiz + 1));
+         errmsgs.push (T ('Text before header') + ' [h] - qwiz ' + (i_qwiz + 1));
       }
 
       // Delete header from htm.
@@ -1797,13 +1806,13 @@ function display_summary_and_exit (i_qwiz) {
       if (n_incorrect == 0) {
          report_html.push ('<p>In this ' + number_to_word (n_questions) + '-question quiz, you answered every question correctly on the first try!</p>');
       } else {
-         report_html.push ('<p>In finishing this ' + number_to_word (n_questions) + '-question quiz, you entered ' + number_to_word (n_incorrect) + ' incorrect ' + plural ('answer', n_incorrect) + '.</p>');
+         report_html.push ('<p>In finishing this ' + number_to_word (n_questions) + '-question quiz, you entered ' + number_to_word (n_incorrect) + ' incorrect ' + plural ('answer', 'answers', n_incorrect) + '.</p>');
       }
    } else {
       if (n_incorrect == 0) {
-         report_html.push ('<p>Congratulations, you answered all questions correctly.</p>');
+         report_html.push ('<p>' + T ('Congratulations, you answered all questions correctly') + '.</p>');
       } else {
-         report_html.push ('<p>Your score is ' + number_to_word (n_correct) + ' out of ' + number_to_word (n_questions) + ' questions.</p>');
+         report_html.push ('<p>' + T ('Your score is') + ' ' + number_to_word (n_correct) + ' ' + T ('out of') + ' ' + number_to_word (n_questions) + ' ' + T ('questions') + '.</p>');
       }
    }
 
@@ -1812,11 +1821,11 @@ function display_summary_and_exit (i_qwiz) {
       var topic = qwizdata[i_qwiz].topics[0];
       var all_both_n;
       if (n_questions == 2) {
-         all_both_n = 'Both';
+         all_both_n = T ('Both');
       } else {
-         all_both_n = 'All '+ number_to_word (n_questions);
+         all_both_n = T ('All') + ' '+ number_to_word (n_questions);
       }
-      report_html.push ('<p>' + all_both_n + ' ' + plural ('question', n_questions) + ' were about topic &ldquo;' + topic + '.&rdquo;</p>');
+      report_html.push ('<p>' + all_both_n + ' ' + plural ('question', 'questions', n_questions) + ' were about topic &ldquo;' + topic + '.&rdquo;</p>');
    } else if (n_topics > 1) {
 
       // By topic.
@@ -1828,26 +1837,29 @@ function display_summary_and_exit (i_qwiz) {
          var n_topic_items = n_topic_correct + n_topic_incorrect;
          if (n_topic_items > 0) {
             var topic_html = '<li>';
-            topic_html += 'For topic &ldquo;' + topic + '&rdquo; there ' + plural ('was', n_topic_items) + ' ' + number_to_word (n_topic_items) + ' ' + plural ('question', n_topic_items) + '.&nbsp;';
+            topic_html += T ('For topic') + ' &ldquo;' + topic + '&rdquo; ' + plural ('there was', 'there were', n_topic_items) + ' ' + number_to_word (n_topic_items) + ' ' + plural ('question', 'questions', n_topic_items) + '.&nbsp;';
             if (n_topic_incorrect == 0) {
                if (n_topic_items > 2) {
-                  topic_html += 'You answered all of these questions correctly';
+                  topic_html += T ('You answered all of these questions correctly');
                } else if (n_topic_items == 2) {
-                  topic_html += 'You answered both of these questions correctly';
+                  topic_html += T ('You answered both of these questions correctly');
                } else {
-                  topic_html += 'You answered this question correctly';
+                  topic_html += T ('You answered this question correctly');
                }
                if (qwizdata[i_qwiz].repeat_incorrect_b) {
-                  topic_html += ' on the first try.';
+                  topic_html += ' ' + T ('on the first try.');
                } else {
                   topic_html += '.';
                }
             } else {
                if (qwizdata[i_qwiz].repeat_incorrect_b) {
                   var n_tries = n_topic_items + n_topic_incorrect;
-                  topic_html += 'It took you ' + number_to_word (n_tries) + ' ' + plural ('try', n_tries) + ' to answer ' + plural ('this', n_topic_items) + ' ' + plural ('question', n_topic_items) + ' correctly.';
+                  topic_html += plural ('It took you one try', 'It took you %s tries', n_tries) + ' ' + plural ('to answer this question correctly', 'to answer these questions correctly', n_topic_items) + '.';
+                  topic_html = topic_html.replace ('%s', number_to_word (n_tries));
                } else {
-                  topic_html += 'Your score is ' + number_to_word (n_topic_correct) + ' correct out of ' + number_to_word (n_topic_items) + '.';
+                  topic_html += T ('Your score is %s correct out of %s') + '.';
+                  topic_html = topic_html.replace ('%s', number_to_word (n_topic_correct));
+                  topic_html = topic_html.replace ('%s', number_to_word (n_topic_items));
                }
             }
             topic_html += '</li>';
@@ -1911,7 +1923,7 @@ function check_qwiz_tag_pairs (htm) {
                new_htm = htm;
             }
          } else {
-            alert ('Unmatched [qwiz] - [/qwiz] pairs.');
+            alert (T ('Unmatched [qwiz] - [/qwiz] pairs.'));
          }
       }
    }
@@ -2061,7 +2073,7 @@ function display_progress (i_qwiz) {
    if (n_attempts == 0) {
       progress_html = 'Questions in this quiz: ' + n_to_go;
    } else {
-      progress_html = qwizdata[i_qwiz].n_questions + ' questions, ' + n_attempts + ' ' + plural ('response', n_attempts) + ', ' + qwizdata[i_qwiz].n_correct + ' correct, ' + qwizdata[i_qwiz].n_incorrect + ' incorrect, ' + n_to_go + ' to go';
+      progress_html = qwizdata[i_qwiz].n_questions + ' questions, ' + n_attempts + ' ' + plural ('response', 'responses', n_attempts) + ', ' + qwizdata[i_qwiz].n_correct + ' correct, ' + qwizdata[i_qwiz].n_incorrect + ' incorrect, ' + n_to_go + ' to go';
    }
    $ ('#progress-qwiz' + i_qwiz).html (progress_html);
 }
@@ -2071,7 +2083,7 @@ function display_progress (i_qwiz) {
 function display_qwizzled_progress (i_qwiz) {
 
    // Show in case single-question qwiz.
-   var progress_html = 'Correctly labeled ' + qwizdata[i_qwiz].n_labels_correct + ' out of ' + qwizdata[i_qwiz].n_labels + ' items';
+   var progress_html = 'Correctly labeled ' + qwizdata[i_qwiz].n_labels_correct + ' out of ' + qwizdata[i_qwiz].n_labels + ' ' + plural ('item', 'items', qwizdata[i_qwiz].n_labels);
    $ ('#progress-qwiz' + i_qwiz).html (progress_html).show ();
 
    // If is single-question quiz, don't show mode, but keep its space (since
@@ -2123,7 +2135,7 @@ function create_feedback_div_html (i_qwiz, i_question, i_item, item, c_x) {
 }
 
 
-var number_word = ['zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten'];
+var number_word = [T ('zero'), T ('one'), T ('two'), T ('three'), T ('four'), T ('five'), T ('six'), T ('seven'), T ('eight'), T ('nine'), T ('ten')];
 // -----------------------------------------------------------------------------
 function number_to_word (number) {
    var word;
@@ -2138,30 +2150,34 @@ function number_to_word (number) {
 
 
 // -----------------------------------------------------------------------------
-function plural (word, n) {
+function plural (word, plural_word, n) {
    var new_word;
    if (n == 1) {
       new_word = word;
    } else {
+      new_word = plural_word;
+   }
 
-      // Specials first.
-      if (word == 'was') {
-         new_word = 'were';
+   return T (new_word);
+}
 
-      } else if (word == 'this') {
-         new_word = 'these';
 
-      } else if (word == 'try') {
-         new_word = 'tries';
+// -----------------------------------------------------------------------------
+function T (string) {
+   if (typeof (qwiz_T) == 'undefined') {
 
-      } else {
+      // Stand-alone version.  Just use default string.
+      t_string = string;
+   } else {
 
-         // The simple case.
-         new_word = word + 's';
+      // Translation, if available.
+      t_string = qwiz_T[string];
+      if (typeof (t_string) == 'undefined') {
+         t_string = string;
       }
    }
 
-   return new_word;
+   return t_string;
 }
 
 

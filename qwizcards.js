@@ -1,4 +1,8 @@
 /*
+ * Version 2.08 2014-10-05
+ * Add internationalization - use .po and .mo files.
+ * Add div.post-entry as page content location.
+ *
  * Version 2.07 2014-10-01
  * Suppress errors, delete source in page/post excerpts.
  *
@@ -52,7 +56,7 @@ var q = this;
 
 // The identifier -- including qualifiers like "#" -- of the page content (that
 // perhaps contains inline qwizcard decks) on WordPress.
-var content = 'div.entry-content';
+var content = 'div.entry-content, div.post-entry';
 //var content = 'main';
 
 var errmsgs = [];
@@ -88,7 +92,7 @@ $(document).ready (function () {
 
    // Error messages, if any.
    if (errmsgs.length) {
-      alert (plural ('Error', errmsgs.length) + ' found:\n\n' + errmsgs.join ('\n'));
+      alert (plural ('Error found', 'Errors found', errmsgs.length) + ':\n\n' + errmsgs.join ('\n'));
    }
 
    if (n_decks) {
@@ -665,7 +669,7 @@ function process_card_input (i_deck, i_card, htm, opening_tags) {
 
    // Take off initial "[a]".
    if (! card_back_html) {
-      errmsgs.push ('Did not find answer ("[a]") -- card back -- for qdeck ' + (i_deck + 1) + ', card ' + (i_card + 1) + '\n' + htm);
+      errmsgs.push (T ('Did not find answer ("[a]") -- card back -- for') + ' qdeck ' + (i_deck + 1) + ', card ' + (i_card + 1) + '\n' + htm);
       card_back_html = '';
    } else {
       card_back_html = card_back_html[0].substring (3);
@@ -674,7 +678,7 @@ function process_card_input (i_deck, i_card, htm, opening_tags) {
    // Split into individual items.  Should be just one.
    var card_back_items = card_back_html.split (/\[a\]/);
    if (card_back_items.length != 1) {
-      errmsgs.push ('Got more than one card back ("[a]") for: qdeck ' + (1 + i_deck) + ', card ' + (1 + i_card) + '\n' + htm);
+      errmsgs.push (T ('Got more than one card back ("[a]") for') + ': qdeck ' + (1 + i_deck) + ', card ' + (1 + i_card) + '\n' + htm);
    }
 
    // Capture any opening tags before "[a]" tag.
@@ -706,7 +710,7 @@ function create_card_back_html (i_deck, i_card, htm, opening_tags, front_textent
 
       // Yes.  Error if no textentry on front.
       if (! front_textentry_b) {
-         errmsg.push ('[textentry] on back of card, but not on front - deck ' + (i_deck+1) + ', card ' (i_card+1));
+         errmsg.push (T ('[textentry] on back of card, but not on front') + ' - deck ' + (i_deck+1) + ', card ' (i_card+1));
       }
 
       // Convert to equivalent html.
@@ -801,7 +805,7 @@ function process_header (htm, i_deck, i_question, intro_b) {
 
       // Error if text before [h].
       if (htm.substr (0, 5) != header_html.substr (0, 5)) {
-         errmsgs.push ('Text before header [h] - qdeck ' + (i_deck + 1));
+         errmsgs.push (T ('Text before header') + ' [h] - qdeck ' + (i_deck + 1));
       }
 
       // Delete header from htm.
@@ -1020,7 +1024,7 @@ function check_qdeck_tag_pairs (htm) {
                new_htm = htm;
             }
          } else {
-            alert ('Unmatched [qdeck] - [/qdeck] pairs.');
+            alert (T ('Unmatched [qdeck] - [/qdeck] pairs.'));
          }
       }
    }
@@ -1139,13 +1143,13 @@ function init_card_order (i_deck) {
 // onclick ().  "this" for "this qcard instance".
 this.set_next_buttons = function (i_deck) {
    var htm = '';
-   htm += '<button class="qbutton" onclick="' + qname + '.got_it (' + i_deck + ')" title="Remove this card from the stack">Got it!</button> &nbsp; ';
+   htm += '<button class="qbutton" onclick="' + qname + '.got_it (' + i_deck + ')" title="' + T ('Remove this card from the stack') + '">' + T ('Got it!') + '</button> &nbsp; ';
    if (deckdata[i_deck].n_to_go > 1) {
-      htm += '<button class="qbutton next_card-qdeck' + i_deck + '" onclick="' + qname + '.next_card (' + i_deck + ')" title="Put this card at the bottom of stack, show the next card">Need more practice</button> &nbsp; ';
+      htm += '<button class="qbutton next_card-qdeck' + i_deck + '" onclick="' + qname + '.next_card (' + i_deck + ')" title="' + T ('Put this card at the bottom of stack, show the next card') + '">' + T ('Need more practice') + '</button> &nbsp; ';
    }
-   htm += '<button class="qbutton" onclick="' + qname + '.flip (' + i_deck + ')" title="Show the other side">Flip</button> &nbsp; ';
+   htm += '<button class="qbutton" onclick="' + qname + '.flip (' + i_deck + ')" title="' + T ('Show the other side') + '">' + T ('Flip') + '</button> &nbsp; ';
    if (deckdata[i_deck].n_to_go > 1) {
-      htm += '<button class="qbutton shuffle-qdeck' + i_deck + '" onclick="' + qname + '.shuffle_order (' + i_deck + ')" title="Randomly shuffle the remaining cards">Shuffle</button> &nbsp; ';
+      htm += '<button class="qbutton shuffle-qdeck' + i_deck + '" onclick="' + qname + '.shuffle_order (' + i_deck + ')" title="' + T ('Randomly shuffle the remaining cards') +'">' + T ('Shuffle') + '</button> &nbsp; ';
    }
    if (debug[5]) {
       console.log ('[set_next_buttons] htm:', htm);
@@ -1210,59 +1214,16 @@ function done (i_deck) {
    var report_html = [];
 
    // Overall.
+   var overall;
    if (deckdata[i_deck].n_reviewed == deckdata[i_deck].n_cards) {
-      report_html.push ('<p>In this ' + number_to_word (deckdata[i_deck].n_cards) + '-flashcard stack, you marked every card &lsquo;got it&rsquo; on the first try.</p>');
+      overall = T ('In this %s-flashcard stack, you marked every card "got it" on the first try') + '.';
+      overall = overall.replace ('%s', number_to_word (deckdata[i_deck].n_cards));
    } else {
-      report_html.push ('<p>This flashcard stack had ' + deckdata[i_deck].n_cards + ' cards.  It took you ' + deckdata[i_deck].n_reviewed + ' tries until you felt comfortable enough to to mark &lsquo;got it&rsquo; for each card.</p>');
+      overall = T('This flashcard stack had %s cards.  It took you %s tries until you felt comfortable enough to to mark "got it" for each card' + '.');
+      overall = overall.replace ('%s', number_to_word (deckdata[i_deck].n_cards));
+      overall = overall.replace ('%s', number_to_word (deckdata[i_deck].n_reviewed));
    }
-
-   // See if more than one topic in this deck.
-   /*
-   var multiple_topics_b = false;
-   var first_topic = cards[0].topics[0];
-   for (var ii_card=0; ii_card<n_cards; ii_card++) {
-      var card_topics = cards[ii_card].topics;
-      for (var ii=0; ii<card_topics.length; ii++) {
-         if (card_topics[ii] != first_topic) {
-            multiple_topics_b = true;
-            break;
-         }
-      }
-      if (multiple_topics_b) {
-         break;
-      }
-   }
-   if (! multiple_topics_b) {
-      report_html.push ('<p>All ' + number_to_word (n_cards) + ' ' + plural ('question', deckdata[i_deck].n_cards) + ' were about ' + topic_descriptions[first_topic] + '.</p>');
-   } else {
-
-      // By topic.
-      report_html.push ('<ul>');
-      for (var i_topic=0; i_topic<n_topics; i_topic++) {
-         var topic = topics[i_topic];
-         var n_topic_cards = topic_statistics[topic].n_got_it;
-         if (n_topic_cards > 0) {
-            var topic_html = '<li>There ' + plural ('was', n_topic_cards) + ' ' + number_to_word (n_topic_cards) + ' ' + plural ('question', n_topic_cards) + ' about ' +  topic_descriptions[topic] + '.&nbsp;';
-            if (n_topic_incorrect == 0) {
-               if (n_topic_cards > 2) {
-                  topic_html += 'You answered all of these questions correctly on the first try.';
-               } else if (n_topic_cards == 2) {
-                  topic_html += 'You answered both of these questions correctly on the first try.';
-               } else {
-                  topic_html += 'You answered this question correctly on the first try.';
-               }
-            } else if (n_topic_cards == 1) {
-               topic_html += 'It took you ' + number_to_word (n_topic_cards + n_topic_incorrect) + ' tries to answer this question correctly.';
-            } else {
-               topic_html += 'It took you ' + number_to_word (n_topic_cards + n_topic_incorrect) + ' tries to answer these ' + number_to_word (n_topic_cards) + ' questions correctly.';
-            }
-            topic_html += '</li>';
-            report_html.push (topic_html);
-         }
-      }
-      report_html.push ('</ul>');
-   }
-   */
+   report_html.push ('<p>' + overall + '</p>');
 
    // Show exit text.
    report_html.push (deckdata[i_deck].exit_html);
@@ -1274,7 +1235,7 @@ function done (i_deck) {
 // -----------------------------------------------------------------------------
 function display_progress (i_deck) {
    var progress_html;
-   progress_html = '<p>' + deckdata[i_deck].n_cards + ' cards total, ' + deckdata[i_deck].n_reviewed + ' ' + plural ('card', deckdata[i_deck].n_reviewed) + ' reviewed, ' + deckdata[i_deck].n_to_go + ' ' + plural ('card', deckdata[i_deck].n_to_go) + ' to go</p>';
+   progress_html = '<p>' + deckdata[i_deck].n_cards + ' ' + T ('cards total') + ', ' + deckdata[i_deck].n_reviewed + ' ' + plural ('card', 'cards', deckdata[i_deck].n_reviewed) + ' reviewed, ' + deckdata[i_deck].n_to_go + ' ' + plural ('card', 'cards', deckdata[i_deck].n_to_go) + ' to go</p>';
    deckdata[i_deck].el_progress.html (progress_html);
 }
 
@@ -1537,7 +1498,7 @@ function shuffle (array) {
 
 
 // -----------------------------------------------------------------------------
-var number_word = ['zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten'];
+var number_word = [T ('zero'), T ('one'), T ('two'), T ('three'), T ('four'), T ('five'), T ('six'), T ('seven'), T ('eight'), T ('nine'), T ('ten')];
 
 function number_to_word (number) {
    var word;
@@ -1552,27 +1513,34 @@ function number_to_word (number) {
 
 
 // -----------------------------------------------------------------------------
-function plural (word, n) {
+function plural (word, plural_word, n) {
    var new_word;
    if (n == 1) {
       new_word = word;
    } else {
+      new_word = plural_word;
+   }
 
-      // Specials first.
-      if (word == 'was') {
-         new_word = 'were';
+   return T (new_word);
+}
 
-      } else if (word == 'this') {
-         new_word = 'these';
 
-      } else {
+// -----------------------------------------------------------------------------
+function T (string) {
+   if (typeof (qwiz_T) == 'undefined') {
 
-         // The simple case.
-         new_word = word + 's';
+      // Stand-alone version.  Just use default string.
+      t_string = string;
+   } else {
+
+      // Translation, if available.
+      t_string = qwiz_T[string];
+      if (typeof (t_string) == 'undefined') {
+         t_string = string;
       }
    }
 
-   return new_word;
+   return t_string;
 }
 
 

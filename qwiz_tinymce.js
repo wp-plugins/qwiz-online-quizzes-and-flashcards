@@ -13,7 +13,6 @@
                     title : 'Qwiz - labeled-diagram - enable/restart editing',
                     image : qwizzled_plugin.url + 'images/icon_qwiz.png',
                     onclick : function() {
-                         //ed.selection.setContent('[myshortcode]');
                          qwizzled.show_main_menu (ed, true);
                     }
                });

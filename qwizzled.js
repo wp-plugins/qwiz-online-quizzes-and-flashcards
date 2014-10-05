@@ -1,4 +1,8 @@
 /*
+ * Version 2.08 2014-10-05
+ * Add internationalization - use .po and .mo files.
+ * Add div.post-entry as page content location.
+ *
  * Version 2.01 2014-09-16
  * Modify menu header for Safari on Mac.
  *
@@ -75,6 +79,10 @@ $(document).ready (function () {
 // -----------------------------------------------------------------------------
 this.show_main_menu = function (ed, qwiz_button_b) {
 
+   if (debug[0]) {
+      console.log ('[show_main_menu] typeof (qwizzled_langs):', typeof (qwizzled_langs));
+   }
+
    // Is the visual editing frame present?
    var ok_f = false;
    if ($ (edit_area_selector).is (':visible')) {
@@ -108,7 +116,7 @@ this.show_main_menu = function (ed, qwiz_button_b) {
 
       // Couldn't find editing window.  Error message only if Q button pressed.
       if (qwiz_button_b) {
-         alert ('Could not find editing window.  You need to be editing a page or post in Visual mode.');
+         alert (T ('Could not find editing window.  You need to be editing a page or post in Visual mode.'));
          return false;
       }
    }
@@ -140,7 +148,7 @@ this.show_main_menu = function (ed, qwiz_button_b) {
    mm.push ('   <div id="qwizzled_main_menu_header">');
    mm.push ('      <img src="' + qwizzled_plugin.url + 'images/icon_qwiz.png" class="icon_qwiz" />');
    mm.push ('      <div id="qwizzled_main_menu_title">');
-   mm.push ('         Qwiz - labeled diagram editing menu');
+   mm.push ('         Qwiz - ' + T ('labeled diagram editing menu'));
    mm.push ('      </div>');
    mm.push ('      <img src="' + qwizzled_plugin.url + 'images/icon_exit_red.png" class="icon_main_menu_exit" onclick="qwizzled.exit_main_menu ()" />');
    mm.push ('   </div>');
@@ -381,7 +389,7 @@ this.create_target1 = function () {
 
    // If in text mode, message only.
    if (! $ (edit_area_selector).is (':visible')) {
-      alert ('Please select "Visual" mode to create a target/drop zone');
+      alert (T ('Please select "Visual" mode to create a target/drop zone'));
       return;
    }
 
@@ -632,7 +640,7 @@ this.label_clicked = function (local_el_label_div) {
    if (create_target_b) {
 
       // Prompt to select target.
-      qwizzled_main_menu_feedback.html ('Select the text or click on the image (you may have to click twice) where you want the target "drop zone" for this label').show ();
+      qwizzled_main_menu_feedback.html (T ('Select the text or click on the image (you may have to click twice) where you want the target "drop zone" for this label')).show ();
 
       // Wait for selection.
       waiting_for_target_select_b = true;
@@ -890,7 +898,7 @@ this.target_text_selected = function (e) {
       });
 
       // Provide instruction/feedback.
-      qwizzled_main_menu_feedback.html ('You can position and resize the target "drop zone" how you want in relation to the image.').show ().fadeOut (10000, 'easeInCubic');
+      qwizzled_main_menu_feedback.html (T ('You can position and resize the target "drop zone" how you want in relation to the image.')).show ().fadeOut (10000, 'easeInCubic');
    } else {
 
       // Not just an image.  Regular text; but may include an image.
@@ -940,7 +948,7 @@ function create_text_target (htm, assoc_id, border_style) {
    var common = '<span class="qwizzled_target-' + assoc_id + ' qwizzled_target ';
    var style = ' style="' + border_style + '" ';
    if (n_texts == 0) {
-      alert ("Error: no text selected.");
+      alert (T ('Error: no text selected.'));
    } else if (n_texts == 1) {
       tokens[i_first] = common + 'qwizzled_border_all"'    + style + '>' + tokens[i_first] + '</span>';
    } else if (n_texts >= 2) {
@@ -1107,7 +1115,7 @@ function process_questions (qwiz_html, question_start_tags, find_wrapped_b) {
          if (! find_wrapped_b) {
             new_new_question_html =   '<div class="qwizzled_question">'
                                     +    new_new_question_html 
-                                    +    '<div class="qwizzled_question_bottom_border_title" title="End of labeled-diagram question">'
+                                    +    '<div class="qwizzled_question_bottom_border_title" title="' + T ('End of labeled-diagram question') +'">'
                                     +    '</div>'
                                     + '</div>';
          }
@@ -1285,7 +1293,7 @@ function check_qwiz_tag_pairs (htm) {
    if (matches) {
       var n_tags = matches.length;
       if (n_tags == 0) {
-         alert ('Did not find [qwiz]...[/qwiz] shortcodes.');
+         alert (T ('Did not find [qwiz]...[/qwiz] shortcodes'));
       } else {
          var error_b = false;
 
@@ -1314,7 +1322,7 @@ function check_qwiz_tag_pairs (htm) {
          }
       }
    } else {
-      alert ('Did not find [qwiz]...[/qwiz] shortcodes.');
+      alert (T ('Did not find [qwiz]...[/qwiz] shortcodes'));
    }
 }
 
@@ -1324,7 +1332,7 @@ function report_errors () {
 
    // Error messages, if any.
    if (errmsgs.length) {
-      alert (plural ('Error', errmsgs.length) + ' found:\n\n' + errmsgs.join ('\n'));
+      alert (plural ('Error found', 'Errors found', errmsgs.length) + ':\n\n' + errmsgs.join ('\n'));
    }
 }
 
@@ -1406,7 +1414,7 @@ function is_only_tags_and_whitespace (htm) {
 }
 
 
-var number_word = ['zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten'];
+var number_word = [T ('zero'), T ('one'), T ('two'), T ('three'), T ('four'), T ('five'), T ('six'), T ('seven'), T ('eight'), T ('nine'), T ('ten')];
 // -----------------------------------------------------------------------------
 function number_to_word (number) {
    var word;
@@ -1421,27 +1429,24 @@ function number_to_word (number) {
 
 
 // -----------------------------------------------------------------------------
-function plural (word, n) {
+function plural (word, plural_word, n) {
    var new_word;
    if (n == 1) {
       new_word = word;
    } else {
-
-      // Specials first.
-      if (word == 'was') {
-         new_word = 'were';
-
-      } else if (word == 'this') {
-         new_word = 'these';
-
-      } else {
-
-         // The simple case.
-         new_word = word + 's';
-      }
+      new_word = plural_word;
    }
 
-   return new_word;
+   return T (new_word);
+}
+
+
+// -----------------------------------------------------------------------------
+function T (string) {
+
+   var t_string = tinymce.translate (string);
+
+   return t_string;
 }
 
 
