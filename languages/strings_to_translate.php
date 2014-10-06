@@ -33,7 +33,10 @@
 
       'card' => __ ('card', $q),
       'cards' => __ ('cards', $q),
+
+      /* Translators: as in "there are three cards in total" */
       'cards total' => __ ('cards total', $q),
+
       'Congratulations, you answered all questions correctly' => __ ('Congratulations, you answered all questions correctly', $q),
       'Flip' => __ ('Flip', $q),
 
@@ -67,8 +70,13 @@
       'questions' => __ ('questions', $q),
       'Randomly shuffle the remaining cards' => __ ('Randomly shuffle the remaining cards', $q),
       'Remove this card from the stack' => __ ('Remove this card from the stack', $q),
+
+      /* Translators: as in "three cards have been reviewed" */
+      'reviewed' => __ ('reviewed', $q),
+
       'response' => __ ('response', $q),
       'responses' => __ ('responses', $q),
+      'Review this flashcard stack again' => __ ('Review this flashcard stack again', $q),
       'Show the other side' => __ ('Show the other side', $q),
 
       /* Translators: as in "Shuffle the deck of cards" */
@@ -77,6 +85,7 @@
       /* Translators: as in "Click here to start quiz" */
       'Start quiz' => __ ('Start quiz', $q),
 
+      'Start reviewing cards' => __ ('Start reviewing cards', $q),
       'Take the quiz again' => __ ('Take the quiz again', $q),
       'Test mode: incorrectly-answered questions do not repeat' => __ ('Test mode: incorrectly-answered questions do not repeat', $q),
       'There was' => __ ('There was', $q),
@@ -84,6 +93,10 @@
       'This flashcard stack had %s cards.  It took you %s tries until you felt comfortable enough to to mark "got it" for each card' => __ ('This flashcard stack had %s cards.  It took you %s tries until you felt comfortable enough to to mark "got it" for each card', $q),
       'to answer this question correctly' => __ ('to answer this question correctly', $q),
       'to answer these questions correctly' => __ ('to answer these questions correctly', $q),
+
+      /* Translators: as in "there are three cards to go" */
+      'to go' => __ ('to go', $q),
+
       'View summary report' => __ ('View summary report', $q),
       'You answered all of these questions correctly' => __ ('You answered all of these questions correctly', $q),
       'You answered both of these questions correctly' => __ ('You answered both of these questions correctly', $q),

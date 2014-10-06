@@ -545,7 +545,7 @@ function process_qdeck_pair (htm, i_deck) {
 
          // If there's a [start] tag, replace with start button html.  Otherwise
          // add start button html.
-         var start_button_html = '<button class="qbutton" onclick="' + qname + '.start_deck (' + i_deck + ')">Start reviewing cards</button>';
+         var start_button_html = '<button class="qbutton" onclick="' + qname + '.start_deck (' + i_deck + ')">' + T ('Start reviewing cards') + '</button>';
          if (intro_html.indexOf ('[start]') != -1) {
             intro_html = intro_html.replace ('[start]', start_button_html);
          } else {
@@ -601,7 +601,7 @@ function process_qdeck_pair (htm, i_deck) {
          var restart_button_html =
                           '    <button class="qbutton"'
                         + '            onclick="' + qname + '.start_deck (' + i_deck + ')">\n'
-                        + '       Review this flashcard stack again\n'
+                        +          T ('Review this flashcard stack again') + '\n'
                         + '    </button>\n';
          exit_html = exit_html[1].replace ('[restart]', restart_button_html);
          deckdata[i_deck].exit_html = exit_html;
@@ -1235,7 +1235,7 @@ function done (i_deck) {
 // -----------------------------------------------------------------------------
 function display_progress (i_deck) {
    var progress_html;
-   progress_html = '<p>' + deckdata[i_deck].n_cards + ' ' + T ('cards total') + ', ' + deckdata[i_deck].n_reviewed + ' ' + plural ('card', 'cards', deckdata[i_deck].n_reviewed) + ' reviewed, ' + deckdata[i_deck].n_to_go + ' ' + plural ('card', 'cards', deckdata[i_deck].n_to_go) + ' to go</p>';
+   progress_html = '<p>' + deckdata[i_deck].n_cards + ' ' + T ('cards total') + ', ' + deckdata[i_deck].n_reviewed + ' ' + plural ('card', 'cards', deckdata[i_deck].n_reviewed) + ' ' + T ('reviewed') + ', ' + deckdata[i_deck].n_to_go + ' ' + plural ('card', 'cards', deckdata[i_deck].n_to_go) + ' ' + T ('to go') + '</p>';
    deckdata[i_deck].el_progress.html (progress_html);
 }
 
