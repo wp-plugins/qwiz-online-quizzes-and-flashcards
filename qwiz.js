@@ -1,4 +1,7 @@
 /*
+ * Version 2.09 2014-10-05
+ * A few more strings for internationalization.
+ *
  * Version 2.08 2014-10-05
  * Add internationalization - use .po and .mo files.
  * Add div.post-entry as page content location.
@@ -1012,7 +1015,7 @@ function create_qwiz_divs (i_qwiz, qwiz_tag, htm, exit_html) {
    bottom_html +=  '<div class="next_button" id="next_button-qwiz' + i_qwiz + '">\n'
                  + '   <button class="qbutton" onclick="' + qname + '.next_question (' + i_qwiz + ')">'
                  +        '<span id="next_button_text-qwiz' + i_qwiz + '">'
-                 +           'Start quiz'
+                 +           T ('Start quiz')
                  +        '</span>'
                  +    '</button>\n'
                  + '</div>\n';
@@ -1031,7 +1034,7 @@ function create_restart_button (i_qwiz, exit_html) {
    if (exit_html) {
       var restart_button_html =
                           '    <button onclick="' + qname + '.restart_quiz (' + i_qwiz + ')">\n'
-                        + '       Take the quiz again\n'
+                        +          T ('Take the quiz again') + '\n'
                         + '    </button>\n';
       exit_html = exit_html.replace ('[restart]', restart_button_html);
    }
@@ -1168,7 +1171,7 @@ this.next_question = function (i_qwiz) {
          // Also, show progress and change button text.  Only if more than one
          // question in quiz.
          display_progress (i_qwiz);
-         $ ('#next_button_text-' + qwiz_id).html ('Next question');
+         $ ('#next_button_text-' + qwiz_id).html (T ('Next question'));
       } else {
 
          // Don't show mode.
@@ -2052,7 +2055,7 @@ function update_progress_show_next (i_qwiz) {
          n_done += qwizdata[i_qwiz].n_incorrect;
       }
       if (n_done == qwizdata[i_qwiz].n_questions) {
-         $ ('#next_button_text-qwiz' + i_qwiz).html ('View summary report');
+         $ ('#next_button_text-qwiz' + i_qwiz).html (T ('View summary report'));
       }
       $ ('#next_button-qwiz' + i_qwiz).show ();
    }

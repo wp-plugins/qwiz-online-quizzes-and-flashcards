@@ -51,7 +51,12 @@
       'item' => __ ('item', $q),
       'items' => __ ('items', $q),
       'Learn mode: questions repeat until answered correctly' => __ ('Learn mode: questions repeat until answered correctly', $q),
+      'Move each item to its correct <span class="qwizzled_target_border">place</span>' => __ ('Move each item to its correct <span class="qwizzled_target_border">place</span>', $q),
       'Need more practice' => __ ('Need more practice', $q),
+
+      /* Translators: as in "Click here to go to the next question" */
+      'Next question' => __ ('Next question', $q),
+
       'on the first try' => __ ('on the first try', $q),
 
       /* Translators: as in "three out of four" */
@@ -65,13 +70,21 @@
       'response' => __ ('response', $q),
       'responses' => __ ('responses', $q),
       'Show the other side' => __ ('Show the other side', $q),
+
+      /* Translators: as in "Shuffle the deck of cards" */
       'Shuffle' => __ ('Shuffle', $q),
+
+      /* Translators: as in "Click here to start quiz" */
+      'Start quiz' => __ ('Start quiz', $q),
+
+      'Take the quiz again' => __ ('Take the quiz again', $q),
       'Test mode: incorrectly-answered questions do not repeat' => __ ('Test mode: incorrectly-answered questions do not repeat', $q),
       'There was' => __ ('There was', $q),
       'There were' => __ ('There were', $q),
       'This flashcard stack had %s cards.  It took you %s tries until you felt comfortable enough to to mark "got it" for each card' => __ ('This flashcard stack had %s cards.  It took you %s tries until you felt comfortable enough to to mark "got it" for each card', $q),
       'to answer this question correctly' => __ ('to answer this question correctly', $q),
       'to answer these questions correctly' => __ ('to answer these questions correctly', $q),
+      'View summary report' => __ ('View summary report', $q),
       'You answered all of these questions correctly' => __ ('You answered all of these questions correctly', $q),
       'You answered both of these questions correctly' => __ ('You answered both of these questions correctly', $q),
       'You answered this question correctly' => __ ('You answered this question correctly', $q),
