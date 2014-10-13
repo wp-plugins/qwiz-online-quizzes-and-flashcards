@@ -1,4 +1,7 @@
 /*
+ * Version 2.09 2014-10-12
+ * Add random="true" option - initial order randomized.
+ *
  * Version 2.08 2014-10-05
  * Add internationalization - use .po and .mo files.
  * Add div.post-entry as page content location.
@@ -678,7 +681,7 @@ function process_card_input (i_deck, i_card, htm, opening_tags) {
    // Split into individual items.  Should be just one.
    var card_back_items = card_back_html.split (/\[a\]/);
    if (card_back_items.length != 1) {
-      errmsgs.push (T ('Got more than one card back ("[a]") for') + ': qdeck ' + (1 + i_deck) + ', card ' + (1 + i_card) + '\n' + htm);
+      errmsgs.push (T ('Got more than one answer ("[a]") -- card back -- for') + ': qdeck ' + (1 + i_deck) + ', card ' + (1 + i_card) + '\n' + htm);
    }
 
    // Capture any opening tags before "[a]" tag.
@@ -849,6 +852,19 @@ function create_qdeck_divs (i_deck, qdeck_tag) {
          if (attributes.search ('border') == -1) {
             attributes = attributes.replace (/(style\s*?=\s*?["'])/m, '$1border: 2px solid black; ');
          }
+      }
+
+      // If "random=..." present, parse out true/false, delete.  Default for
+      // this deck.
+      var random_matches = attributes.match (/random\s*?=\s*?"[^"]+"/m);
+      deckdata[i_deck].random_b = false;
+      if (random_matches) {
+         var random = random_matches[0];
+         deckdata[i_deck].random_b = random.search ('true') != -1;
+         if (debug[0]) {
+            console.log ('[create_qwiz_divs] random:', random, ', random_b:', deckdata[i_deck].random_b);
+         }
+         attributes = attributes.replace (random, '');
       }
    }
 
@@ -1134,6 +1150,11 @@ function init_card_order (i_deck) {
    deckdata[i_deck].card_order = new Array (n_cards);
    for (var i=0; i<n_cards; i++) {
       deckdata[i_deck].card_order[i] = i;
+   }
+
+   // Shuffle if attribute for initial random order set (random="true").
+   if (deckdata[i_deck].random_b) {
+      deckdata[i_deck].card_order = shuffle (deckdata[i_deck].card_order);
    }
 }
 

@@ -1,5 +1,7 @@
 /*
  * Version 2.09 2014-10-05
+ * Fix "Mode" not showing after labeled diagram.
+ * Labeled diagram not "correct" until labels placed correctly on first try.
  * A few more strings for internationalization.
  *
  * Version 2.08 2014-10-05
@@ -377,32 +379,49 @@ this.label_dropped = function (target_obj, label_obj) {
       // Increment number of labels correctly placed.  See if done with
       // diagram.
       qwizdata[i_qwiz].n_labels_correct++;
+      var qwizq_id = '#qwiz' + i_qwiz + '-q' + i_question;
       if (qwizdata[i_qwiz].n_labels_correct == qwizdata[i_qwiz].n_labels) {
 
          // Done with labeled diagram.  Show summary, final feedback DKTMP.
          var n_tries = qwizdata[i_qwiz].n_label_attempts;
          var n_labels = qwizdata[i_qwiz].n_labels;
+         var correct_b = n_tries == n_labels;
          var qwizzled_summary;
-         if (n_tries == n_labels) {
+         if (correct_b) {
             qwizzled_summary = 'You placed all of the items correctly on the first try!';
          } else {
             qwizzled_summary = plural ('It took you one try', 'It took you %s tries', n_tries) + ' ' + plural ('to place this label correctly', 'to place these labels correctly', n_labels) + '.';
             qwizzled_summary = qwizzled_summary.replace ('%s', number_to_word (n_tries));
          }
-         $ ('#qwiz' + i_qwiz + '-q' + i_question + '-ff').html (qwizzled_summary).show ();
+         $ (qwizq_id + '-ff').html (qwizzled_summary).show ();
 
          // Exit text if this is a single-question qwiz and there is exit
-         // text.  Mark correct, show next button.
-         qwizdata[i_qwiz].n_correct++;
+         // text.
          if (qwizdata[i_qwiz].finished_diagram_div) {
 
-            $ ('#qwiz' + i_qwiz + '-q0 td.qwizzled_feedback').append (qwizdata[i_qwiz].finished_diagram_div);
+            $ (qwizq_id + ' td.qwizzled_feedback').append (qwizdata[i_qwiz].finished_diagram_div);
 
             // Update progress bar.
             display_qwizzled_progress (i_qwiz);
          } else {
-            $ ('#qwiz' + i_qwiz).data ('answered_correctly', 1);
-            update_topic_statistics (i_qwiz, i_question, true);
+
+            // Consider correct only if all labels properly placed on first try.
+            if (correct_b) {
+               qwizdata[i_qwiz].n_correct++;
+               $ (qwizq_id).data ('answered_correctly', 1);
+            } else {
+
+               // Record number of incorrect responses.
+               qwizdata[i_qwiz].n_incorrect++;
+
+               // If repeating incorrect, record as incorrect response as signal
+               // to restore labeled diagram state.  If not repeating incorrect,
+               // do same to record incorrect response.
+               $ (qwizq_id).data ('answered_correctly', 0);
+            }
+            update_topic_statistics (i_qwiz, i_question, correct_b);
+
+            // Show next-button.
             update_progress_show_next (i_qwiz);
          }
       } else {
@@ -511,6 +530,7 @@ function add_style () {
    s.push ('   padding-left:    3px;');
    s.push ('   padding-right:   3px;');
    s.push ('   color:           gray;');
+   s.push ('   cursor:          help;');
    //s.push ('   background:      #CCCCCC;');
    //s.push ('   border:          1px solid gray;');
    //s.push ('   border-radius:   4px;');
@@ -941,7 +961,7 @@ function create_qwiz_divs (i_qwiz, qwiz_tag, htm, exit_html) {
    
    // If "repeat_incorrect=..." present, parse out true/false, delete.
    // Default for this qwiz.
-   var repeat_incorrect_matches = attributes.match (/repeat_incorrect="[^"]+"/m);
+   var repeat_incorrect_matches = attributes.match (/repeat_incorrect\s*?=\s*?"[^"]+"/m);
    qwizdata[i_qwiz].repeat_incorrect_b = true;
    if (repeat_incorrect_matches) {
       var repeat_incorrect = repeat_incorrect_matches[0];
@@ -1126,7 +1146,8 @@ this.restart_quiz = function (i_qwiz) {
    for (var id in qwizdata[i_qwiz].qwizzled) {
       $ ('div#' + id).replaceWith (qwizdata[i_qwiz].qwizzled[id]);
 
-      // For reasons beyond me, it's necessary to re-initialize the cloned object.
+      // For reasons beyond me, it's necessary to re-initialize the cloned
+      // object.
       qwizdata[i_qwiz].qwizzled[id] = $ ('div#' + id).clone (true);
    }
 
@@ -1225,16 +1246,32 @@ function display_question (i_qwiz, i_question) {
    $ ('[id^=' + qwizq_id + ']').hide ();
 
    var qwizq_obj = $ ('#' + qwizq_id);
-   qwizq_obj.show ();
+   var qwizzled_b = qwizq_obj.hasClass ('qwizzled');
 
 
-   // If a labeled diagram, reset progress bar.
-   if (qwizq_obj.hasClass ('qwizzled')) {
+   // If a labeled diagram, if previously-answered incorrectly, restore state.
+   if (qwizzled_b) {
+      if ($ ('#' + qwizq_id).data ('answered_correctly') == 0) {
+         $ ('div#' + qwizq_id).replaceWith (qwizdata[i_qwiz].qwizzled[qwizq_id]);
+         qwizq_obj = $ ('#' + qwizq_id);
+
+         // As in restart_quiz (), re-initialize the cloned object.
+         qwizdata[i_qwiz].qwizzled[qwizq_id] = $ ('div#' + qwizq_id).clone (true);
+         if (debug[0]) {
+            console.log ('[display_question] qwizq_id:', qwizq_id);
+         }
+      }
+
+      // Also, reset progress bar.
       qwizdata[i_qwiz].n_labels_correct = 0;
       qwizdata[i_qwiz].n_label_attempts = 0;
       qwizdata[i_qwiz].n_labels = qwizq_obj.find ('div.qwizzled_label').length;
       display_qwizzled_progress (i_qwiz);
-   } else {
+   }
+
+   qwizq_obj.show ();
+
+   if (! qwizzled_b) {
 
       // Enable radio clicks in case previously disabled for this question.
       // Also, show radios unclicked.
@@ -2086,12 +2123,8 @@ function display_progress (i_qwiz) {
 function display_qwizzled_progress (i_qwiz) {
 
    // Show in case single-question qwiz.
-   var progress_html = 'Correctly labeled ' + qwizdata[i_qwiz].n_labels_correct + ' out of ' + qwizdata[i_qwiz].n_labels + ' ' + plural ('item', 'items', qwizdata[i_qwiz].n_labels);
+   var progress_html = 'Correctly labeled ' + qwizdata[i_qwiz].n_labels_correct + ' out of ' + qwizdata[i_qwiz].n_labels + ' items';
    $ ('#progress-qwiz' + i_qwiz).html (progress_html).show ();
-
-   // If is single-question quiz, don't show mode, but keep its space (since
-   // progress floats right).
-   $ ('#mode-qwiz' + i_qwiz).css ('visibility', 'hidden');
 }
 
 

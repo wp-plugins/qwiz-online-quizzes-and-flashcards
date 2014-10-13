@@ -1,4 +1,7 @@
 /*
+ * Version 2.09 2014-10-12
+ * Warn/prevent use of images with captions for labeled diagrams.
+ *
  * Version 2.08 2014-10-05
  * Add internationalization - use .po and .mo files.
  * Add div.post-entry as page content location.
@@ -713,192 +716,210 @@ this.target_text_selected = function (e) {
 
       // Yes, image.
       if (debug[0]) {
-         console.log ('node tagName:', $ (node)[0].tagName);
-         //console.log ('parent html:', $ (node).parent ().html ());
-         console.log ('parent tagName:', $ (node).parent ()[0].tagName);
-         //console.log ('parent parent html:', $ (node).parent ().parent ().html ());
-         console.log ('parent parent tagName:', $ (node).parent ().parent ()[0].tagName);
+         console.log ('node tagName:', node_obj[0].tagName);
+         //console.log ('parent html:', node_obj.parent ().html ());
+         console.log ('parent tagName:', node_obj.parent ()[0].tagName);
+         //console.log ('parent parent html:', node_obj.parent ().parent ().html ());
+         console.log ('parent parent tagName:', node_obj.parent ().parent ()[0].tagName);
       }
 
       // If images already wrapped, add target to that div.  Element from
       // TinyMCE, use jQuery to get parent.
       var el_img = tinymce_ed.selection.getNode ();
-      var img_wrapper;
+      var img_wrapper = '';
       if ($ (el_img).parents ().hasClass ('qwizzled_image')) {
          img_wrapper = $ (el_img).parents ('[class*="qwizzled_image"]');
          n_labels_w_targets--;
          if (debug[0]) {
             console.log ('Found img_wrapper:', img_wrapper);
          }
-      } else {
+      }
+      var caption_b = false;
+      if (img_wrapper == '') {
 
-         // Create wrapper.  First collect attributes from image (that is,
-         // everything except "<img " and "/>").
-         var img_attributes = selected_text.substr (5, slen-7);
+         // Won't work with captions.  Alert to delete caption and try again.
+         parent_parent_tagname = node_obj.parent ().parent ()[0].tagName;
+         caption_b = parent_parent_tagname == 'DT';
+         if (caption_b) {
+            alert (T ('Sorry, labeled diagrams do not work with images that have captions.  Please edit the image, delete the caption, and try again.'));
 
-         // Wrap image in div with image's attributes, but transfer height= and
-         // width= to style of wrapping div, then delete id=, src=, alt=, 
-         // height=, and width=.  Set the margins to zero, since the
-         // image's class's margins will take care of that (and don't want to
-         // double them), but keep auto margins if aligncenter WordPress class.
-         // First grab height and width.
-         var m = img_attributes.match (/height\s*=\s*"(.*?)"/m);
-         var img_size_style = '';
-         if (m) {
-            img_size_style += 'height: ' + m[1] + 'px; ';
-         }
-         m = img_attributes.match (/width\s*=\s*"(.*?)"/m);
-         if (m) {
-            img_size_style += 'width: ' + m[1] + 'px; ';
-         }
-         var img_wrapper_attributes = img_attributes.replace (/(id|src|alt|width|height)\s*=\s*".*?"/gm, '');
-         var img_wrapper_id = 'id="qwizzled_img_wrapper-' + assoc_id + '" ';
-         var img_wrapper_style = ' style="position: relative; ' + img_size_style;
-         if (img_attributes.search ('aligncenter') == -1) {
-            img_wrapper_style += 'margin: 0px;';
+            // Cancel feedback.
+            qwizzled_main_menu_feedback.hide ();
          } else {
-            img_wrapper_style += 'margin: 0px auto;';
-         }
-         img_wrapper_style += '" ';
 
-         // TinyMCE has style that adds padding to image, but this isn't present
-         // in page display.  Add style to set padding to zero.  Editor also puts
-         // border around image.  Nix that, too.
-         //img_attributes = add_attr_value ('style', 'padding: 0px; border: none; ', img_attributes);
+            // Create wrapper.  First collect attributes from image (that is,
+            // everything except "<img " and "/>").
+            var img_attributes = selected_text.substr (5, slen-7);
 
-         // Take away alignleft, aligncenter, etc.  Messes things up when
-         // display page.
-         img_attributes = img_attributes.replace (/align(left|center|right|none)/m, '');
-
-         // Add class or to class.
-         var new_txt = '<div ' + img_wrapper_id + img_wrapper_style + img_wrapper_attributes + '><img ' + img_attributes + ' /></div>';
-         new_txt = add_attr_value ('class', 'qwizzled_image', new_txt);
-         if (debug[0]) {
-            console.log ('[target_text_selected] new_txt: ' + new_txt);
-         }
-
-         // Note: observed setups include
-         //   <p>                            <p>
-         //      <a> href=...>                  Paragraph text...
-         //         <img ...>                   <a href=...>
-         //      </a>                              <img ...>
-         //      <br data-mce-bogus=1>          </a>
-         //   </p>                              more paragraph text...
-         //                                  </p>
-         //
-         //  A div can't live inside a paragraph, so when wrap img in a div,
-         //  move the div in front of the paragraph.  If paragraph otherwise
-         //  empty, delete.  Note also that el_img (selected text via TinyMCE
-         //  is just the <img ...> element.
-
-         // Identify <a href=...> link, if there.
-         var img_href = '';
-         var link_obj = $ (el_img).parent ('a');
-         if (link_obj.length) {
-            img_href = link_obj.attr ('href');
-            if (debug[0]) {
-               console.log ('[target_text_selected] img_href:', img_href);
+            // Wrap image in div with image's attributes, but transfer height= and
+            // width= to style of wrapping div, then delete id=, src=, alt=, 
+            // height=, and width=.  Set the margins to zero, since the
+            // image's class's margins will take care of that (and don't want to
+            // double them), but keep auto margins if aligncenter WordPress class.
+            // First grab height and width.
+            var m = img_attributes.match (/height\s*=\s*"(.*?)"/m);
+            var img_size_style = '';
+            if (m) {
+               img_size_style += 'height: ' + m[1] + 'px; ';
             }
-         }
+            m = img_attributes.match (/width\s*=\s*"(.*?)"/m);
+            if (m) {
+               img_size_style += 'width: ' + m[1] + 'px; ';
+            }
+            var img_wrapper_attributes = img_attributes.replace (/(id|src|alt|width|height)\s*=\s*".*?"/gm, '');
+            var img_wrapper_id = 'id="qwizzled_img_wrapper-' + assoc_id + '" ';
+            var img_wrapper_style = ' style="position: relative; ' + img_size_style;
+            if (img_attributes.search ('aligncenter') == -1) {
+               img_wrapper_style += 'margin: 0px;';
+            } else {
+               img_wrapper_style += 'margin: 0px auto;';
+            }
+            img_wrapper_style += '" ';
 
-         // If image was inside a paragraph, want to move it in front of 
-         // paragraph.  Otherwise, just use TinyMCE to replace image with
-         // wrapper that includes image.
-         var p_obj = $ (el_img).parents ('p');
-         if (p_obj.length) {
+            // TinyMCE has style that adds padding to image, but this isn't present
+            // in page display.  Add style to set padding to zero.  Editor also puts
+            // border around image.  Nix that, too.
+            //img_attributes = add_attr_value ('style', 'padding: 0px; border: none; ', img_attributes);
 
-            // Yes, paragraph parent exists.  Insert wrapping div and img
-            // in front of the paragraph, delete existing image with TinyMCE.
-            p_obj.before (new_txt);
-            tinymce_ed.selection.setContent ('');
+            // Take away alignleft, aligncenter, etc.  Messes things up when
+            // display page.
+            img_attributes = img_attributes.replace (/align(left|center|right|none)/m, '');
+
+            // Add class or to class.
+            var new_txt = '<div ' + img_wrapper_id + img_wrapper_style + img_wrapper_attributes + '><img ' + img_attributes + ' /></div>';
+            new_txt = add_attr_value ('class', 'qwizzled_image', new_txt);
             if (debug[0]) {
-               console.log ('inserted wrapper before p_obj:', p_obj);
-               console.log ('p_obj.html ():', p_obj.html ());
+               console.log ('[target_text_selected] new_txt: ' + new_txt);
             }
 
-         } else {
-            tinymce_ed.selection.setContent (new_txt);
-         }
+            // Note: observed setups include
+            //   <p>                            <p>
+            //      <a> href=...>                  Paragraph text...
+            //         <img ...>                   <a href=...>
+            //      </a>                              <img ...>
+            //      <br data-mce-bogus=1>          </a>
+            //   </p>                              more paragraph text...
+            //                                  </p>
+            //
+            //  A div can't live inside a paragraph, so when wrap img in a div,
+            //  move the div in front of the paragraph.  If paragraph otherwise
+            //  empty, delete.  Note also that el_img (selected text via TinyMCE
+            //  is just the <img ...> element.
 
-         // Use jQuery to get wrapper object.
-         img_wrapper = edit_area.find ('#qwizzled_img_wrapper-' + assoc_id);
-
-         // If image link, check that it's now empty.  If parent is <p>,
-         // see if just image link and "data-mce-bogus" element.  If so, delete
-         // paragraph.
-         if (img_href) {
-            link_obj = edit_area.find ('a[href="' + img_href + '"]');
+            // Identify <a href=...> link, if there.
+            var img_href = '';
+            var link_obj = $ (el_img).parent ('a');
             if (link_obj.length) {
+               img_href = link_obj.attr ('href');
                if (debug[0]) {
-                  console.log ('[target_text_selected] link_obj.html():', link_obj.html());
+                  console.log ('[target_text_selected] img_href:', img_href);
                }
-               var link_html = link_obj.html ();
-               if (link_html.search (/\S/) == -1) {
-                  p_obj = link_obj.parents ('p');
-                  if (p_obj.length) {
-                     link_obj.remove ();
-                     edit_area.find ('[data-mce-bogus]').remove ();
-                     var p_html = p_obj.html ();
-                     if (debug[0]) {
-                        console.log ('[target_text_selected] p_html:', p_html);
-                     }
-                     if (p_html.search (/\S/) == -1) {
-                        p_obj.remove ();
+            }
+
+            // If image was inside a paragraph, want to move it in front of 
+            // paragraph.  Otherwise, just use TinyMCE to replace image with
+            // wrapper that includes image.
+            var p_obj = $ (el_img).parents ('p');
+            if (p_obj.length) {
+
+               // Yes, paragraph parent exists.  Insert wrapping div and img
+               // in front of the paragraph, delete existing image with TinyMCE.
+               p_obj.before (new_txt);
+               tinymce_ed.selection.setContent ('');
+               if (debug[0]) {
+                  console.log ('inserted wrapper before p_obj:', p_obj);
+                  console.log ('p_obj.html ():', p_obj.html ());
+               }
+
+            } else {
+               tinymce_ed.selection.setContent (new_txt);
+            }
+
+            // Use jQuery to get wrapper object.
+            img_wrapper = edit_area.find ('#qwizzled_img_wrapper-' + assoc_id);
+
+            // If image link, check that it's now empty.  If parent is <p>,
+            // see if just image link and "data-mce-bogus" element.  If so, delete
+            // paragraph.
+            if (img_href) {
+               link_obj = edit_area.find ('a[href="' + img_href + '"]');
+               if (link_obj.length) {
+                  if (debug[0]) {
+                     console.log ('[target_text_selected] link_obj.html():', link_obj.html());
+                  }
+                  var link_html = link_obj.html ();
+                  if (link_html.search (/\S/) == -1) {
+                     p_obj = link_obj.parents ('p');
+                     if (p_obj.length) {
+                        link_obj.remove ();
+                        edit_area.find ('[data-mce-bogus]').remove ();
+                        var p_html = p_obj.html ();
+                        if (debug[0]) {
+                           console.log ('[target_text_selected] p_html:', p_html);
+                        }
+                        if (p_html.search (/\S/) == -1) {
+                           p_obj.remove ();
+                        }
                      }
                   }
                }
             }
+            if (debug[0]) {
+               console.log ('[target_text_selected] updated edit_area html:', edit_area.html ());
+            }
          }
       }
+      if (! caption_b) {
 
-      // Save association with target ID with label.  For some reason data ()
-      // didn't work.  Also, set label border same as associated target border.
-      $ (el_label_div).attr ('data-label_target_id', assoc_id);
-      if (label_border_style == '') {
-         if ($ (el_label_div).hasClass ('qwizzled_highlight_label')) {
-            $ (el_label_div).css ({'border-color': bcolor, 'border-style': bstyle, 'border-width': '2px'});
+         // Save association with target ID with label.  For some reason data ()
+         // didn't work.  Also, set label border same as associated target border.
+         $ (el_label_div).attr ('data-label_target_id', assoc_id);
+         if (label_border_style == '') {
+            if ($ (el_label_div).hasClass ('qwizzled_highlight_label')) {
+               $ (el_label_div).css ({'border-color': bcolor, 'border-style': bstyle, 'border-width': '2px'});
+            } else {
+               $ (el_label_div).find ('.qwizzled_highlight_label').css ({'border-color': bcolor, 'border-style': bstyle, 'border-width': '2px'});
+            }
+         }
+
+         // Add target to span.  Position the target where clicked.
+         // clientX and Y are relative to document -- body in iframe in this case.
+         // node_obj is our image, with jQuery offset () also relative to body in
+         // iframe.  So subtraction should give us click position in image.
+         if (debug[0]) {
+            console.log ('[target_text_selected] e.clientX:', e.clientX, ', e.clientY:', e.clientY);
+         }
+         var style = 'left: ' + target_left + 'px; top: ' + target_top + 'px; ';
+
+         // Target height and width set in add_style_edit_area ().  Give target
+         // border to match label border.
+         if (label_border_style) {
+            style += label_border_style;
          } else {
-            $ (el_label_div).find ('.qwizzled_highlight_label').css ({'border-color': bcolor, 'border-style': bstyle, 'border-width': '2px'});
+            style += 'border: ' + bwidth + ' ' + bstyle + ' ' + bcolor + ';';
          }
+
+         // Create target, include association ID.  Prepend it to wrapper content.
+         var target_html = '<div class="qwizzled_target-' + assoc_id + ' qwizzled_target" style="' + style + '"></div>';
+         img_wrapper.prepend (target_html);
+
+         // Make target draggable, resizable.
+         var target_obj = edit_area.find ('.qwizzled_target-' + assoc_id);
+         target_obj.draggable ();
+         target_obj.resizable ({
+            resize: function (e, ui_obj) {
+
+               // Set the left and bottom margins of the target div to offset the 
+               // (resized) width and height of the div (kludge to enable use of
+               // relative positioning rather than absolute, which gets extra
+               // "drag handle" in Firefox).
+               $ (this).css ({'margin-right': -(ui_obj.size.width + horizontal_margin_adjust) + 'px', 'margin-bottom': -(ui_obj.size.height + vertical_margin_adjust) + 'px'});
+            }
+         });
+
+         // Provide instruction/feedback.
+         qwizzled_main_menu_feedback.html (T ('You can position and resize the target "drop zone" how you want in relation to the image.')).show ().fadeOut (10000, 'easeInCubic');
       }
-
-      // Add target to span.  Position the target where clicked.
-      // clientX and Y are relative to document -- body in iframe in this case.
-      // node_obj is our image, with jQuery offset () also relative to body in
-      // iframe.  So subtraction should give us click position in image.
-      if (debug[0]) {
-         console.log ('[target_text_selected] e.clientX:', e.clientX, ', e.clientY:', e.clientY);
-      }
-      var style = 'left: ' + target_left + 'px; top: ' + target_top + 'px; ';
-
-      // Target height and width set in add_style_edit_area ().  Give target
-      // border to match label border.
-      if (label_border_style) {
-         style += label_border_style;
-      } else {
-         style += 'border: ' + bwidth + ' ' + bstyle + ' ' + bcolor + ';';
-      }
-
-      // Create target, include association ID.  Prepend it to wrapper content.
-      var target_html = '<div class="qwizzled_target-' + assoc_id + ' qwizzled_target" style="' + style + '"></div>';
-      img_wrapper.prepend (target_html);
-
-      // Make target draggable, resizable.
-      var target_obj = edit_area.find ('.qwizzled_target-' + assoc_id);
-      target_obj.draggable ();
-      target_obj.resizable ({
-         resize: function (e, ui_obj) {
-
-            // Set the left and bottom margins of the target div to offset the 
-            // (resized) width and height of the div (kludge to enable use of
-            // relative positioning rather than absolute, which gets extra
-            // "drag handle" in Firefox).
-            $ (this).css ({'margin-right': -(ui_obj.size.width + horizontal_margin_adjust) + 'px', 'margin-bottom': -(ui_obj.size.height + vertical_margin_adjust) + 'px'});
-         }
-      });
-
-      // Provide instruction/feedback.
-      qwizzled_main_menu_feedback.html (T ('You can position and resize the target "drop zone" how you want in relation to the image.')).show ().fadeOut (10000, 'easeInCubic');
    } else {
 
       // Not just an image.  Regular text; but may include an image.

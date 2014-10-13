@@ -2,7 +2,7 @@
 Contributors: dan_kirshner
 Tags: interactive quiz, quiz, flashcards, labeled diagrams
 Tested up to: 4.0
-Stable tag: 2.08
+Stable tag: 2.09
 License: GPL2
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
@@ -19,6 +19,14 @@ Activate the plugin through the 'Plugins' menu in WordPress
 == Screenshots ==
 
 == Changelog ==
+
+= 2.09 =
+2014-10-12
+Fix "Mode" not showing after labeled diagram.
+Labeled diagram not "correct" until labels placed correctly on first try.
+Add random="true" option for flashcard decks - initial order randomized.
+Warn/prevent use of images with captions for labeled diagrams.
+A few more strings for internationalization.
 
 = 2.08 =
 2014-10-05
