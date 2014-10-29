@@ -20,6 +20,11 @@ Activate the plugin through the 'Plugins' menu in WordPress
 
 == Changelog ==
 
+= 2.10 =
+2014-10-28
+Fix topic= for labeled diagram questions.
+Add labels="top", etc. options for labeled diagram questions.
+
 = 2.09 =
 2014-10-12
 Fix "Mode" not showing after labeled diagram.

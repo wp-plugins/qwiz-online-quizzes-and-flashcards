@@ -1,4 +1,8 @@
 /*
+ * Version 2.10 2014-10-28
+ * Fix topic= for labeled diagram questions.
+ * Add labels="top", etc. options for labeled diagram questions.
+ *
  * Version 2.09 2014-10-05
  * Fix "Mode" not showing after labeled diagram.
  * Labeled diagram not "correct" until labels placed correctly on first try.
@@ -591,11 +595,14 @@ function add_style () {
 
    // Labeled-diagram labels table cell.
    s.push ('td.qwizzled_labels {');
-   s.push ('   width:           25%;');
-   s.push ('   min-width:       125px;');
    s.push ('   vertical-align:  top;');
    s.push ('   border:          none;');
    s.push ('   padding:         0px;');
+   s.push ('}');
+
+   s.push ('td.qwizzled_labels_left_right {');
+   s.push ('   width:           25%;');
+   s.push ('   min-width:       125px;');
    s.push ('}');
 
    // Box around labels.
@@ -612,14 +619,23 @@ function add_style () {
    s.push ('   margin-bottom:   0.5rem;');
    s.push ('}');
 
-   // Bulleted labels indent.
-   s.push ('td.qwizzled_labels ul {');
+   s.push ('ul.qwizzled_labels {');
+   s.push ('   margin:          0px;');
    s.push ('   padding:         0px;');
    s.push ('}');
 
-   s.push ('td.qwizzled_labels li {');
-   s.push ('   margin-left:     1rem;');
+   // Bulleted labels indent (= padding).
+   s.push ('ul.qwizzled_labels_std li {');
+   s.push ('   padding:         0px;');
    s.push ('   margin:          0 0 0 1rem;');
+   s.push ('   margin-left:     1rem;');
+   s.push ('}');
+
+   s.push ('ul.qwizzled_labels_inline li {');
+   s.push ('   float:           left;');
+   s.push ('   padding:         0px;');
+   s.push ('   margin:          0 0 0 2rem;');
+   s.push ('   margin-left:     2rem;');
    s.push ('}');
 
    // Labeled-diagram labels feedback cell.
@@ -815,11 +831,11 @@ function process_qwiz_pair (htm) {
       }
 
       // question_html -- everything from first [q] on.
-      var question_html = htm.match (/(\[q [^\]]*\]|<div class="qwizzled_question">)[\s\S]*|\[q\][\s\S]*/m)[0];
+      var question_html = htm.match (/(\[q [^\]]*\]|<div class="qwizzled_question">|\[q\])[\s\S]*/m)[0];
 
       // Find topic attributes, if any, for each question.  First get array of
       // tags.
-      var question_tags = question_html.match (/\[q[^\]]*\]|<div class="qwizzled_question">/gm);
+      var question_tags = question_html.match (/\[(<code><\/code>)*?q([^\]]*)\]/gm);
       if (debug[4]) {
          console.log ('[process_qwiz_pair] question_tags: ', question_tags);
       }
@@ -896,7 +912,8 @@ function process_qwiz_pair (htm) {
             qwizdata[i_qwiz].qwizzled_b = true;
             question_div = process_qwizzled (i_qwiz, i_question,
                                              questions_html[i_question],
-                                             q_opening_tags[i_question]);
+                                             q_opening_tags[i_question],
+                                             question_tags[i_question]);
          } else {
 
             // Error: didn't find choices or labels.
@@ -1078,34 +1095,34 @@ function process_topics (i_qwiz, question_tags) {
    for (var i_question=0; i_question<n_questions; i_question++) {
       var question_tag = question_tags[i_question];
 
-      // See if any attribute.
-      var matches = question_tag.match (/\[q\s+([^\]]*)\]/);
-      if (matches && matches[1].substr (0, 5) == 'topic') {
-         var attribute = matches[1].substr (5);
-         var matches = attribute.match (/"([^"]*)"/);
-         if (matches) {
-            var question_topics = trim (matches[1]);
-            if (debug[4]) {
-               console.log ('[process_topics] question_topics: ', question_topics);
-            }
+      // Find attributes, if any.
+      var m = question_tag.match (/\[(<code><\/code>)*?q([^\]]*)\]/m);
+      var attributes = m[2];
+      if (attributes) {
 
-            // Multiple topics for a question - separated by semicolon (and
-            // optional space).  Split into array.
-            question_topics = question_topics.split (/; */);
-            qwizdata[i_qwiz].question_topics[i_question] = question_topics;
-            n_questions_w_topics++;
+         // Look for "topic=" attribute.
+         var topic_match = attributes.match (/topic\s*?=\s*?"([^"]+)"/m);
+         if (topic_match) {
+            var question_topics = topic_match[1];
+            if (question_topics) {
+               if (debug[4]) {
+                  console.log ('[process_topics] question_topics: ', question_topics);
+               }
 
-            // Add topics to list of topics if not already in list.
-            for (var i=0; i<question_topics.length; i++) {
-               var topic = question_topics[i];
-               if (qwizdata[i_qwiz].topics.indexOf (topic) == -1) {
-                  qwizdata[i_qwiz].topics.push (topic);
+               // Multiple topics for a question - separated by semicolon (and
+               // optional space).  Split into array.
+               question_topics = question_topics.split (/; */);
+               qwizdata[i_qwiz].question_topics[i_question] = question_topics;
+               n_questions_w_topics++;
+
+               // Add topics to list of topics if not already in list.
+               for (var i=0; i<question_topics.length; i++) {
+                  var topic = question_topics[i];
+                  if (qwizdata[i_qwiz].topics.indexOf (topic) == -1) {
+                     qwizdata[i_qwiz].topics.push (topic);
+                  }
                }
             }
-         } else {
-
-            // Have '[q topic', say, but didn't find double quotes.
-            errmsgs.push (T ('Did not find topic within double quotes for') + ' qwiz ' + i_qwiz + ', question ' + i_question);
          }
       }
    }
@@ -1450,7 +1467,8 @@ function process_question (i_qwiz, i_question, htm, opening_tags) {
 
 
 // -----------------------------------------------------------------------------
-function process_qwizzled (i_qwiz, i_question, question_htm, opening_tags) {
+function process_qwizzled (i_qwiz, i_question, question_htm, opening_tags,
+                           question_tag) {
 
    if (debug[1]) {
       console.log ('[process_qwizzled] question_htm: ', question_htm);
@@ -1461,6 +1479,20 @@ function process_qwizzled (i_qwiz, i_question, question_htm, opening_tags) {
    // target.
    // DKTMP
    // ...
+
+   // See if labels placement specified by "attribute", e.g., [q labels="top"].
+   // Default is "right".  Find attributes, if any.
+   var m = question_tag.match (/\[<code><\/code>q([^\]]*)\]/m);
+   var attributes = m[1];
+   if (attributes) {
+
+      // Look for "labels=" attribute.
+      var labels_match = attributes.match (/labels\s*?=\s*?"([^"]+)"/m);
+      var labels_position = labels_match[1].toLowerCase ();
+      if (debug[0]) {
+         console.log ('[process_qwizzled] labels_position:', labels_position);
+      }
+   }
 
    // Begin with standard question div, plus beginning of layout table --
    // "canvas" on left, labels on right, and feedback below both.
@@ -1488,22 +1520,56 @@ function process_qwizzled (i_qwiz, i_question, question_htm, opening_tags) {
    new_htm = new_htm.substr (0, canvas_div_pos + div_html.length);
 
    // Just change "div" to "td".  Can keep class.
-   var table_html = '<td' + div_html.substring (4, div_html.length - 4) + 'td>';
+   var td_canvas = '<td' + div_html.substring (4, div_html.length - 4) + 'td>';
+
+   // Add on label cell and feedback cell.
+   var td_labels_style = '';
+   if (labels_position == 'left') {
+      td_labels_style = ' style="padding-right: 5px;"'
+   }
+   var td_labels_add_class = '';
+   if (labels_position != 'top' && labels_position != 'bottom') {
+      td_labels_add_class = ' qwizzled_labels_left_right';
+   }
+   var td_labels   = '<td class="qwizzled_labels' + td_labels_add_class + '"' + td_labels_style + '>'
+                   +    '<div class="qwizzled_labels_border">'
+                   +        'Q-LABELS-Q'
+                   +        '<div style="clear: both;"></div>\n';
+                   +    '</div>'
+                   + '</td>';
+   var td_feedback = '<td class="qwizzled_feedback" colspan="2">QWIZZLED-FEEDBACK-Q</td>';
+                 //+ '</tr>'
+                 //+ '</table>';
+
+   // Different table setups (after first "<tr">, already in new_htm, above.
+   var table_html;
+   if (labels_position == "top") {
+      table_html =            td_labels + '</tr>'
+                   + '<tr>' + td_canvas + '</tr>';
+   } else if (labels_position == "bottom") {
+      table_html =            td_canvas + '</tr>'
+                   + '<tr>' + td_labels + '</tr>';
+   } else if (labels_position == "left") {
+      table_html =            td_labels + td_canvas + '</tr>';
+                   + '<tr>' + td_canvas + '</tr>';
+   } else {
+
+      // Default ("right").
+      table_html =            td_canvas + td_labels + '</tr>';
+                   + '<tr>' + td_canvas + '</tr>';
+   }
    if (debug[0]) {
       console.log ('[process_qwizzled] table_html.substr (0, 40):', table_html.substr (0, 40));
    }
 
-   // Add on label cell and feedback cell.
-   table_html +=      '<td class="qwizzled_labels"><div class="qwizzled_labels_border">Q-LABELS-Q</div></td>'
-                 + '</tr>'
-                 + '<tr>'
-                 +    '<td class="qwizzled_feedback" colspan="2">QWIZZLED-FEEDBACK-Q</td>'
-                 + '</tr>'
+   // Feedback is always below.  Finish table.
+   table_html +=      '<tr>' + td_feedback + '</tr>'
                  + '</table>';
+
    new_htm = new_htm.replace (div_html, table_html);
 
    // Take out the ("encoded") [q].
-   new_htm = new_htm.replace ('[<code></code>q]', '');
+   new_htm = new_htm.replace (/\[<code><\/code>q[^\]]*\]/, '');
 
    if (debug[0]) {
       console.log ('[process_qwizzled] new_htm:', new_htm);
@@ -1539,7 +1605,13 @@ function process_qwizzled (i_qwiz, i_question, question_htm, opening_tags) {
 
    // Put labels in labels area.
    var label_head = '<p class="qwizzled_label_head">Move each item to its correct <span class="qwizzled_target_border">place</span></p>';
-   new_htm = new_htm.replace ('Q-LABELS-Q', label_head + '<ul>' + label_divs.join ('\n') + '</ul>');
+   var ul;
+   if (labels_position == "top" || labels_position == "bottom") {
+      ul = '<ul class="qwizzled_labels qwizzled_labels_inline">';
+   } else {
+      ul = '<ul class="qwizzled_labels qwizzled_labels_std">';
+   }
+   new_htm = new_htm.replace ('Q-LABELS-Q', label_head + ul + label_divs.join ('\n') + '</ul>');
 
    // ..........................................................................
    // Process feedback -- [f*] (label correctly placed) and [fx] (label not
@@ -1624,9 +1696,10 @@ this.init_drag_and_drop = function (qwizq_elm) {
    qwizq_obj.find ('td.qwizzled_labels div.qwizzled_label').each (function () {
       if (debug[0]) {
          console.log ('[init_drag_and_drop] \'td.qwizzled_labels div.qwizzled_label\':', $ (this));
+         console.log ('                       parents (\'.qwizq\':', $ (this).parents ('.qwizq'));
       }
       $ (this).draggable ({
-         containment:   $ (this).parents ('.qwizq'),
+         //containment:   $ (this).parents ('.qwizq'),
          start:         function (event, ui) {
 
                            // If label previously incorrectly placed, reset
