@@ -149,5 +149,3 @@
       'Unmatched [qdeck] - [/qdeck] pairs' => __ ('Unmatched [qdeck] - [/qdeck] pairs', $q),
       'Unmatched [qwiz] - [/qwiz] pairs' => __ ('Unmatched [qwiz] - [/qwiz] pairs', $q)
    );
-?>
-

@@ -3,7 +3,7 @@
  * Plugin Name: Qwiz - online quizzes and flashcards
  * Plugin URI: http://dkprojects.net/qwiz
  * Description: Easy online quizzes and flashcards for WordPress
- * Version: 2.12
+ * Version: 2.13
  * Author: Dan Kirshner
  * Author URI: http://dkprojects.net/qwiz
  * License: GPL2
@@ -50,10 +50,10 @@ function add_qwiz_js () {
    $qwizcards            = plugins_url ('qwizcards.js', __FILE__);
    $jquery_ui            = plugins_url ('jquery-ui.min.js', __FILE__);
    $jquery_ui_touchpunch = plugins_url ('jquery.ui.touch-punch.min.js', __FILE__);
-   wp_enqueue_script ('qwiz_handle',                 $qwiz,                 array (), '2.12', true);
-   wp_enqueue_script ('qwizcard_handle',             $qwizcards,            array (), '2.12', true);
-   wp_enqueue_script ('jquery_ui_handle',            $jquery_ui,            array (), '2.12', true);
-   wp_enqueue_script ('jquery_ui_touchpunch_handle', $jquery_ui_touchpunch, array (), '2.12', true);
+   wp_enqueue_script ('qwiz_handle',                 $qwiz,                 array (), '2.13', true);
+   wp_enqueue_script ('qwizcard_handle',             $qwizcards,            array (), '2.13', true);
+   wp_enqueue_script ('jquery_ui_handle',            $jquery_ui,            array (), '2.13', true);
+   wp_enqueue_script ('jquery_ui_touchpunch_handle', $jquery_ui_touchpunch, array (), '2.13', true);
 
 
    $plugin_url = plugins_url ( '/', __FILE__ );
@@ -105,4 +105,3 @@ function qwizzled_add_locale($locales) {
 }
 add_filter ('mce_external_languages', 'qwizzled_add_locale');
 
-?>

@@ -25,4 +25,3 @@ function qwizzled_translation () {
 }
 
 $strings = qwizzled_translation ();
-?>
