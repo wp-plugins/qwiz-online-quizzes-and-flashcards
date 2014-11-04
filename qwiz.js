@@ -1,4 +1,13 @@
 /*
+ * Version 2.11 2014-11-03
+ * New classes for labeled-diagram target/label borders (avoid "flash").
+ * Ignore empty paragraphs (with "&nbsp;") in intro without "[i]".
+ * Qwiz icon/link on intro or first question only.
+ * If labeled diagram is wide, reset qwiz div/borders to match.
+ * 'div.container' as content option.
+ * Use class "qtarget_assocNNN..." instead of data-...; some implementations
+ * eat data-...
+ *
  * Version 2.10 2014-10-28
  * Fix topic= for labeled diagram questions.
  * Add labels="top", etc. options for labeled diagram questions.
@@ -89,8 +98,9 @@ $ = jQuery;
 var q = this;
 
 // The identifier -- including qualifiers like "#" -- of the page content (that
-// perhaps contains inline quizzes) on WordPress.
-var content = 'div.entry-content, div.post-entry';
+// perhaps contains inline quizzes) on WordPress.  Multiple entries: apparently
+// themes can change this; these have come up so far.
+var content = 'div.entry-content, div.post-entry, div.container';
 
 var errmsgs = [];
 
@@ -244,7 +254,10 @@ function init_qwizzled (content_obj) {
 
    // Targets no longer draggable (from qwizzled create/edit step).
    // Also reset borders.
-   content_obj.find ('td.qwizzled_canvas .qwizzled_target').removeClass ('ui-draggable ui-draggable-handle ui-resizable').css ('border', '2px dotted gray');
+   content_obj.find ('td.qwizzled_canvas .qwizzled_target').removeClass ('ui-draggable ui-draggable-handle ui-resizable').css ({'border-style': 'dotted', 'border-color': 'gray'});
+
+   // Image-linked targets need border-width.
+   content_obj.find ('div.qwizzled_image div.qwizzled_target').css ('border-width', '2px');
 
    // Eliminate label borders.
    content_obj.find ('.qwizzled_highlight_label').css ('border', 'none');
@@ -269,9 +282,20 @@ function init_qwizzled (content_obj) {
    });
 
    // Save deep copy of each qwizzled question -- in case restart quiz.
+   // Set up object.
    for (var i_qwiz=0; i_qwiz<n_qwizzes; i_qwiz++) {
       if (qwizdata[i_qwiz].qwizzled_b) {
          qwizdata[i_qwiz].qwizzled = {};
+
+         // See if this qwiz that has one or more labeled diagrams has non-
+         // default width.
+         var initial_width = $ ('#xqwiz' + i_qwiz).outerWidth ();
+         if (debug[0]) {
+            console.log ('[init_qwizzled] initial_width:', initial_width);
+         }
+         if (initial_width) {
+            qwizdata[i_qwiz].initial_width = initial_width;
+         }
       }
    }
 
@@ -330,8 +354,15 @@ this.label_dragstart = function (label_obj) {
 this.label_dropped = function (target_obj, label_obj) {
 
 
-   // Is this the right target?  Get the id from the label.
-   var assoc_id = label_obj.data ('label_target_id');
+   // Is this the right target?  Get the association id from the label class.
+   // If no matching class, use data () (backwards compatibility).
+   var classes = label_obj.attr ('class');
+   var m = classes.match (/qtarget_assoc([0-9]*)/);
+   if (m) { 
+      var assoc_id = m[1];
+   } else {
+      var assoc_id = label_obj.data ('label_target_id');
+   }
    if (debug[0]) {
       console.log ('[label_dropped] target_obj:', target_obj, ', assoc_id:', assoc_id);
    }
@@ -503,10 +534,20 @@ function add_style () {
    s.push ('<style type="text/css">\n');
 
    s.push ('.qwiz {');
+   s.push ('   position:        relative;');
    s.push ('   border:          2px solid black;');
    s.push ('   width:           500px;');
    s.push ('   min-height:      300px;');
    s.push ('   padding:         5px;');
+   s.push ('   box-sizing:      content-box;');
+   s.push ('   -moz-box-sizing: content-box;');
+   s.push ('}');
+
+   s.push ('.xqwiz {');
+   s.push ('   visibility:      hidden;');
+   s.push ('   height:          0px;');
+   s.push ('   box-sizing:      content-box;');
+   s.push ('   -moz-box-sizing: content-box;');
    s.push ('}');
 
    s.push ('.qwiz img {');
@@ -572,6 +613,14 @@ function add_style () {
 
    s.push ('.qwiz-feedback p {');
    s.push ('   margin-bottom:   0.3em;');
+   s.push ('}');
+
+   s.push ('div.icon_qwiz {');
+   s.push ('   position:        absolute;');
+   s.push ('   left:            2px;');
+   s.push ('   bottom:          2px;');
+   s.push ('   width:           16px;');
+   s.push ('   height:          16px;');
    s.push ('}');
 
    // Labeled-diagram layout table.
@@ -685,6 +734,22 @@ function add_style () {
    s.push ('   padding-right:   2px;');
    s.push ('}');
 
+   s.push ('.qwizzled_border_all {');
+   s.push ('   border-width:    2px;');
+   s.push ('}');
+
+   s.push ('.qwizzled_border_left {');
+   s.push ('   border-width:    2px 0px 2px 2px;');
+   s.push ('}');
+
+   s.push ('.qwizzled_border_right {');
+   s.push ('   border-width:    2px 2px 2px 0px;');
+   s.push ('}');
+
+   s.push ('.qwizzled_border_center {');
+   s.push ('   border-width:    2px 0px 2px 0px;');
+   s.push ('}');
+
    s.push ('.qwizzled_target_hover {');
    s.push ('   outline:         3px solid lightgray;');
    s.push ('}');
@@ -765,6 +830,7 @@ function process_qwiz_pair (htm) {
    qwizdata[i_qwiz].n_correct   = 0;
    qwizdata[i_qwiz].n_incorrect = 0;
    qwizdata[i_qwiz].i_question  = -1;
+   qwizdata[i_qwiz].initial_width = 500;
 
    var qwiz_tag = htm.match (/\[qwiz[^\]]*\]/m)[0];
    if (debug[0]) {
@@ -809,8 +875,9 @@ function process_qwiz_pair (htm) {
       // See if no [i].
       if (intro_html == 'NA') {
          
-         // No [i] -- intro may be text before [q].  See if there is.
-         intro_html = parse_html_block (htm, ['^'], ['[q]', '[q ', '<div class="qwizzled_question">']);
+         // No [i] -- intro may be text before [q].  See if there is.  Add flag
+         // to ignore &nbsp; (empty paragraph).
+         intro_html = parse_html_block (htm, ['^'], ['[q]', '[q ', '<div class="qwizzled_question">'], true);
       }
 
       // See if intro was just tags and whitespace.
@@ -890,7 +957,7 @@ function process_qwiz_pair (htm) {
 
       // Split into individual items.  Include search for qwizzled_question
       // divs.
-      var questions_html = question_html.split (/\[q [^\]]*\]|\[q\]|<div class="qwizzled_question">/);
+      var questions_html = question_html.split (/\[q [^\]]*\]|\[q\]|<div class="qwizzled_question>/);
       if (debug[0]) {
          console.log ('[process_qwiz_pair] questions_html:', questions_html.join ('//\n\n'));
       }
@@ -907,7 +974,7 @@ function process_qwiz_pair (htm) {
                                              questions_html[i_question],
                                              q_opening_tags[i_question]);
          // See if labels.
-         } else if (questions_html[i_question].search (/\[l\]|<div class="qwizzled_label"/m) != -1) {
+         } else if (questions_html[i_question].search (/\[l\]|<div class="qwizzled_label/m) != -1) {
             qwizzled_b = true;
             qwizdata[i_qwiz].qwizzled_b = true;
             question_div = process_qwizzled (i_qwiz, i_question,
@@ -976,6 +1043,9 @@ function create_qwiz_divs (i_qwiz, qwiz_tag, htm, exit_html) {
       console.log ('[create_qwiz_divs] attributes: ', attributes);
    }
    
+   // If non-default width set, set flag.
+   var non_default_width_b = attributes.search (/[\s;"]width/m) != -1;
+
    // If "repeat_incorrect=..." present, parse out true/false, delete.
    // Default for this qwiz.
    var repeat_incorrect_matches = attributes.match (/repeat_incorrect\s*?=\s*?"[^"]+"/m);
@@ -989,8 +1059,14 @@ function create_qwiz_divs (i_qwiz, qwiz_tag, htm, exit_html) {
       attributes = attributes.replace (repeat_incorrect, '');
    }
 
+   // Undisplayed version of qwiz div, so can measure default width if need to.
+   var top_html = '';
+   if (non_default_width_b) {
+      top_html = '<div id="xqwiz' + i_qwiz + '" class="xqwiz" ' + attributes + '></div>\n';
+   }
+
    // This qwiz opening div.
-   var top_html = '<div id="qwiz' + i_qwiz + '" class="qwiz" ' + attributes + '>\n';
+   top_html += '<div id="qwiz' + i_qwiz + '" class="qwiz" ' + attributes + '>\n';
 
    // Header div.  If no initial header, hide.
    //var style = ' style="margin: 0px; padding: 5px;"';
@@ -1057,6 +1133,12 @@ function create_qwiz_divs (i_qwiz, qwiz_tag, htm, exit_html) {
                  +    '</button>\n'
                  + '</div>\n';
 
+   bottom_html +=   '<div class="icon_qwiz" id="icon_qwiz' + i_qwiz + '">'
+                  +    '<a href="//dkprojects.net/qwiz">'
+                  +       '<img src="' + qwiz_plugin_data.url + 'images/icon_qwiz16x16.png" style="border: none;" title="Qwiz - online quizzes and flashcards" />'
+                  +    '</a>'
+                  + '</div>';
+
    // This qwiz closing div.
    bottom_html += '</div>\n';
 
@@ -1065,6 +1147,7 @@ function create_qwiz_divs (i_qwiz, qwiz_tag, htm, exit_html) {
 
    return htm;
 }
+
 
 // -----------------------------------------------------------------------------
 function create_restart_button (i_qwiz, exit_html) {
@@ -1197,6 +1280,12 @@ this.next_question = function (i_qwiz) {
       console.log ('[next_question] i_question: ', i_question, ', n_questions: ', n_questions);
    }
 
+   // If width was reset, set back.
+   if (qwizdata[i_qwiz].width_reset) {
+      $ ('#' + qwiz_id).css ('width', qwizdata[i_qwiz].initial_width + 'px');
+      qwizdata[i_qwiz].width_reset = false;
+   }
+
    // If was displaying intro, hide -- but show intro (if any) with the single
    // question of a single-question quiz.
    if (i_question == -1) {
@@ -1210,6 +1299,12 @@ this.next_question = function (i_qwiz) {
          // question in quiz.
          display_progress (i_qwiz);
          $ ('#next_button_text-' + qwiz_id).html (T ('Next question'));
+
+         // If intro was showing, can hide qwiz icon now.
+         if (! no_intro_b[i_qwiz]) {
+            $ ('div#icon_qwiz' + i_qwiz).hide ();
+         }
+
       } else {
 
          // Don't show mode.
@@ -1218,10 +1313,13 @@ this.next_question = function (i_qwiz) {
 
    } else {
 
-      // Hide previous question, set back to absolute positioning (take out of
-      // flow for sake of qwizzled label dragging).
+      // Hide previous question.
       var qwizq_id = '#' + qwiz_id + '-q' + i_question;
       $ (qwizq_id).hide ();
+
+      if (i_question == 0) {
+         $ ('div#icon_qwiz' + i_qwiz).hide ();
+      }
    }
 
    // Hide "next" button until user makes a choice.
@@ -1288,7 +1386,18 @@ function display_question (i_qwiz, i_question) {
 
    qwizq_obj.show ();
 
-   if (! qwizzled_b) {
+   if (qwizzled_b) {
+
+      // If layout table is wider than default qwiz width (defines border),
+      // set wider for now.  Get width of table.
+      var table_width = qwizq_obj.find ('table.qwizzled_table').outerWidth ();
+      if (table_width > qwizdata[i_qwiz].initial_width) {
+         $ ('#qwiz' + i_qwiz).css ('width', table_width + 'px');
+
+         // Set flag to reset width on next question.
+         qwizdata[i_qwiz].width_reset = true;
+      }
+   } else {
 
       // Enable radio clicks in case previously disabled for this question.
       // Also, show radios unclicked.
@@ -1483,14 +1592,16 @@ function process_qwizzled (i_qwiz, i_question, question_htm, opening_tags,
    // See if labels placement specified by "attribute", e.g., [q labels="top"].
    // Default is "right".  Find attributes, if any.
    var m = question_tag.match (/\[<code><\/code>q([^\]]*)\]/m);
-   var attributes = m[1];
-   if (attributes) {
+   if (m) {
+      var attributes = m[1];
+      if (attributes) {
 
-      // Look for "labels=" attribute.
-      var labels_match = attributes.match (/labels\s*?=\s*?"([^"]+)"/m);
-      var labels_position = labels_match[1].toLowerCase ();
-      if (debug[0]) {
-         console.log ('[process_qwizzled] labels_position:', labels_position);
+         // Look for "labels=" attribute.
+         var labels_match = attributes.match (/labels\s*?=\s*?"([^"]+)"/m);
+         var labels_position = labels_match[1].toLowerCase ();
+         if (debug[0]) {
+            console.log ('[process_qwizzled] labels_position:', labels_position);
+         }
       }
    }
 
@@ -1798,7 +1909,7 @@ function tags_to_pat (tags) {
 // -----------------------------------------------------------------------------
 // Parse out block of html -- from opening tags, through one of qwiz/qcard
 // "tags" up to any opening tags of next qwiz/qcard tags.
-function parse_html_block (htm, qtags, qnext_tags) {
+function parse_html_block (htm, qtags, qnext_tags, ignore_nbsp_b) {
 
    if (debug[0]) {
       console.log ('[parse_html_block] qtags: ', qtags, ', htm: ', htm);
@@ -1840,6 +1951,11 @@ function parse_html_block (htm, qtags, qnext_tags) {
 
       // If htm is only tags and whitespace, set to empty string.
       var htm_wo_tags = htm_block.replace (/<[^>]+>/gm, '');
+
+      // If flag set, also ignore &nbsp;
+      if (ignore_nbsp_b != undefined) {
+         htm_wo_tags = htm_wo_tags.replace ('&nbsp;', '');
+      }
       if (htm_wo_tags.search (/\S/) == -1) {
          htm_block = '';
       /*
@@ -2273,14 +2389,14 @@ function plural (word, plural_word, n) {
 
 // -----------------------------------------------------------------------------
 function T (string) {
-   if (typeof (qwiz_T) == 'undefined') {
+   if (typeof (qwiz_plugin_data) == 'undefined') {
 
       // Stand-alone version.  Just use default string.
       t_string = string;
    } else {
 
       // Translation, if available.
-      t_string = qwiz_T[string];
+      t_string = qwiz_plugin_data.T[string];
       if (typeof (t_string) == 'undefined') {
          t_string = string;
       }

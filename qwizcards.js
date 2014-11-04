@@ -1,4 +1,9 @@
 /*
+ * Version 2.11 2014-11-03
+ * Ignore empty paragraphs (with "&nbsp;") in intro without "[i]".
+ * Qwiz icon/link on intro or first card only.
+ * 'div.container' as content option.
+ *
  * Version 2.09 2014-10-12
  * Add random="true" option - initial order randomized.
  *
@@ -58,8 +63,9 @@ $ = jQuery;
 var q = this;
 
 // The identifier -- including qualifiers like "#" -- of the page content (that
-// perhaps contains inline qwizcard decks) on WordPress.
-var content = 'div.entry-content, div.post-entry';
+// perhaps contains inline quizzes) on WordPress.  Multiple entries: apparently
+// themes can change this; these have come up so far.
+var content = 'div.entry-content, div.post-entry, div.container';
 //var content = 'main';
 
 var errmsgs = [];
@@ -145,7 +151,7 @@ function process_html () {
       var htm = $(this).html ();
       if (! htm) {
 
-         //errmsgs.push ('Did not find page content (looking for div "' + content + '")');
+         //errmsgs.push (T ('Did not find page content (looking for div') + ' "' + content + '")');
       } else {
 
          // See if there is a deck or decks.
@@ -280,6 +286,14 @@ function add_style () {
    s.push ('.qcard_card img {');
    s.push ('   border:              0px;');
    s.push ('   box-shadow:          none;');
+   s.push ('}');
+
+   s.push ('div.icon_qwiz {');
+   s.push ('   position:        absolute;');
+   s.push ('   left:            2px;');
+   s.push ('   bottom:          2px;');
+   s.push ('   width:           16px;');
+   s.push ('   height:          16px;');
    s.push ('}');
 
    s.push ('.qcard_card .back .center {');
@@ -518,7 +532,7 @@ function process_qdeck_pair (htm, i_deck) {
 
    // Make sure there's at least one question.
    if (htm.search (/\[q([^\]]*)\]/m) == -1) {
-      errmsgs.push ('Did not find question tags ("[q]") for qdeck ' + (i_deck + 1));
+      errmsgs.push (T ('Did not find question tags ("[q]") for') + ' qdeck ' + (i_deck + 1));
    } else {
 
       // See if header.  Sets deckdata[i_deck].header_html.
@@ -540,7 +554,7 @@ function process_qdeck_pair (htm, i_deck) {
       } else {
          // Error if text before [i].
          if (htm.substr (0, 5) != intro_html.substr (0, 5)) {
-            errmsgs.push ('Text before intro [i] - qdeck ' + (i_deck + 1));
+            errmsgs.push (T ('Text before intro') + ' [i] - qdeck ' + (i_deck + 1));
          }
 
          // Delete [i] from intro.
@@ -747,7 +761,7 @@ function tags_to_pat (tags) {
 // -----------------------------------------------------------------------------
 // Parse out block of html -- from opening tags, through one of qwiz/qcard
 // "tags" up to any opening tags of next qwiz/qcard tags.
-function parse_html_block (htm, qtags, qnext_tags) {
+function parse_html_block (htm, qtags, qnext_tags, ignore_nbsp_b) {
 
    // Include opening tags before the qwiz/qcard tags in each case.
    var opening_pat = '(<[^/][^>]*?>\\s*)*?'; 
@@ -765,6 +779,11 @@ function parse_html_block (htm, qtags, qnext_tags) {
 
       // If htm is only tags and whitespace, set to empty string.
       var htm_wo_tags = htm_block.replace (/<[^>]+>/gm, '');
+
+      // If flag set, also ignore &nbsp;
+      if (ignore_nbsp_b != undefined) {
+         htm_wo_tags = htm_wo_tags.replace ('&nbsp;', '');
+      }
       if (htm_wo_tags.search (/\S/) == -1) {
          htm_block = '';
       } else {
@@ -890,6 +909,11 @@ function create_qdeck_divs (i_deck, qdeck_tag) {
    divs.push ('                  </td>');
    divs.push ('               </tr>');
    divs.push ('            </table>');
+   divs.push ('            <div id="icon_qwiz' + i_deck + '" class="icon_qwiz">');
+   divs.push ('               <a href="//dkprojects.net/qwiz">');
+   divs.push ('                  <img src="' + qwiz_plugin_data.url + 'images/icon_qwiz16x16.png" style="border: none;" title="Qwiz - online quizzes and flashcards" />');
+   divs.push ('               </a>');
+   divs.push ('            </div>');
    divs.push ('         </div>');
    divs.push ('         <div class="back">');
    divs.push ('            <table class="qcard_table" ' + attributes + ' cellspacing="0" cellpadding="0">');
@@ -950,7 +974,7 @@ function process_topics (i_deck, card_tags) {
 
       // If any topics given, every card must have at least one topic.
       if (n_cards_w_topics != n_cards) {
-         errmsgs.push ('Topic(s) were given for at least one card, but at least one card doesn\'t have a topic.');
+         errmsgs.push (T ('Topic(s) were given for at least one card, but at least one card doesn\'t have a topic'));
       }
       if (debug[4]) {
          console.log ('[process_topics] topics: ' + deckdata[i_deck].topics.join ('; '));
@@ -977,6 +1001,8 @@ this.start_deck = function (i_deck) {
 
    var n_cards = deckdata[i_deck].n_cards;
    deckdata[i_deck].n_to_go = n_cards;
+
+   $ ('div#icon_qwiz' + i_deck).hide ();
 
    q.set_next_buttons (i_deck);
 
@@ -1437,6 +1463,11 @@ this.next_card = function (i_deck) {
    deckdata[i_deck].el_qcard_card.attr ('data-direction', new_direction);
    deckdata[i_deck].el_qcard_card.data('direction', new_direction);
 
+   // Can hide qwiz icon/link now.
+   if (deckdata[i_deck].i_card == 0) {
+      $ ('div#icon_qwiz' + i_deck).hide ();
+   }
+
    deckdata[i_deck].i_card++;
    if (deckdata[i_deck].i_card >= deckdata[i_deck].n_cards) {
       deckdata[i_deck].i_card = 0;
@@ -1548,14 +1579,14 @@ function plural (word, plural_word, n) {
 
 // -----------------------------------------------------------------------------
 function T (string) {
-   if (typeof (qwiz_T) == 'undefined') {
+   if (typeof (qwiz_plugin_data) == 'undefined') {
 
       // Stand-alone version.  Just use default string.
       t_string = string;
    } else {
 
       // Translation, if available.
-      t_string = qwiz_T[string];
+      t_string = qwiz_plugin_data.T[string];
       if (typeof (t_string) == 'undefined') {
          t_string = string;
       }

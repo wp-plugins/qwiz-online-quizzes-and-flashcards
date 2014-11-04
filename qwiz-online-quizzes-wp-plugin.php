@@ -3,7 +3,7 @@
  * Plugin Name: Qwiz - online quizzes and flashcards
  * Plugin URI: http://dkprojects.net/qwiz
  * Description: Easy online quizzes and flashcards for WordPress
- * Version: 2.10
+ * Version: 2.11
  * Author: Dan Kirshner
  * Author URI: http://dkprojects.net/qwiz
  * License: GPL2
@@ -50,13 +50,15 @@ function add_qwiz_js () {
    $qwizcards            = plugins_url ('qwizcards.js', __FILE__);
    $jquery_ui            = plugins_url ('jquery-ui.min.js', __FILE__);
    $jquery_ui_touchpunch = plugins_url ('jquery.ui.touch-punch.min.js', __FILE__);
-   wp_enqueue_script ('qwiz_handle',                 $qwiz,                 array (), '2.10', true);
-   wp_enqueue_script ('qwizcard_handle',             $qwizcards,            array (), '2.10', true);
-   wp_enqueue_script ('jquery_ui_handle',            $jquery_ui,            array (), '2.10', true);
-   wp_enqueue_script ('jquery_ui_touchpunch_handle', $jquery_ui_touchpunch, array (), '2.10', true);
+   wp_enqueue_script ('qwiz_handle',                 $qwiz,                 array (), '2.11', true);
+   wp_enqueue_script ('qwizcard_handle',             $qwizcards,            array (), '2.11', true);
+   wp_enqueue_script ('jquery_ui_handle',            $jquery_ui,            array (), '2.11', true);
+   wp_enqueue_script ('jquery_ui_touchpunch_handle', $jquery_ui_touchpunch, array (), '2.11', true);
 
-   wp_localize_script ('qwiz_handle',                'qwiz_T', $qwiz_T);
-   wp_localize_script ('qwizcard_handle',            'qwiz_T', $qwiz_T);
+
+   $plugin_url = plugins_url ( '/', __FILE__ );
+   wp_localize_script ('qwiz_handle',                'qwiz_plugin_data', array ('T' => $qwiz_T, 'url' => $plugin_url));
+   wp_localize_script ('qwizcard_handle',            'qwiz_plugin_data', array ('T' => $qwiz_T, 'url' => $plugin_url));
 }
 
 
@@ -95,19 +97,6 @@ add_action ('admin_init', 'qwizzled_button');
 
 // Pass plugin url to qwiz_tinymce.js.
 add_action ('admin_head', 'qwizzled_plugin_url');
-
-// Test registering shortcode.  Worked, but unlike what was promised in
-// get_the_excerpt (), the code result showed up in the post summary.
-/*
-function echo_shortcode ($atts) {
-   $echo_atts = '';
-   foreach ($atts as $key => $value) {
-      $echo_atts .= " $key=\"$value\"";
-   }
-   return "[testcode_echo $echo_atts]";
-}
-add_shortcode ('testcode', echo_shortcode);
-*/
 
 function qwizzled_add_locale($locales) {
     $locales ['qwizzled_langs'] = plugin_dir_path (__FILE__) . 'languages/qwizzled_langs.php';

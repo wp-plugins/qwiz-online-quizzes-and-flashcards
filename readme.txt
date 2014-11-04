@@ -2,7 +2,7 @@
 Contributors: dan_kirshner
 Tags: interactive quiz, quiz, flashcards, labeled diagrams
 Tested up to: 4.0
-Stable tag: 2.10
+Stable tag: 2.11
 License: GPL2
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
@@ -19,6 +19,17 @@ Activate the plugin through the 'Plugins' menu in WordPress
 == Screenshots ==
 
 == Changelog ==
+
+= 2.11 =
+2014-11-03
+Use classes for labeled-diagram target/label borders - avoid "flash" on page
+load.  (Fixes newly-created labeled diagrams only.)
+Ignore empty paragraphs (with "&nbsp;") in intro without "[i]".
+Qwiz icon/link on intro or first question only.
+If labeled diagram is wide, reset qwiz div/borders to match.
+'div.container' as content option.
+Use class "qtarget_assocNNN..." instead of data-...; some implementations
+eat data-...
 
 = 2.10 =
 2014-10-28

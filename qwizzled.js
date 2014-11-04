@@ -1,4 +1,10 @@
 /*
+ * Version 2.11 2014-11-03
+ * Use class instead of style for target/label borders (avoid "flash").
+ * Use class "qtarget_assocNNN..." instead of data-...; some implementations
+ * eat data-...
+ * If feedback fadeout stopped, reset opacity (since jQuery doesn't).
+ *
  * Version 2.09 2014-10-12
  * Warn/prevent use of images with captions for labeled diagrams.
  *
@@ -36,8 +42,7 @@ var qwizzledf = function () {
 var qname = 'qwizzled';
 
 // Debug settings.
-var debug = [];
-debug.push (false);    // 0 - general.
+var debug = [false];
 
 $ = jQuery;
 
@@ -60,10 +65,9 @@ var waiting_for_label_click_b = false;
 var waiting_for_target_select_b = false;
 var qwizzled_question_obj;
 var el_label_div;
-var label_border_style;
+var label_border_class;
 var assoc_id;
 
-var bwidth  = '2px';
 var bstyles = ['dotted', 'dashed', 'solid'];
 var bcolors = ['red', 'magenta', 'blue', 'aqua'];
 
@@ -302,7 +306,7 @@ function add_style () {
    s.push ('   cursor:          default;');
    s.push ('}');
 
-   s.push ('.qwizzled_highlight_label {');
+   s.push ('.qwizzled_highlight_label_border {');
    s.push ('   border:          1px dotted gray;');
    s.push ('}');
 
@@ -346,7 +350,7 @@ function add_style_edit_area () {
    s.push ('   margin:          0px;');
    s.push ('}');
 
-   s.push ('.qwizzled_highlight_label {');
+   s.push ('.qwizzled_highlight_label_border {');
    s.push ('   border:          1px dotted gray;');
    s.push ('}');
 
@@ -374,6 +378,38 @@ function add_style_edit_area () {
 
    s.push ('.qwizzled_border_center {');
    s.push ('   border-width:    2px 0px 2px 0px;');
+   s.push ('}');
+
+   s.push ('.qwizzled_border_class_red {');
+   s.push ('   border-color:    red;');
+   s.push ('}');
+
+   s.push ('.qwizzled_border_class_magenta {');
+   s.push ('   border-color:    magenta;');
+   s.push ('}');
+
+   s.push ('.qwizzled_border_class_blue {');
+   s.push ('   border-color:    blue;');
+   s.push ('}');
+
+   s.push ('.qwizzled_border_class_aqua {');
+   s.push ('   border-color:    aqua;');
+   s.push ('}');
+
+   s.push ('.qwizzled_border_class_dotted {');
+   s.push ('   border-style:    dotted;');
+   s.push ('}');
+
+   s.push ('.qwizzled_border_class_dashed {');
+   s.push ('   border-style:    dashed;');
+   s.push ('}');
+
+   s.push ('.qwizzled_border_class_solid {');
+   s.push ('   border-style:    solid;');
+   s.push ('}');
+
+   s.push ('.qwizzled_border_class_width {');
+   s.push ('   border-width:    2px;');
    s.push ('}');
 
    s.push ('</style>');
@@ -444,7 +480,13 @@ this.create_target2 = function () {
 
    // Want labels to be within [qwiz]...[/qwiz] pairs.  Make sure there is such
    // a pair.
-   check_qwiz_tag_pairs (htm);
+   if (! check_qwiz_tag_pairs_ok (htm)) {
+
+      // Hide spinner.
+      $ ('#create_target_spinner').css ('visibility', 'hidden');
+
+      return;
+   }
 
    // See if there are labels.  Labels already wrapped in span element look
    // like [<code></code>l].  Get all labels between [qwiz]...[/qwiz] pairs.
@@ -504,10 +546,15 @@ this.create_target2 = function () {
    if (! any_labeled_diagram_questions_b) {
 
       if (no_q_code_b) {
-         errmsgs.push ('Did not find any questions [q] within [qwiz]...[/qwiz] shortcode pairs');
+         alert (T ('Did not find any questions [q] within [qwiz]...[/qwiz] shortcode pairs'));
       } else {
-         errmsgs.push ('Did not find any labels [l] within [qwiz]...[/qwiz] shortcode pairs');
+         alert (T ('Did not find any labels [l] within [qwiz]...[/qwiz] shortcode pairs'));
       }
+
+      // Hide spinner.
+      $ ('#create_target_spinner').css ('visibility', 'hidden');
+
+      return
    }
 
    if (any_new_html_b) {
@@ -520,7 +567,7 @@ this.create_target2 = function () {
       edit_area.find ('*.qwizzled_label > p, :header').each (function () {
          var innerhtm = $ (this).html ();
          if (innerhtm.search ('qwizzled_highlight_label') == -1) {
-            $ (this).html ('<span class="qwizzled_highlight_label">' + innerhtm + '</span>');
+            $ (this).html ('<span class="qwizzled_highlight_label qwizzled_highlight_label_border">' + innerhtm + '</span>');
          }
       });
 
@@ -556,14 +603,14 @@ this.create_target2 = function () {
 
    // Provide instruction/feedback.
    var click_on_a_label =   'Click on a '
-                          + '<span class="qwizzled_highlight_label" style="background: white;">'
+                          + '<span class="qwizzled_highlight_label_border" style="background: white;">'
                           +    'label'
                           + '</span>'
                           + '<img src="' + qwizzled_plugin.url + 'images/icon_exit_bw.jpg" class="click_on_a_label_exit" onclick="qwizzled.exit_click_on_a_label ()" />';
 
    // First cancel any previous action (fadeout of "You can position..."
-   // instruction).
-   qwizzled_main_menu_feedback.stop ().html (click_on_a_label).show ();
+   // instruction).  Set opacity back to 1.0 in case gets stuck.
+   qwizzled_main_menu_feedback.stop ().html (click_on_a_label).show ().css ('opacity', '1.0');
 
    // Hide spinner -- we're ready.
    $ ('#create_target_spinner').css ('visibility', 'hidden');
@@ -605,15 +652,28 @@ this.label_clicked = function (local_el_label_div) {
    // Find question div that is parent of this label.
    qwizzled_question_obj = $ (el_label_div).parents ('.qwizzled_question');
 
-   // Does this label have a target already?  label_border_style will signal
+   // Does this label have a target already?  label_border_class will signal
    // new target for existing label.
    var create_target_b = true;
-   label_border_style = '';
-   assoc_id = $ (el_label_div).data ('label_target_id');
+   label_border_class = '';
+   var classes = $ (el_label_div).attr ('class');
+   var m = classes.match (/qtarget_assoc([0-9]*)/);
+   if (m) { 
+      assoc_id = m[1];
+   } else {
+      assoc_id = '';
+   }
    if (assoc_id) {
 
       // Yes.  See if user wants to replace target.
       if (confirm ('This label already has a target.\nDo you want to replace the existing target?')) {
+
+         // Get the association number.
+         var m = classes.match (/qtarget_assoc([0-9]*)/);
+         assoc_id = m[1];
+         if (debug[0]) {
+            console.log ('[label_clicked] classes:', classes, ', assoc_id:', assoc_id);
+         }
 
          // If it's a div -- a rectangle on an image -- delete it.  If it's a
          // span or spans, replace the <span> with its content.
@@ -626,15 +686,15 @@ this.label_clicked = function (local_el_label_div) {
             });
          }
 
-         // Get the label's current border colors/style -- re-use for new
-         // target.  Global var, so can pass to target_text_selected ().
-         label_style = $ (el_label_div).find ('.qwizzled_highlight_label').attr ('style');
+         // Get the label's current border colors/style classes -- re-use for new
+         // target.
+         var label_class = $ (el_label_div).find ('.qwizzled_highlight_label').attr ('class');
          if (debug[0]) {
-            console.log ('[label_clicked] label_style:', label_style);
+            console.log ('[label_clicked] label_class:', label_class);
          }
-         var m = label_style.match (/border:.*?;/);
+         var m = label_class.match (/qwizzled_border_class_[a-z]*/g);
          if (m) {
-            label_border_style = m[0];
+            label_border_class = m.join (' ');
          }
       } else {
          create_target_b = false;
@@ -697,8 +757,8 @@ this.target_text_selected = function (e) {
    // Pick border color and style for this label-target pair.  Count how many
    // labels in this question already associated with a target.  Don't do if
    // re-using current label border (new target for existing label).
-   if (label_border_style == '') {
-      var labels_w_targets = qwizzled_question_obj.find ('.qwizzled_label[data-label_target_id]');
+   if (label_border_class == '') {
+      var labels_w_targets = qwizzled_question_obj.find ('div.qwizzled_label[class*="qtarget_assoc"]');
       var n_labels_w_targets = labels_w_targets.length;
       if (debug[0]) {
          console.log ('n_labels_w_targets:', n_labels_w_targets);
@@ -767,6 +827,9 @@ this.target_text_selected = function (e) {
                img_size_style += 'width: ' + m[1] + 'px; ';
             }
             var img_wrapper_attributes = img_attributes.replace (/(id|src|alt|width|height)\s*=\s*".*?"/gm, '');
+
+            // Just use assoc_id to create unique id -- used below as selector
+            // for jQuery find.
             var img_wrapper_id = 'id="qwizzled_img_wrapper-' + assoc_id + '" ';
             var img_wrapper_style = ' style="position: relative; ' + img_size_style;
             if (img_attributes.search ('aligncenter') == -1) {
@@ -871,14 +934,15 @@ this.target_text_selected = function (e) {
       }
       if (! caption_b) {
 
-         // Save association with target ID with label.  For some reason data ()
-         // didn't work.  Also, set label border same as associated target border.
-         $ (el_label_div).attr ('data-label_target_id', assoc_id);
-         if (label_border_style == '') {
+         // Save association with target ID with label.  Use a class to avoid
+         // editors that eat the data-... attribute.  Also, set label border
+         // same as associated target border.
+         $ (el_label_div).addClass ('qtarget_assoc' + assoc_id);
+         if (label_border_class == '') {
             if ($ (el_label_div).hasClass ('qwizzled_highlight_label')) {
-               $ (el_label_div).css ({'border-color': bcolor, 'border-style': bstyle, 'border-width': '2px'});
+               $ (el_label_div).removeClass ('qwizzled_highlight_label_border').addClass ('qwizzled_border_class_' + bcolor + ' qwizzled_border_class_' + bstyle + ' qwizzled_border_class_width');
             } else {
-               $ (el_label_div).find ('.qwizzled_highlight_label').css ({'border-color': bcolor, 'border-style': bstyle, 'border-width': '2px'});
+               $ (el_label_div).find ('.qwizzled_highlight_label').removeClass ('qwizzled_highlight_label_border').addClass ('qwizzled_border_class_' + bcolor + ' qwizzled_border_class_' + bstyle + ' qwizzled_border_class_width');
             }
          }
 
@@ -889,18 +953,16 @@ this.target_text_selected = function (e) {
          if (debug[0]) {
             console.log ('[target_text_selected] e.clientX:', e.clientX, ', e.clientY:', e.clientY);
          }
-         var style = 'left: ' + target_left + 'px; top: ' + target_top + 'px; ';
+         var style = 'left: ' + target_left + 'px; top: ' + target_top + 'px;';
 
          // Target height and width set in add_style_edit_area ().  Give target
-         // border to match label border.
-         if (label_border_style) {
-            style += label_border_style;
-         } else {
-            style += 'border: ' + bwidth + ' ' + bstyle + ' ' + bcolor + ';';
+         // classes for border to match label border.
+         if (! label_border_class) {
+            label_border_class = 'qwizzled_border_class_' + bstyle + ' qwizzled_border_class_' + bcolor + ' qwizzled_border_class_width';
          }
 
          // Create target, include association ID.  Prepend it to wrapper content.
-         var target_html = '<div class="qwizzled_target-' + assoc_id + ' qwizzled_target" style="' + style + '"></div>';
+         var target_html = '<div class="qwizzled_target-' + assoc_id + ' qwizzled_target ' + label_border_class + '" style="' + style + '"></div>';
          img_wrapper.prepend (target_html);
 
          // Make target draggable, resizable.
@@ -925,16 +987,17 @@ this.target_text_selected = function (e) {
       // Not just an image.  Regular text; but may include an image.
       // Wrap selected text in span or spans.  If selection is (parts of) more
       // than one paragraph, need separate spans.
-      if (label_border_style == '') {
-         label_border_style = 'border: ' + bwidth + ' ' + bstyle + ' ' + bcolor + ';';
+      if (label_border_class == '') {
+         label_border_class = 'qwizzled_border_class_' + bstyle + ' qwizzled_border_class_' + bcolor;
       }
-      var new_txt = create_text_target (selected_text, assoc_id, label_border_style);
+      var new_txt = create_text_target (selected_text, assoc_id, label_border_class);
       tinymce_ed.selection.setContent (new_txt);
 
-      // Save association with target ID with label.  For some reason data ()
-      // didn't work.  Label border same as associated target.
-      $ (el_label_div).attr ('data-label_target_id', assoc_id);
-      $ (el_label_div).find ('.qwizzled_highlight_label').css ({'border-color': bcolor, 'border-style': bstyle, 'border-width': '2px'});
+      // Save association with target ID with label.  Use class to avoid editors
+      // editors that eat the data-... attribute.  Also, set label border same as
+      // associated target border.
+      $ (el_label_div).addClass ('qtarget_assoc' + assoc_id);
+      $ (el_label_div).find ('.qwizzled_highlight_label').removeClass ('qwizzled_highlight_label_border').addClass (label_border_class + ' qwizzled_border_class_width');
 
       // Cancel feedback.
       qwizzled_main_menu_feedback.hide ();
@@ -943,7 +1006,7 @@ this.target_text_selected = function (e) {
 
 
 // -----------------------------------------------------------------------------
-function create_text_target (htm, assoc_id, border_style) {
+function create_text_target (htm, assoc_id, border_class) {
 
    // Parse into tags and text.
    var t = parse_tags_text (htm);
@@ -966,18 +1029,27 @@ function create_text_target (htm, assoc_id, border_style) {
       }
    }
 
+   // Be sure not to include width class from border_class -- widths set by
+   // classes added here.
+   border_class = border_class.replace ('qwizzled_border_class_width', '');
    var common = '<span class="qwizzled_target-' + assoc_id + ' qwizzled_target ';
-   var style = ' style="' + border_style + '" ';
    if (n_texts == 0) {
       alert (T ('Error: no text selected.'));
    } else if (n_texts == 1) {
-      tokens[i_first] = common + 'qwizzled_border_all"'    + style + '>' + tokens[i_first] + '</span>';
+      tokens[i_first] = common + 'qwizzled_border_all '       + border_class + '">' + tokens[i_first] + '</span>';
    } else if (n_texts >= 2) {
-      tokens[i_first] = common + 'qwizzled_border_left"'   + style + '>' + tokens[i_first] + '</span>';
-      tokens[i_last]  = common + 'qwizzled_border_right"'  + style + '>' + tokens[i_last]  + '</span>';
+      tokens[i_first] = common + 'qwizzled_border_left '      + border_class + '">' + tokens[i_first] + '</span>';
+      tokens[i_last]  = common + 'qwizzled_border_right '     + border_class + '">' + tokens[i_last]  + '</span>';
       for (var i=i_first+1; i<i_last; i++) {
          if (token_types[i] != 'tag') {
-            tokens[i]    = common + 'qwizzled_border_center"' + style + '>' + tokens[i]  + '</span>';
+
+            // Leave all-whitespace text alone, but replace with TinyMCE
+            // empty-line indicator (apparently).
+            if (tokens[i].search (/\S/) == -1) {
+               tokens[i] = '<br data-mce-bogus="1">';
+            } else {
+               tokens[i]    = common + 'qwizzled_border_center ' + border_class + '">' + tokens[i]  + '</span>';
+            }
          }
       }
    }
@@ -1021,11 +1093,23 @@ function parse_tags_text (htm) {
          tokens[i_token] += htm[i];
       }
    }
-   if (debug[0]) {
-      console.log ('[parse_tags_text] tokens:', tokens);
+
+   // Remove empty non-tag tokens.
+   var new_tokens = [];
+   var new_token_types = [];
+   var n_tokens = tokens.length;
+   for (var i=0; i<n_tokens; i++) {
+      if (token_types[i] == 'tag' || tokens[i] != '') {
+         new_tokens.push (tokens[i]);
+         new_token_types.push (token_types[i]);
+      }
    }
 
-   return {'tokens': tokens, 'token_types': token_types}
+   if (debug[0]) {
+      console.log ('[parse_tags_text] new_tokens:', new_tokens);
+   }
+
+   return {'tokens': new_tokens, 'token_types': new_token_types}
 }
 
 
@@ -1241,7 +1325,7 @@ function process_labels (question_html, label_start_tags, find_wrapped_b) {
             var fx_b = false;
             var f_len = feedback_htmls.length;
             if (f_len > 2) {
-               errmsgs.push ('Too many feedback shortcodes');
+               errmsgs.push (T ('Too many feedback shortcodes'));
             }
             for (var i=0; i<f_len; i++) {
                if (feedback_htmls[i].search (/\[fx\]/) != -1) {
@@ -1307,7 +1391,9 @@ function canned_feedback (correct_b) {
 
 
 // -----------------------------------------------------------------------------
-function check_qwiz_tag_pairs (htm) {
+function check_qwiz_tag_pairs_ok (htm) {
+
+   var error_b = false;
 
    // Match "[qwiz]" or "[/qwiz]".
    var matches = htm.match (/\[qwiz|\[\/qwiz\]/gm);
@@ -1315,8 +1401,8 @@ function check_qwiz_tag_pairs (htm) {
       var n_tags = matches.length;
       if (n_tags == 0) {
          alert (T ('Did not find [qwiz]...[/qwiz] shortcodes'));
+         error_b = true;
       } else {
-         var error_b = false;
 
          if (n_tags % 2 != 0) {
             error_b = true;
@@ -1339,12 +1425,16 @@ function check_qwiz_tag_pairs (htm) {
             }
          }
          if (error_b){
-            errmsgs.push ('Unmatched [qwiz] - [/qwiz] pairs.');
+            alert (  T ('Unmatched [qwiz] - [/qwiz] pairs.')  + '  '
+                   + T ('Please fix and try again.'));
          }
       }
    } else {
-      alert (T ('Did not find [qwiz]...[/qwiz] shortcodes'));
+      alert (  T ('Did not find [qwiz]...[/qwiz] shortcodes') + '  '
+             + T ('Please fix and try again.'));
    }
+
+   return ! error_b;
 }
 
 
@@ -1491,4 +1581,5 @@ function trim (s) {
 
 // -----------------------------------------------------------------------------
 qwizzledf.call (qwizzled);
+
 
