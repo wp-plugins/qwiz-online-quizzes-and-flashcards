@@ -1,4 +1,8 @@
 /*
+ * Version 2.12 2014-11-03
+ * Distinguish qwiz from qdeck in hiding icon.
+ * Feedback padding - don't overlap icon.
+ *
  * Version 2.11 2014-11-03
  * New classes for labeled-diagram target/label borders (avoid "flash").
  * Ignore empty paragraphs (with "&nbsp;") in intro without "[i]".
@@ -690,7 +694,7 @@ function add_style () {
    // Labeled-diagram labels feedback cell.
    s.push ('td.qwizzled_feedback {');
    s.push ('   border:          none;');
-   s.push ('   padding:         0px;');
+   s.push ('   padding:         0px 0px 0px 20px;');  // Top, right, bottom, left.
    //s.push ('   border-top:      1px solid black;');
    s.push ('}');
 
@@ -780,6 +784,7 @@ function add_style () {
    // Starts out centered.
    s.push ('.next_button {');
    s.push ('   text-align:      center;');
+   s.push ('   margin-left:     20px;');
    s.push ('}');
 
    s.push ('.qbutton {');
@@ -1302,7 +1307,7 @@ this.next_question = function (i_qwiz) {
 
          // If intro was showing, can hide qwiz icon now.
          if (! no_intro_b[i_qwiz]) {
-            $ ('div#icon_qwiz' + i_qwiz).hide ();
+            $ ('div.qwiz div#icon_qwiz' + i_qwiz).hide ();
          }
 
       } else {
@@ -1318,7 +1323,7 @@ this.next_question = function (i_qwiz) {
       $ (qwizq_id).hide ();
 
       if (i_question == 0) {
-         $ ('div#icon_qwiz' + i_qwiz).hide ();
+         $ ('div.qwiz div#icon_qwiz' + i_qwiz).hide ();
       }
    }
 

@@ -1,4 +1,7 @@
 /*
+ * Version 2.12 2014-11-03
+ * Distinguish qwiz from qdeck in hiding icon.
+ *
  * Version 2.11 2014-11-03
  * Ignore empty paragraphs (with "&nbsp;") in intro without "[i]".
  * Qwiz icon/link on intro or first card only.
@@ -311,6 +314,7 @@ function add_style () {
    s.push ('.qcard_next_buttons {');
    s.push ('   position:            relative;');
    s.push ('   margin-top:          5px;');
+   s.push ('   margin-left:         20px;');
    s.push ('   text-align:          center;');
    s.push ('}');
    s.push ('.qbutton {');
@@ -1002,7 +1006,7 @@ this.start_deck = function (i_deck) {
    var n_cards = deckdata[i_deck].n_cards;
    deckdata[i_deck].n_to_go = n_cards;
 
-   $ ('div#icon_qwiz' + i_deck).hide ();
+   $ ('div.qcard_window div#icon_qwiz' + i_deck).hide ();
 
    q.set_next_buttons (i_deck);
 
@@ -1465,7 +1469,7 @@ this.next_card = function (i_deck) {
 
    // Can hide qwiz icon/link now.
    if (deckdata[i_deck].i_card == 0) {
-      $ ('div#icon_qwiz' + i_deck).hide ();
+      $ ('div.qcard_window div#icon_qwiz' + i_deck).hide ();
    }
 
    deckdata[i_deck].i_card++;

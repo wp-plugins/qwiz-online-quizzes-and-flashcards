@@ -20,6 +20,10 @@ Activate the plugin through the 'Plugins' menu in WordPress
 
 == Changelog ==
 
+= 2.12 =
+2014-11-03
+A few minor fixes.
+
 = 2.11 =
 2014-11-03
 Use classes for labeled-diagram target/label borders - avoid "flash" on page
