@@ -962,7 +962,7 @@ function process_qwiz_pair (htm) {
 
       // Split into individual items.  Include search for qwizzled_question
       // divs.
-      var questions_html = question_html.split (/\[q [^\]]*\]|\[q\]|<div class="qwizzled_question>/);
+      var questions_html = question_html.split (/\[q [^\]]*\]|\[q\]|<div class="qwizzled_question">/);
       if (debug[0]) {
          console.log ('[process_qwiz_pair] questions_html:', questions_html.join ('//\n\n'));
       }
