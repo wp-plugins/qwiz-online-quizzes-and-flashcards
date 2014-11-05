@@ -1,4 +1,7 @@
 /*
+ * Version 2.14 2014-11-04
+ * Restore missing double quote -- couldn't split on labeled diagrams.
+ *
  * Version 2.12 2014-11-03
  * Distinguish qwiz from qdeck in hiding icon.
  * Feedback padding - don't overlap icon.

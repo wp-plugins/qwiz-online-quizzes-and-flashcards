@@ -20,6 +20,10 @@ Activate the plugin through the 'Plugins' menu in WordPress
 
 == Changelog ==
 
+= 2.14 =
+2014-11-04
+Restore missing double quote -- couldn't split on labeled diagrams.
+
 = 2.13 =
 2014-11-04
 Delete php closing tags in .php files.
