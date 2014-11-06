@@ -630,6 +630,14 @@ function add_style () {
    s.push ('   height:          16px;');
    s.push ('}');
 
+   s.push ('img.icon_qwiz {');
+   s.push ('   opacity:         0.4;');
+   s.push ('}');
+
+   s.push ('img.icon_qwiz:hover {');
+   s.push ('   opacity:         1.0;');
+   s.push ('}');
+
    // Labeled-diagram layout table.
    s.push ('table.qwizzled_table {');
    s.push ('   width:           100%;');
@@ -1143,7 +1151,7 @@ function create_qwiz_divs (i_qwiz, qwiz_tag, htm, exit_html) {
 
    bottom_html +=   '<div class="icon_qwiz" id="icon_qwiz' + i_qwiz + '">'
                   +    '<a href="//dkprojects.net/qwiz">'
-                  +       '<img src="' + qwiz_plugin_data.url + 'images/icon_qwiz16x16.png" style="border: none;" title="Qwiz - online quizzes and flashcards" />'
+                  +       '<img class="icon_qwiz" src="' + qwiz_plugin_data.url + 'images/icon_qwiz16x16.png" style="border: none;" title="Qwiz - online quizzes and flashcards" />'
                   +    '</a>'
                   + '</div>';
 

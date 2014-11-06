@@ -291,12 +291,20 @@ function add_style () {
    s.push ('   box-shadow:          none;');
    s.push ('}');
 
-   s.push ('div.icon_qwiz {');
+   s.push ('div.icon_qdeck {');
    s.push ('   position:        absolute;');
    s.push ('   left:            2px;');
    s.push ('   bottom:          2px;');
    s.push ('   width:           16px;');
    s.push ('   height:          16px;');
+   s.push ('}');
+
+   s.push ('img.icon_qdeck {');
+   s.push ('   opacity:         0.4;');
+   s.push ('}');
+
+   s.push ('img.icon_qdeck:hover {');
+   s.push ('   opacity:         1.0;');
    s.push ('}');
 
    s.push ('.qcard_card .back .center {');
@@ -913,9 +921,9 @@ function create_qdeck_divs (i_deck, qdeck_tag) {
    divs.push ('                  </td>');
    divs.push ('               </tr>');
    divs.push ('            </table>');
-   divs.push ('            <div id="icon_qwiz' + i_deck + '" class="icon_qwiz">');
+   divs.push ('            <div id="icon_qdeck' + i_deck + '" class="icon_qdeck">');
    divs.push ('               <a href="//dkprojects.net/qwiz">');
-   divs.push ('                  <img src="' + qwiz_plugin_data.url + 'images/icon_qwiz16x16.png" style="border: none;" title="Qwiz - online quizzes and flashcards" />');
+   divs.push ('                  <img class="icon_qdeck" src="' + qwiz_plugin_data.url + 'images/icon_qwiz16x16.png" style="border: none;" title="Qwiz - online quizzes and flashcards" />');
    divs.push ('               </a>');
    divs.push ('            </div>');
    divs.push ('         </div>');
@@ -1006,7 +1014,7 @@ this.start_deck = function (i_deck) {
    var n_cards = deckdata[i_deck].n_cards;
    deckdata[i_deck].n_to_go = n_cards;
 
-   $ ('div.qcard_window div#icon_qwiz' + i_deck).hide ();
+   $ ('div.qcard_window div#icon_qdeck' + i_deck).hide ();
 
    q.set_next_buttons (i_deck);
 
@@ -1469,7 +1477,7 @@ this.next_card = function (i_deck) {
 
    // Can hide qwiz icon/link now.
    if (deckdata[i_deck].i_card == 0) {
-      $ ('div.qcard_window div#icon_qwiz' + i_deck).hide ();
+      $ ('div.qcard_window div#icon_qdeck' + i_deck).hide ();
    }
 
    deckdata[i_deck].i_card++;
