@@ -1,0 +1,440 @@
+# Copyright (C) 2014 Qwiz - online quizzes and flashcards
+# This file is distributed under the same license as the Qwiz - online quizzes and flashcards package.
+msgid ""
+msgstr ""
+"Project-Id-Version: Qwiz - online quizzes and flashcards 2.08\n"
+"Report-Msgid-Bugs-To: http://wordpress.org/support/plugin/qwiz-online-"
+"quizzes-and-flashcards\n"
+"POT-Creation-Date: 2014-10-06 03:18:54+00:00\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"PO-Revision-Date: 2014-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+
+#. Translators: 
+#.         The first set of strings are seen by users.
+#.         The second set is seen only by quiz creators when they 
+#.         create and edit labeled diagrams in the WordPress editor.
+#.         The last set is error messages not normally seen by
+#.         users.
+#: languages/strings_to_translate.php:13
+msgid "zero"
+msgstr ""
+
+#: languages/strings_to_translate.php:14
+msgid "one"
+msgstr ""
+
+#: languages/strings_to_translate.php:15
+msgid "two"
+msgstr ""
+
+#: languages/strings_to_translate.php:16
+msgid "three"
+msgstr ""
+
+#: languages/strings_to_translate.php:17
+msgid "four"
+msgstr ""
+
+#: languages/strings_to_translate.php:18
+msgid "five"
+msgstr ""
+
+#: languages/strings_to_translate.php:19
+msgid "six"
+msgstr ""
+
+#: languages/strings_to_translate.php:20
+msgid "seven"
+msgstr ""
+
+#: languages/strings_to_translate.php:21
+msgid "eight"
+msgstr ""
+
+#: languages/strings_to_translate.php:22
+msgid "nine"
+msgstr ""
+
+#: languages/strings_to_translate.php:23
+msgid "ten"
+msgstr ""
+
+#. Translators: as in "All questions..."
+#: languages/strings_to_translate.php:26
+msgid "All"
+msgstr ""
+
+#: languages/strings_to_translate.php:28
+msgid "answer"
+msgstr ""
+
+#: languages/strings_to_translate.php:29
+msgid "answers"
+msgstr ""
+
+#. Translators: as in "Both questions..."
+#: languages/strings_to_translate.php:32
+msgid "Both"
+msgstr ""
+
+#: languages/strings_to_translate.php:34
+msgid "card"
+msgstr ""
+
+#: languages/strings_to_translate.php:35
+msgid "cards"
+msgstr ""
+
+#. Translators: as in "there are three cards in total"
+#: languages/strings_to_translate.php:38
+msgid "cards total"
+msgstr ""
+
+#: languages/strings_to_translate.php:40
+msgid "Congratulations, you answered all questions correctly"
+msgstr ""
+
+#: languages/strings_to_translate.php:41
+msgid "Flip"
+msgstr ""
+
+#. Translators: as in "For topic Biology..."
+#: languages/strings_to_translate.php:44
+msgid "For topic"
+msgstr ""
+
+#: languages/strings_to_translate.php:46
+msgid "Got it!"
+msgstr ""
+
+#. Translators: as in "In this five-flashcard stack..."
+#: languages/strings_to_translate.php:49
+msgid ""
+"In this %s-flashcard stack, you marked every card \"got it\" on the first try"
+msgstr ""
+
+#: languages/strings_to_translate.php:51 languages/strings_to_translate.php:52
+msgid "It took you one try"
+msgstr ""
+
+#: languages/strings_to_translate.php:53
+msgid "It took you %s tries"
+msgstr ""
+
+#: languages/strings_to_translate.php:54
+msgid "item"
+msgstr ""
+
+#: languages/strings_to_translate.php:55
+msgid "items"
+msgstr ""
+
+#: languages/strings_to_translate.php:56
+msgid "Learn mode: questions repeat until answered correctly"
+msgstr ""
+
+#: languages/strings_to_translate.php:57
+msgid ""
+"Move each item to its correct <span class=\"qwizzled_target_border\">place</"
+"span>"
+msgstr ""
+
+#: languages/strings_to_translate.php:58
+msgid "Need more practice"
+msgstr ""
+
+#. Translators: as in "Click here to go to the next question"
+#: languages/strings_to_translate.php:61
+msgid "Next question"
+msgstr ""
+
+#: languages/strings_to_translate.php:63
+msgid "on the first try"
+msgstr ""
+
+#. Translators: as in "three out of four"
+#: languages/strings_to_translate.php:66
+msgid "out of"
+msgstr ""
+
+#: languages/strings_to_translate.php:68
+msgid "Put this card at the bottom of stack, show the next card"
+msgstr ""
+
+#: languages/strings_to_translate.php:69
+msgid "question"
+msgstr ""
+
+#: languages/strings_to_translate.php:70
+msgid "questions"
+msgstr ""
+
+#: languages/strings_to_translate.php:71
+msgid "Randomly shuffle the remaining cards"
+msgstr ""
+
+#: languages/strings_to_translate.php:72
+msgid "Remove this card from the stack"
+msgstr ""
+
+#. Translators: as in "three cards have been reviewed"
+#: languages/strings_to_translate.php:75
+msgid "reviewed"
+msgstr ""
+
+#: languages/strings_to_translate.php:77
+msgid "response"
+msgstr ""
+
+#: languages/strings_to_translate.php:78
+msgid "responses"
+msgstr ""
+
+#: languages/strings_to_translate.php:79
+msgid "Review this flashcard stack again"
+msgstr ""
+
+#: languages/strings_to_translate.php:80
+msgid "Show the other side"
+msgstr ""
+
+#. Translators: as in "Shuffle the deck of cards"
+#: languages/strings_to_translate.php:83
+msgid "Shuffle"
+msgstr ""
+
+#. Translators: as in "Click here to start quiz"
+#: languages/strings_to_translate.php:86
+msgid "Start quiz"
+msgstr ""
+
+#: languages/strings_to_translate.php:88
+msgid "Start reviewing cards"
+msgstr ""
+
+#: languages/strings_to_translate.php:89
+msgid "Take the quiz again"
+msgstr ""
+
+#: languages/strings_to_translate.php:90
+msgid "Test mode: incorrectly-answered questions do not repeat"
+msgstr ""
+
+#: languages/strings_to_translate.php:91
+msgid "There was"
+msgstr ""
+
+#: languages/strings_to_translate.php:92
+msgid "There were"
+msgstr ""
+
+#: languages/strings_to_translate.php:93
+msgid ""
+"This flashcard stack had %s cards.  It took you %s tries until you felt "
+"comfortable enough to to mark \"got it\" for each card"
+msgstr ""
+
+#: languages/strings_to_translate.php:94
+msgid "to answer this question correctly"
+msgstr ""
+
+#: languages/strings_to_translate.php:95
+msgid "to answer these questions correctly"
+msgstr ""
+
+#. Translators: as in "there are three cards to go"
+#: languages/strings_to_translate.php:98
+msgid "to go"
+msgstr ""
+
+#: languages/strings_to_translate.php:100
+msgid "View summary report"
+msgstr ""
+
+#: languages/strings_to_translate.php:101
+msgid "You answered all of these questions correctly"
+msgstr ""
+
+#: languages/strings_to_translate.php:102
+msgid "You answered both of these questions correctly"
+msgstr ""
+
+#: languages/strings_to_translate.php:103
+msgid "You answered this question correctly"
+msgstr ""
+
+#: languages/strings_to_translate.php:104
+msgid "Your score is"
+msgstr ""
+
+#: languages/strings_to_translate.php:105
+msgid "Your score is %s correct out of %s"
+msgstr ""
+
+#: languages/strings_to_translate.php:112
+msgid ""
+"Create a target \"drop zone\" for a label - click here, then click label"
+msgstr ""
+
+#: languages/strings_to_translate.php:113
+msgid ""
+"Could not find editing window.  You need to be editing a page or post in "
+"Visual mode."
+msgstr ""
+
+#: languages/strings_to_translate.php:114
+msgid "Did not find [qwiz]...[/qwiz] shortcodes"
+msgstr ""
+
+#: languages/strings_to_translate.php:115
+msgid "End of labeled-diagram question"
+msgstr ""
+
+#: languages/strings_to_translate.php:116
+msgid "Error: no text selected"
+msgstr ""
+
+#: languages/strings_to_translate.php:117
+msgid "labeled diagram editing menu"
+msgstr ""
+
+#: languages/strings_to_translate.php:118
+msgid "Please select \"Visual\" mode to create a target/drop zone"
+msgstr ""
+
+#: languages/strings_to_translate.php:119
+msgid ""
+"Select the text or click on the image (you may have to click twice) where "
+"you want the target \"drop zone\" for this label"
+msgstr ""
+
+#: languages/strings_to_translate.php:120
+msgid ""
+"You can position and resize the target \"drop zone\" how you want in "
+"relation to the image"
+msgstr ""
+
+#. Translators: The remaining strings are error messages - not normally
+#.          seen by the user -- only by the quiz/flashcard creator.
+#: languages/strings_to_translate.php:124
+msgid "Did not find answer (\"[a]\") -- card back -- for"
+msgstr ""
+
+#: languages/strings_to_translate.php:125
+msgid "Did not find choices (\"[c]\") for"
+msgstr ""
+
+#: languages/strings_to_translate.php:126
+msgid "Did not find choices (\"[c]\") or labels (\"[l]\") for"
+msgstr ""
+
+#: languages/strings_to_translate.php:127
+msgid ""
+"Did not find end of image area.  Please check that all labels and target "
+"\"drop zones\" were correctly processed and saved during the edit of this "
+"page"
+msgstr ""
+
+#: languages/strings_to_translate.php:128
+msgid "Did not find feedback (\"[f]\") for"
+msgstr ""
+
+#: languages/strings_to_translate.php:129
+msgid "Did not find question tags (\"[q]\") for"
+msgstr ""
+
+#: languages/strings_to_translate.php:130
+msgid ""
+"Did not find target \"drop-zones\" for labels.  Please check that all labels "
+"and target \"drop zones\" were correctly processed and saved during the edit "
+"of this page"
+msgstr ""
+
+#: languages/strings_to_translate.php:131
+msgid "Did not find topic within double quotes for"
+msgstr ""
+
+#: languages/strings_to_translate.php:132
+msgid "does not match number of labels"
+msgstr ""
+
+#: languages/strings_to_translate.php:133
+msgid "Error found"
+msgstr ""
+
+#: languages/strings_to_translate.php:134
+msgid "Errors found"
+msgstr ""
+
+#: languages/strings_to_translate.php:135
+msgid "(exit text) must be last"
+msgstr ""
+
+#: languages/strings_to_translate.php:136
+msgid "Got more than one card back (\"[a]\") for"
+msgstr ""
+
+#: languages/strings_to_translate.php:137
+msgid "More than one choice was marked correct"
+msgstr ""
+
+#: languages/strings_to_translate.php:138
+msgid "No choice was marked correct"
+msgstr ""
+
+#: languages/strings_to_translate.php:139
+msgid "Number of feedback items does not match number of choices"
+msgstr ""
+
+#: languages/strings_to_translate.php:140
+msgid "Number of feedback items"
+msgstr ""
+
+#: languages/strings_to_translate.php:141
+msgid "Text before header"
+msgstr ""
+
+#: languages/strings_to_translate.php:142
+msgid "Text before intro"
+msgstr ""
+
+#: languages/strings_to_translate.php:143
+msgid "[textentry] on back of card, but not on front"
+msgstr ""
+
+#: languages/strings_to_translate.php:144
+msgid ""
+"Topic(s) were given for at least one question, but at least one question "
+"doesn't have a topic"
+msgstr ""
+
+#: languages/strings_to_translate.php:145
+msgid "Unmatched [qdeck] - [/qdeck] pairs"
+msgstr ""
+
+#: languages/strings_to_translate.php:146
+msgid "Unmatched [qwiz] - [/qwiz] pairs"
+msgstr ""
+
+#. Plugin Name of the plugin/theme
+msgid "Qwiz - online quizzes and flashcards"
+msgstr ""
+
+#. #-#-#-#-#  qwiz.pot (Qwiz - online quizzes and flashcards 2.08)  #-#-#-#-#
+#. Plugin URI of the plugin/theme
+#. #-#-#-#-#  qwiz.pot (Qwiz - online quizzes and flashcards 2.08)  #-#-#-#-#
+#. Author URI of the plugin/theme
+msgid "http://dkprojects.net/qwiz"
+msgstr ""
+
+#. Description of the plugin/theme
+msgid "Easy online quizzes and flashcards for WordPress"
+msgstr ""
+
+#. Author of the plugin/theme
+msgid "Dan Kirshner"
+msgstr ""
