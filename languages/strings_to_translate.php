@@ -53,6 +53,9 @@
       'It took you %s tries' => __ ('It took you %s tries', $q),
       'item' => __ ('item', $q),
       'items' => __ ('items', $q),
+
+      /* Translators: as in "This quiz is in learn mode" */
+      'Learn' => __ ('Learn', $q),
       'Learn mode: questions repeat until answered correctly' => __ ('Learn mode: questions repeat until answered correctly', $q),
       'Move each item to its correct <span class="qwizzled_target_border">place</span>' => __ ('Move each item to its correct <span class="qwizzled_target_border">place</span>', $q),
       'Need more practice' => __ ('Need more practice', $q),
@@ -87,6 +90,9 @@
 
       'Start reviewing cards' => __ ('Start reviewing cards', $q),
       'Take the quiz again' => __ ('Take the quiz again', $q),
+
+      /* Translators: as in "This quiz is in test mode" */
+      'Test' => __ ('Test', $q),
       'Test mode: incorrectly-answered questions do not repeat' => __ ('Test mode: incorrectly-answered questions do not repeat', $q),
       'There was' => __ ('There was', $q),
       'There were' => __ ('There were', $q),

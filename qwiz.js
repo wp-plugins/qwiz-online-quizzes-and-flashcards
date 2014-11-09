@@ -1,4 +1,10 @@
 /*
+ * Version 2.15 2014-11-09
+ * Nicer qwiz icon, hover effect.  Hide icon with flip.
+ * Ignore empty paragraphs when no [i]: handle multiple paragraphs.
+ * Fix choice highlighting when multiple choices within one paragraph.
+ * Handle left- and right-double-quotes in labels="top", etc.
+ *
  * Version 2.14 2014-11-04
  * Restore missing double quote -- couldn't split on labeled diagrams.
  *
@@ -105,9 +111,11 @@ $ = jQuery;
 var q = this;
 
 // The identifier -- including qualifiers like "#" -- of the page content (that
-// perhaps contains inline quizzes) on WordPress.  Multiple entries: apparently
-// themes can change this; these have come up so far.
-var content = 'div.entry-content, div.post-entry, div.container';
+// perhaps contains inline quizzes) on WordPress.  Multiple-entries default
+// set in qwiz-online-quizzes-wp-plugin.php: div.entry-content, div.post-entry,
+// div.container.  Apparently themes can change this; these have come up so far.
+// Body default for stand-alone use.
+var content = get_qwiz_param ('content', 'body');
 
 var errmsgs = [];
 
@@ -360,7 +368,6 @@ this.label_dragstart = function (label_obj) {
 // -----------------------------------------------------------------------------
 this.label_dropped = function (target_obj, label_obj) {
 
-
    // Is this the right target?  Get the association id from the label class.
    // If no matching class, use data () (backwards compatibility).
    var classes = label_obj.attr ('class');
@@ -384,6 +391,12 @@ this.label_dropped = function (target_obj, label_obj) {
    var i_question = fields[1].substr (1);
    if (debug[0]) {
       console.log ('[label_dropped] question_selector:', question_selector);
+   }
+
+   // If no separate intro page, and this is first question, hide qwiz icon.
+   if (i_question == 0 && (no_intro_b[i_qwiz]
+                                     || qwizdata[i_qwiz].n_questions == 1)) {
+      $ ('div.qwiz div#icon_qwiz' + i_qwiz).hide ();
    }
 
    // Increment number of tries.
@@ -705,7 +718,6 @@ function add_style () {
    // Labeled-diagram labels feedback cell.
    s.push ('td.qwizzled_feedback {');
    s.push ('   border:          none;');
-   s.push ('   padding:         0px 0px 0px 20px;');  // Top, right, bottom, left.
    //s.push ('   border-top:      1px solid black;');
    s.push ('}');
 
@@ -795,7 +807,6 @@ function add_style () {
    // Starts out centered.
    s.push ('.next_button {');
    s.push ('   text-align:      center;');
-   s.push ('   margin-left:     20px;');
    s.push ('}');
 
    s.push ('.qbutton {');
@@ -1060,19 +1071,13 @@ function create_qwiz_divs (i_qwiz, qwiz_tag, htm, exit_html) {
    }
    
    // If non-default width set, set flag.
-   var non_default_width_b = attributes.search (/[\s;"]width/m) != -1;
+   var non_default_width_b = attributes.search (/[\s;"\u201C\u201D]width/m) != -1;
 
-   // If "repeat_incorrect=..." present, parse out true/false, delete.
-   // Default for this qwiz.
-   var repeat_incorrect_matches = attributes.match (/repeat_incorrect\s*?=\s*?"[^"]+"/m);
-   qwizdata[i_qwiz].repeat_incorrect_b = true;
-   if (repeat_incorrect_matches) {
-      var repeat_incorrect = repeat_incorrect_matches[0];
-      qwizdata[i_qwiz].repeat_incorrect_b = repeat_incorrect.search ('false') == -1;
-      if (debug[0]) {
-         console.log ('[create_qwiz_divs] repeat_incorrect:', repeat_incorrect, ', repeat_incorrect_b:', qwizdata[i_qwiz].repeat_incorrect_b);
-      }
-      attributes = attributes.replace (repeat_incorrect, '');
+   // If "repeat_incorrect=..." present, parse out true/false.
+   var repeat_incorrect_value = get_attr (attributes, 'repeat_incorrect');
+   qwizdata[i_qwiz].repeat_incorrect_b = repeat_incorrect_value != 'false';
+   if (debug[0]) {
+      console.log ('[create_qwiz_divs] repeat_incorrect:', repeat_incorrect, ', repeat_incorrect_b:', qwizdata[i_qwiz].repeat_incorrect_b);
    }
 
    // Undisplayed version of qwiz div, so can measure default width if need to.
@@ -1101,10 +1106,10 @@ function create_qwiz_divs (i_qwiz, qwiz_tag, htm, exit_html) {
    var mode;
    var title;
    if (qwizdata[i_qwiz].repeat_incorrect_b) {
-      mode = 'Learn';
+      mode = T ('Learn');
       title = learn_mode_title + ' ' + test_mode_title;
    } else {
-      mode = 'Test';
+      mode = T ('Test');
       title = test_mode_title + ' ' + learn_mode_title;
    }
    progress_div_html += '   <div id="mode-qwiz' + i_qwiz + '" class="qwiz-mode" title="' + title + '">\n';
@@ -1149,11 +1154,21 @@ function create_qwiz_divs (i_qwiz, qwiz_tag, htm, exit_html) {
                  +    '</button>\n'
                  + '</div>\n';
 
-   bottom_html +=   '<div class="icon_qwiz" id="icon_qwiz' + i_qwiz + '">'
-                  +    '<a href="//dkprojects.net/qwiz">'
-                  +       '<img class="icon_qwiz" src="' + qwiz_plugin_data.url + 'images/icon_qwiz16x16.png" style="border: none;" title="Qwiz - online quizzes and flashcards" />'
-                  +    '</a>'
-                  + '</div>';
+   var icon_qwiz = get_qwiz_param ('icon_qwiz');
+   if (icon_qwiz != 'Not displayed') {
+      var title = 'Qwiz - online quizzes and flashcards';
+      bottom_html += '<div class="icon_qwiz" id="icon_qwiz' + i_qwiz + '">';
+      if (icon_qwiz != 'Icon only') {
+         bottom_html += '<a href="//dkprojects.net/qwiz">';
+      } else {
+         title += ' - dkprojects.net/qwiz';
+      }
+      bottom_html += '<img class="icon_qwiz" src="' + get_qwiz_param ('url', './') + 'images/icon_qwiz16x16.png" style="border: none;" title="' + title + '" />'
+      if (icon_qwiz != 'Icon only') {
+         bottom_html += '</a>';
+      }
+      bottom_html += '</div>';
+   }
 
    // This qwiz closing div.
    bottom_html += '</div>\n';
@@ -1200,26 +1215,23 @@ function process_topics (i_qwiz, question_tags) {
       if (attributes) {
 
          // Look for "topic=" attribute.
-         var topic_match = attributes.match (/topic\s*?=\s*?"([^"]+)"/m);
-         if (topic_match) {
-            var question_topics = topic_match[1];
-            if (question_topics) {
-               if (debug[4]) {
-                  console.log ('[process_topics] question_topics: ', question_topics);
-               }
+         var question_topics = get_attr (attributes, 'topic');
+         if (question_topics) {
+            if (debug[4]) {
+               console.log ('[process_topics] question_topics: ', question_topics);
+            }
 
-               // Multiple topics for a question - separated by semicolon (and
-               // optional space).  Split into array.
-               question_topics = question_topics.split (/; */);
-               qwizdata[i_qwiz].question_topics[i_question] = question_topics;
-               n_questions_w_topics++;
+            // Multiple topics for a question - separated by semicolon (and
+            // optional space).  Split into array.
+            question_topics = question_topics.split (/; */);
+            qwizdata[i_qwiz].question_topics[i_question] = question_topics;
+            n_questions_w_topics++;
 
-               // Add topics to list of topics if not already in list.
-               for (var i=0; i<question_topics.length; i++) {
-                  var topic = question_topics[i];
-                  if (qwizdata[i_qwiz].topics.indexOf (topic) == -1) {
-                     qwizdata[i_qwiz].topics.push (topic);
-                  }
+            // Add topics to list of topics if not already in list.
+            for (var i=0; i<question_topics.length; i++) {
+               var topic = question_topics[i];
+               if (qwizdata[i_qwiz].topics.indexOf (topic) == -1) {
+                  qwizdata[i_qwiz].topics.push (topic);
                }
             }
          }
@@ -1332,10 +1344,6 @@ this.next_question = function (i_qwiz) {
       // Hide previous question.
       var qwizq_id = '#' + qwiz_id + '-q' + i_question;
       $ (qwizq_id).hide ();
-
-      if (i_question == 0) {
-         $ ('div.qwiz div#icon_qwiz' + i_qwiz).hide ();
-      }
    }
 
    // Hide "next" button until user makes a choice.
@@ -1492,8 +1500,25 @@ function process_question (i_qwiz, i_question, htm, opening_tags) {
          n_correct += radio_button_html[0];
          choice_html = choice_html.replace (/\[c\*{0,1}\]/m, radio_button_html[1]);
 
-         // Assemble with span to make choice clickable and highlight on mouseover.
-         new_htm += '<span class="qwiz-choice choice choices-qwiz' + i_qwiz + '-q' + i_question + '" onclick="' + qname + '.process_choice (\'qwiz' + i_qwiz + '-q' + i_question + '-a' + i_choice + '\')">\n'
+         // Assemble with span to make choice clickable and highlight on
+         // mouseover.  If starts with a paragraph or header tag, but does not
+         // end with corresponding closing tag, move the span _after_ the 
+         // opening tag.
+         if (choice_html.substr (0, 2) == '<p' || choice_html.substr (0, 2) == '<h') {
+            var len = choice_html.length;
+
+            // len - 4 is third character from end. </p> </h1>
+            //                                      4321 54321
+            if (choice_html.substr (length - 4, 3) != '</p' 
+                && choice_html.substr (length - 5, 3) != '</h') {
+               var end_opening_tag_pos = choice_html.indexOf ('>');
+               if (end_opening_tag_pos != -1) {
+                  new_htm += choice_html.substr (0, end_opening_tag_pos + 1);
+                  choice_html = choice_html.substr (end_opening_tag_pos + 1);
+               }
+            }
+         }
+         new_htm += '<span class="qwiz-choice choices-qwiz' + i_qwiz + '-q' + i_question + '" onclick="' + qname + '.process_choice (\'qwiz' + i_qwiz + '-q' + i_question + '-a' + i_choice + '\')">\n'
                     + choice_html + '</span>';
       } else {
 
@@ -1607,14 +1632,16 @@ function process_qwizzled (i_qwiz, i_question, question_htm, opening_tags,
 
    // See if labels placement specified by "attribute", e.g., [q labels="top"].
    // Default is "right".  Find attributes, if any.
+   var labels_position = '';
    var m = question_tag.match (/\[<code><\/code>q([^\]]*)\]/m);
    if (m) {
       var attributes = m[1];
       if (attributes) {
 
-         // Look for "labels=" attribute.
-         var labels_match = attributes.match (/labels\s*?=\s*?"([^"]+)"/m);
-         var labels_position = labels_match[1].toLowerCase ();
+         // Look for "labels=" attribute.  Match regular double-quote, or
+         // left- or right-double-quote.
+         labels_position = get_attr (attributes, 'labels');
+         labels_position = labels_position.toLowerCase ();
          if (debug[0]) {
             console.log ('[process_qwizzled] labels_position:', labels_position);
          }
@@ -1970,7 +1997,7 @@ function parse_html_block (htm, qtags, qnext_tags, ignore_nbsp_b) {
 
       // If flag set, also ignore &nbsp;
       if (ignore_nbsp_b != undefined) {
-         htm_wo_tags = htm_wo_tags.replace ('&nbsp;', '');
+         htm_wo_tags = htm_wo_tags.replace (/&nbsp;/g, '');
       }
       if (htm_wo_tags.search (/\S/) == -1) {
          htm_block = '';
@@ -2264,6 +2291,12 @@ this.process_choice = function (feedback_id) {
       var i_question = feedback_id.match (/-q([0-9]+)-/)[1];
       update_topic_statistics (i_qwiz, i_question, correct_f);
 
+      // If no separate intro page, hide qwiz icon now.
+      if (i_question == 0 && (no_intro_b[i_qwiz]
+                                        || qwizdata[i_qwiz].n_questions == 1)) {
+         $ ('div.qwiz div#icon_qwiz' + i_qwiz).hide ();
+      }
+
       // Update progress and show next button -- only if more than one question.
       update_progress_show_next (i_qwiz);
    }
@@ -2376,8 +2409,24 @@ function create_feedback_div_html (i_qwiz, i_question, i_item, item, c_x) {
 }
 
 
-var number_word = [T ('zero'), T ('one'), T ('two'), T ('three'), T ('four'), T ('five'), T ('six'), T ('seven'), T ('eight'), T ('nine'), T ('ten')];
 // -----------------------------------------------------------------------------
+function get_attr (htm, attr_name) {
+
+   var attr_value = '';
+
+   var attr_re = new RegExp (attr_name + '\\s*?=\\s*?["\\u201C\\u201D]([^"\u201C\u201D]+)["\\u201C\\u201D]', 'm');
+   var attr_match = htm.match (attr_re);
+   if (attr_match) {
+      attr_value = trim (attr_match[1]);
+   }
+
+   return attr_value;
+}
+
+
+// -----------------------------------------------------------------------------
+var number_word = [T ('zero'), T ('one'), T ('two'), T ('three'), T ('four'), T ('five'), T ('six'), T ('seven'), T ('eight'), T ('nine'), T ('ten')];
+
 function number_to_word (number) {
    var word;
    if (number > 9) {
@@ -2405,20 +2454,46 @@ function plural (word, plural_word, n) {
 
 // -----------------------------------------------------------------------------
 function T (string) {
-   if (typeof (qwiz_plugin_data) == 'undefined') {
 
-      // Stand-alone version.  Just use default string.
-      t_string = string;
-   } else {
+   var t_string = '';
 
-      // Translation, if available.
-      t_string = qwiz_plugin_data.T[string];
-      if (typeof (t_string) == 'undefined') {
-         t_string = string;
+   // Translation, if available.
+   if (typeof (qwiz_params) != 'undefined') {
+      if (typeof (qwiz_params.T) != 'undefined') {
+         if (typeof (qwiz_params.T[string]) != 'undefined') {
+            t_string = qwiz_params.T[string];
+         }
       }
+   }
+   if (t_string == '') {
+
+      // Translation not available.  Just use default string.
+      t_string = string;
    }
 
    return t_string;
+}
+
+
+// -----------------------------------------------------------------------------
+function get_qwiz_param (key, default_value) {
+
+   var value = '';
+   if (typeof (qwiz_params) != 'undefined') {
+      if (typeof (qwiz_params[key]) != 'undefined') {
+         value = qwiz_params[key];
+      }
+   }
+   if (value == '') {
+
+      // qwiz_params object or key not present.  Return default value, if 
+      // given, or ''.
+      if (default_value != undefined) {
+         value = default_value;
+      }
+   }
+
+   return value;
 }
 
 

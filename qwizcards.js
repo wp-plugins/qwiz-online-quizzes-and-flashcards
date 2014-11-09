@@ -1,4 +1,11 @@
 /*
+ * Version 2.15 2014-11-09
+ * Nicer qwiz icon, hover effect.  Hide icon with flip.
+ * Fix ignore empty paragraphs when no [i].  Also, handle multiple paragraphs.
+ * Handle left- and right-double-quotes in random="true", etc.
+ * Correct sizing of larger of front and back (border showing through in
+ * Firefox).
+ *
  * Version 2.12 2014-11-03
  * Distinguish qwiz from qdeck in hiding icon.
  *
@@ -66,10 +73,11 @@ $ = jQuery;
 var q = this;
 
 // The identifier -- including qualifiers like "#" -- of the page content (that
-// perhaps contains inline quizzes) on WordPress.  Multiple entries: apparently
-// themes can change this; these have come up so far.
-var content = 'div.entry-content, div.post-entry, div.container';
-//var content = 'main';
+// perhaps contains inline flashcard decks) on WordPress.  Default
+// set in qwiz-online-quizzes-wp-plugin.php: div.entry-content, div.post-entry,
+// div.container.  Apparently themes can change this; these have come up so far.
+// Body default for stand-alone use.
+var content = get_qwiz_param ('content', 'body');
 
 var errmsgs = [];
 
@@ -316,7 +324,7 @@ function add_style () {
    s.push ('   line-height:         25px;');
    s.push ('   font-size:           12pt;');
    s.push ('}');
-   s.push ('.qcard_card .cbutton {');
+   s.push ('div.qcard_card button.cbutton {');
    s.push ('   display:          none;');
    s.push ('}');
    s.push ('.qcard_next_buttons {');
@@ -557,7 +565,7 @@ function process_qdeck_pair (htm, i_deck) {
       if (intro_html == 'NA') {
          
          // No [i] -- intro may be text before [q].  See if there is.
-         intro_html = parse_html_block (htm, ['^'], ['[q]', '[q ']);
+         intro_html = parse_html_block (htm, ['^'], ['[q]', '[q '], true);
       }
 
       // See if intro was just tags and whitespace.
@@ -794,7 +802,7 @@ function parse_html_block (htm, qtags, qnext_tags, ignore_nbsp_b) {
 
       // If flag set, also ignore &nbsp;
       if (ignore_nbsp_b != undefined) {
-         htm_wo_tags = htm_wo_tags.replace ('&nbsp;', '');
+         htm_wo_tags = htm_wo_tags.replace (/&nbsp;/g, '');
       }
       if (htm_wo_tags.search (/\S/) == -1) {
          htm_block = '';
@@ -887,15 +895,10 @@ function create_qdeck_divs (i_deck, qdeck_tag) {
 
       // If "random=..." present, parse out true/false, delete.  Default for
       // this deck.
-      var random_matches = attributes.match (/random\s*?=\s*?"[^"]+"/m);
-      deckdata[i_deck].random_b = false;
-      if (random_matches) {
-         var random = random_matches[0];
-         deckdata[i_deck].random_b = random.search ('true') != -1;
-         if (debug[0]) {
-            console.log ('[create_qwiz_divs] random:', random, ', random_b:', deckdata[i_deck].random_b);
-         }
-         attributes = attributes.replace (random, '');
+      var random = get_attr (attributes, 'random');
+      deckdata[i_deck].random_b = random == 'true';
+      if (debug[0]) {
+         console.log ('[create_qwiz_divs] random:', random, ', random_b:', deckdata[i_deck].random_b);
       }
    }
 
@@ -921,11 +924,29 @@ function create_qdeck_divs (i_deck, qdeck_tag) {
    divs.push ('                  </td>');
    divs.push ('               </tr>');
    divs.push ('            </table>');
-   divs.push ('            <div id="icon_qdeck' + i_deck + '" class="icon_qdeck">');
-   divs.push ('               <a href="//dkprojects.net/qwiz">');
-   divs.push ('                  <img class="icon_qdeck" src="' + qwiz_plugin_data.url + 'images/icon_qwiz16x16.png" style="border: none;" title="Qwiz - online quizzes and flashcards" />');
-   divs.push ('               </a>');
-   divs.push ('            </div>');
+
+   var icon_qwiz = get_qwiz_param ('icon_qwiz');
+   if (icon_qwiz != 'Not displayed') {
+      var title = 'Qwiz - online quizzes and flashcards';
+
+      divs.push ('         <div id="icon_qdeck' + i_deck + '" class="icon_qdeck">');
+
+      if (icon_qwiz != 'Icon only') {
+
+         divs.push ('         <a href="//dkprojects.net/qwiz">');
+
+      } else {
+         title += ' - dkprojects.net/qwiz';
+      }
+
+      divs.push ('               <img class="icon_qdeck" src="' + get_qwiz_param ('url', './') + 'images/icon_qwiz16x16.png" style="border: none;" title="' + title + '" />');
+
+      if (icon_qwiz != 'Icon only') {
+
+         divs.push ('         </a>');
+      }
+      divs.push ('         </div>');
+   }
    divs.push ('         </div>');
    divs.push ('         <div class="back">');
    divs.push ('            <table class="qcard_table" ' + attributes + ' cellspacing="0" cellpadding="0">');
@@ -954,13 +975,12 @@ function process_topics (i_deck, card_tags) {
    for (var i_card=0; i_card<n_cards; i_card++) {
       var card_tag = card_tags[i_card];
 
-      // See if any attribute.
+      // See if any topic attribute.
       var matches = card_tag.match (/\[q +([^\]]*)\]/);
-      if (matches && matches[1].substr (0, 7) == 'topic="') {
-         var attribute = matches[1].substr (7);
-         var matches = attribute.match (/([^"]*)"/);
-         if (matches) {
-            var card_topics = trim (matches[1]);
+      if (matches) {
+         var attributes = matches[1];
+         var card_topics = get_attr (attributes, 'topic');
+         if (card_topics) {
             if (debug[4]) {
                console.log ('[process_topics] card_topics: ', card_topics);
             }
@@ -1167,14 +1187,16 @@ function check_and_init_topics () {
 function init_element_pointers (i_deck) {
 
    // jQuery element objects for this deck.
-   deckdata[i_deck].el_qcard_container  = $('#qcard_window-qdeck' + i_deck + ' div.card-container');
-   deckdata[i_deck].el_flip             = $('.cbutton-qdeck' + i_deck);
-   deckdata[i_deck].el_progress         = $('#qcard_progress-qdeck' + i_deck);
-   deckdata[i_deck].el_header           = $('#qcard_header-qdeck' + i_deck);
-   deckdata[i_deck].el_qcard_card       = $('#qcard_card-qdeck' + i_deck);
-   deckdata[i_deck].el_qcard_card_front = $('#qcard_card-qdeck' + i_deck + ' div.front td.center');
-   deckdata[i_deck].el_qcard_card_back  = $('#qcard_card-qdeck' + i_deck + ' div.back  td.center');
-   deckdata[i_deck].el_next_buttons     = $('#qcard_next_buttons-qdeck' + i_deck);
+   deckdata[i_deck].el_qcard_container  = $('div#qcard_window-qdeck' + i_deck + ' div.card-container');
+   deckdata[i_deck].el_flip             = $('button.cbutton-qdeck' + i_deck);
+   deckdata[i_deck].el_progress         = $('div#qcard_progress-qdeck' + i_deck);
+   deckdata[i_deck].el_header           = $('div#qcard_header-qdeck' + i_deck);
+   deckdata[i_deck].el_qcard_card       = $('div#qcard_card-qdeck' + i_deck);
+   deckdata[i_deck].el_qcard_table_front= $('div#qcard_card-qdeck' + i_deck + ' div.front table');
+   deckdata[i_deck].el_qcard_table_back = $('div#qcard_card-qdeck' + i_deck + ' div.back  table');
+   deckdata[i_deck].el_qcard_card_front = $('div#qcard_card-qdeck' + i_deck + ' div.front td.center');
+   deckdata[i_deck].el_qcard_card_back  = $('div#qcard_card-qdeck' + i_deck + ' div.back  td.center');
+   deckdata[i_deck].el_next_buttons     = $('div#qcard_next_buttons-qdeck' + i_deck);
 
    if (debug[5]) {
       console.log ('[init_element_pointers] el_next_buttons:', deckdata[i_deck].el_next_buttons);
@@ -1312,11 +1334,16 @@ this.flip = function (i_deck) {
       // "flashing" in Chrome on Mac).
       el_front.find ('sup, sub').css ('visibility', 'hidden');
 
+      // Hide qwiz icon/link.
+      if (deckdata[i_deck].i_card == 0) {
+         $ ('div.qcard_window div#icon_qdeck' + i_deck).hide ();
+      }
+
       // If there's a text entry box...
       if (el_textentry.length) {
 
          // Hide it (shows through in Safari, Chrome, "flashing" in Chrome on
-         // Mac.
+         // Mac).
          el_textentry.css ('visibility', 'hidden');
 
          // If something entered in text box, then set back-side element to what
@@ -1432,8 +1459,8 @@ function set_container_width_height (i_deck, qcard_width) {
 
    // Get height of front and back, set height of container to larger of the
    // two.
-   var height_front = deckdata[i_deck].el_qcard_card_front.outerHeight ();
-   var height_back  = deckdata[i_deck].el_qcard_card_back.outerHeight ();
+   var height_front = deckdata[i_deck].el_qcard_table_front.outerHeight ();
+   var height_back  = deckdata[i_deck].el_qcard_table_back.outerHeight ();
    var max_height = Math.max (height_front, height_back);
 
    if (debug[0]) {
@@ -1562,6 +1589,21 @@ function shuffle (array) {
 
 
 // -----------------------------------------------------------------------------
+function get_attr (htm, attr_name) {
+
+   var attr_value = '';
+
+   var attr_re = new RegExp (attr_name + '\\s*?=\\s*?["\\u201C\\u201D]([^"\u201C\u201D]+)["\\u201C\\u201D]', 'm');
+   var attr_match = htm.match (attr_re);
+   if (attr_match) {
+      attr_value = trim (attr_match[1]);
+   }
+
+   return attr_value;
+}
+
+
+// -----------------------------------------------------------------------------
 var number_word = [T ('zero'), T ('one'), T ('two'), T ('three'), T ('four'), T ('five'), T ('six'), T ('seven'), T ('eight'), T ('nine'), T ('ten')];
 
 function number_to_word (number) {
@@ -1591,20 +1633,46 @@ function plural (word, plural_word, n) {
 
 // -----------------------------------------------------------------------------
 function T (string) {
-   if (typeof (qwiz_plugin_data) == 'undefined') {
 
-      // Stand-alone version.  Just use default string.
-      t_string = string;
-   } else {
+   var t_string = '';
 
-      // Translation, if available.
-      t_string = qwiz_plugin_data.T[string];
-      if (typeof (t_string) == 'undefined') {
-         t_string = string;
+   // Translation, if available.
+   if (typeof (qwiz_params) != 'undefined') {
+      if (typeof (qwiz_params.T) != 'undefined') {
+         if (typeof (qwiz_params.T[string]) != 'undefined') {
+            t_string = qwiz_params.T[string];
+         }
       }
+   }
+   if (t_string == '') {
+
+      // Translation not available.  Just use default string.
+      t_string = string;
    }
 
    return t_string;
+}
+
+
+// -----------------------------------------------------------------------------
+function get_qwiz_param (key, default_value) {
+
+   var value = '';
+   if (typeof (qwiz_params) != 'undefined') {
+      if (typeof (qwiz_params[key]) != 'undefined') {
+         value = qwiz_params[key];
+      }
+   }
+   if (value == '') {
+
+      // qwiz_params object or key not present.  Return default value, if 
+      // given, or ''.
+      if (default_value != undefined) {
+         value = default_value;
+      }
+   }
+
+   return value;
 }
 
 

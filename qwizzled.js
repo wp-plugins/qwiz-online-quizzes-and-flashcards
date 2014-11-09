@@ -522,7 +522,7 @@ this.create_target2 = function () {
       // Find questions that haven't been wrapped -- see if labels [l] inside,
       // along with associated feedback ([f*] and [fx]).  Wrap labels.  If no
       // feedback given, create empty (= use canned response) shortcodes.
-      // html returned only if labels inside.
+      // html returned only if labels inside.  '[q {^]}+]'
       question_start_tags = ['[q]', '[q '];
       r = process_questions (qwiz_matches[i_qwiz], question_start_tags, false);
       var any_notwrapped_question_has_labels_b = r.any_labels_b;
@@ -1451,9 +1451,18 @@ function report_errors () {
 // -----------------------------------------------------------------------------
 function tags_to_pat (tags) {
    var tags_pat = '(' + tags.join (')|(') + ')';
+
+   // Escape square brackets and asterisks.
    tags_pat = tags_pat.replace (/([\[\]\*])/g, '\\$1');
+
+   // Curly brackets fill the function of (non-escaped) square brackets.
    tags_pat = tags_pat.replace (/{/g, '[').replace (/}/g, ']').replace (/#/g, '*');
+
+   // A matching tag is a match group, and may be followed by whitespace.
    tags_pat = '((' + tags_pat + ')\\s*)';
+   if (debug[0]) {
+      console.log ('[tags_to_pat] tags_pat:', tags_pat);
+   }
    
    return tags_pat;
 }

@@ -3,7 +3,7 @@
  * Plugin Name: Qwiz - online quizzes and flashcards
  * Plugin URI: http://dkprojects.net/qwiz
  * Description: Easy online quizzes and flashcards for WordPress
- * Version: 2.14
+ * Version: 2.15
  * Author: Dan Kirshner
  * Author URI: http://dkprojects.net/qwiz
  * License: GPL2
@@ -50,15 +50,42 @@ function add_qwiz_js () {
    $qwizcards            = plugins_url ('qwizcards.js', __FILE__);
    $jquery_ui            = plugins_url ('jquery-ui.min.js', __FILE__);
    $jquery_ui_touchpunch = plugins_url ('jquery.ui.touch-punch.min.js', __FILE__);
-   wp_enqueue_script ('qwiz_handle',                 $qwiz,                 array (), '2.14', true);
-   wp_enqueue_script ('qwizcard_handle',             $qwizcards,            array (), '2.14', true);
-   wp_enqueue_script ('jquery_ui_handle',            $jquery_ui,            array (), '2.14', true);
-   wp_enqueue_script ('jquery_ui_touchpunch_handle', $jquery_ui_touchpunch, array (), '2.14', true);
+   wp_enqueue_script ('qwiz_handle',                 $qwiz,                 array (), '2.15', true);
+   wp_enqueue_script ('qwizcard_handle',             $qwizcards,            array (), '2.15', true);
+   wp_enqueue_script ('jquery_ui_handle',            $jquery_ui,            array (), '2.15', true);
+   wp_enqueue_script ('jquery_ui_touchpunch_handle', $jquery_ui_touchpunch, array (), '2.15', true);
 
-
+   // Options/parameters.  Set default content option.
    $plugin_url = plugins_url ( '/', __FILE__ );
-   wp_localize_script ('qwiz_handle',                'qwiz_plugin_data', array ('T' => $qwiz_T, 'url' => $plugin_url));
-   wp_localize_script ('qwizcard_handle',            'qwiz_plugin_data', array ('T' => $qwiz_T, 'url' => $plugin_url));
+   $options = get_option ('qwiz_options');
+   $icon_qwiz         = $options['icon_qwiz'];
+   $content           = $options['content'];
+   $translate_strings = $options['translate_strings'];
+
+   // Default for content div selector.
+   if (! $content) {
+      $content = 'div.entry-content, div.post-entry, div.container';
+   }
+
+   // If string substitutions given, make them now.
+   if ($translate_strings) {
+      $translate_strings = explode ("\n", $translate_strings);
+      $n_translate_strings = count ($translate_strings);
+      for ($i=0; $i<$n_translate_strings; $i++) {
+         $strings = explode (';', $translate_strings[$i]);
+         $old_string = $strings[0];
+         $new_string = trim ($strings[1]);
+         $qwiz_T[$old_string] = $new_string;
+      }
+   }
+   $qwiz_params = array (
+      'T' => $qwiz_T, 
+      'url' => $plugin_url, 
+      'icon_qwiz' => $icon_qwiz,
+      'content'   => $content
+   );
+   wp_localize_script ('qwiz_handle',     'qwiz_params', $qwiz_params);
+   wp_localize_script ('qwizcard_handle', 'qwiz_params', $qwiz_params);
 }
 
 
@@ -105,3 +132,6 @@ function qwizzled_add_locale($locales) {
 }
 add_filter ('mce_external_languages', 'qwizzled_add_locale');
 
+
+// Admin page.
+include "qwiz_admin.php";

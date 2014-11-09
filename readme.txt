@@ -2,7 +2,7 @@
 Contributors: dan_kirshner
 Tags: interactive quiz, quiz, flashcards, labeled diagrams
 Tested up to: 4.0
-Stable tag: 2.13
+Stable tag: 2.15
 License: GPL2
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
@@ -19,6 +19,17 @@ Activate the plugin through the 'Plugins' menu in WordPress
 == Screenshots ==
 
 == Changelog ==
+
+= 2.15 =
+2014-11-09
+Nicer qwiz icon, hover effect.  Hide icon with flip.
+Ignore empty paragraphs when no [i]: handle multiple paragraphs.
+Fix choice highlighting when multiple choices within one paragraph.
+Admin page: option to hide qwiz icon, or display without link, option to 
+change content div location; option to replace button labels.
+Handle left- and right-double-quotes in labels="top", etc.
+Flashcards: correct sizing of larger of front and back (border showing through in
+Firefox).
 
 = 2.14 =
 2014-11-04
