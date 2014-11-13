@@ -1,4 +1,7 @@
 /*
+ * Version 2.17 2014-11-13
+ * Bug fix: "text before intro"
+ *
  * Version 2.16 2014-11-12
  * Separate out "Got it!" from summary text.
  * Delete <br> in header.
@@ -798,7 +801,9 @@ function parse_html_block (htm, qtags, qnext_tags, ignore_nbsp_b) {
    // Include opening tags before the qwiz/qcard tags in each case.
    // -- a series of opening tags with possible whitespace in between, but
    // nothing else.
-   var opening_pat = '(\\s*(<[^/][^>]*?>\\s*)*?)'; 
+   // DKTMP
+   //var opening_pat = '(\\s*(<[^/][^>]*?>\\s*)*?)'; 
+   var opening_pat = '(<[^/][^>]*?>\\s*)*?'; 
    var tags_pat = opening_pat + tags_to_pat (qtags);
    var next_tags_pat = opening_pat + tags_to_pat (qnext_tags);
 
