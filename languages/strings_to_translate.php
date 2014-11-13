@@ -45,8 +45,9 @@
 
       'Got it!' => __ ('Got it!', $q),
 
-      /* Translators: as in "In this five-flashcard stack..." */
-      'In this %s-flashcard stack, you marked every card "got it" on the first try' => __ ('In this %s-flashcard stack, you marked every card "got it" on the first try', $q),
+      /*'Translators: as in In this %s-flashcard stack, you clicked "Got it!" on the first try for every card. */
+      'In this %s-flashcard stack, you clicked' => __ ('In this %s-flashcard stack, you clicked', $q),
+      'on the first try for every card' => __ ('on the first try for every card', $q),
 
       'It took you one try' => __ ('It took you one try', $q),
       'It took you one try' => __ ('It took you one try', $q),
@@ -96,7 +97,10 @@
       'Test mode: incorrectly-answered questions do not repeat' => __ ('Test mode: incorrectly-answered questions do not repeat', $q),
       'There was' => __ ('There was', $q),
       'There were' => __ ('There were', $q),
-      'This flashcard stack had %s cards.  It took you %s tries until you felt comfortable enough to to mark "got it" for each card' => __ ('This flashcard stack had %s cards.  It took you %s tries until you felt comfortable enough to to mark "got it" for each card', $q),
+
+      'This flashcard stack had %s cards.  It took you %s tries until you felt comfortable enough to click' => __ ('This flashcard stack had %s cards.  It took you %s tries until you felt comfortable enough to click', $q),
+      'for each card' => __ ('for each card', $q),
+
       'to answer this question correctly' => __ ('to answer this question correctly', $q),
       'to answer these questions correctly' => __ ('to answer these questions correctly', $q),
 
@@ -149,6 +153,7 @@
       'Please fix and try again' => __ ('Please fix and try again', $q),
       'Text before header' => __ ('Text before header', $q),
       'Text before intro' => __ ('Text before intro', $q),
+      'There should be two feedback items -- correct and incorrect -- for each label' => __ ('There should be two feedback items -- correct and incorrect -- for each label', $q),
       '[textentry] on back of card, but not on front' => __ ('[textentry] on back of card, but not on front', $q),
       'Too many feedback shortcodes' => __ ('Too many feedback shortcodes', $q),
       'Topic(s) were given for at least one question, but at least one question doesn\'t have a topic' => __ ('Topic(s) were given for at least one question, but at least one question doesn\'t have a topic', $q),

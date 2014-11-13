@@ -1,4 +1,8 @@
 /*
+ * Version 2.16 2014-11-12
+ * Separate out "Got it!" from summary text.
+ * Delete <br> in header.
+ *
  * Version 2.15 2014-11-09
  * Nicer qwiz icon, hover effect.  Hide icon with flip.
  * Fix ignore empty paragraphs when no [i].  Also, handle multiple paragraphs.
@@ -782,9 +786,19 @@ function tags_to_pat (tags) {
 // Parse out block of html -- from opening tags, through one of qwiz/qcard
 // "tags" up to any opening tags of next qwiz/qcard tags.
 function parse_html_block (htm, qtags, qnext_tags, ignore_nbsp_b) {
+   if (debug[0]) {
+      console.log ('[parse_html_block] qtags: ', qtags, ', htm: ', htm);
+   }
+
+   // Add a default "end" shortcode that will always be found.
+   var ZendZ = '[ZendZ]';
+   htm += ZendZ;
+   qnext_tags.push (ZendZ);
 
    // Include opening tags before the qwiz/qcard tags in each case.
-   var opening_pat = '(<[^/][^>]*?>\\s*)*?'; 
+   // -- a series of opening tags with possible whitespace in between, but
+   // nothing else.
+   var opening_pat = '(\\s*(<[^/][^>]*?>\\s*)*?)'; 
    var tags_pat = opening_pat + tags_to_pat (qtags);
    var next_tags_pat = opening_pat + tags_to_pat (qnext_tags);
 
@@ -796,6 +810,9 @@ function parse_html_block (htm, qtags, qnext_tags, ignore_nbsp_b) {
    var closing_tags = '';
    if (htm_match) {
       htm_block = htm_match[2];
+
+      // Take off default end shortcode if was found.
+      htm_block = htm_block.replace (ZendZ, '');
 
       // If htm is only tags and whitespace, set to empty string.
       var htm_wo_tags = htm_block.replace (/<[^>]+>/gm, '');
@@ -853,12 +870,11 @@ function process_header (htm, i_deck, i_question, intro_b) {
       // Delete header from htm.
       htm = htm.replace (header_html, '');
 
-      // See if [h] (header this page only) or [H] (persistent, but only until
-      // next header given -- an empty header erases).
-      //header_persist_b = (header_html.search ('[H]') != -1);
-
       // Delete [h] from header.
       header_html = header_html.replace (/\[h\]/ig, '');
+
+      // Delete line-breaks from header.
+      header_html = header_html.replace (/<br.*?>/ig, '');
    }
    deckdata[i_deck].header_html = header_html;
 
@@ -1297,10 +1313,10 @@ function done (i_deck) {
    // Overall.
    var overall;
    if (deckdata[i_deck].n_reviewed == deckdata[i_deck].n_cards) {
-      overall = T ('In this %s-flashcard stack, you marked every card "got it" on the first try') + '.';
+      overall = T ('In this %s-flashcard stack, you clicked') + ' "' + T ('Got it!') + '" ' + T ('on the first try for every card') + '.';
       overall = overall.replace ('%s', number_to_word (deckdata[i_deck].n_cards));
    } else {
-      overall = T('This flashcard stack had %s cards.  It took you %s tries until you felt comfortable enough to to mark "got it" for each card' + '.');
+      overall = T('This flashcard stack had %s cards.  It took you %s tries until you felt comfortable enough to click') + ' "' + T ('Got it!') + '" ' + T ('for each card') + '.';
       overall = overall.replace ('%s', number_to_word (deckdata[i_deck].n_cards));
       overall = overall.replace ('%s', number_to_word (deckdata[i_deck].n_reviewed));
    }

@@ -2,7 +2,7 @@
 Contributors: dan_kirshner
 Tags: interactive quiz, quiz, flashcards, labeled diagrams
 Tested up to: 4.0
-Stable tag: 2.15
+Stable tag: 2.16
 License: GPL2
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
@@ -19,6 +19,14 @@ Activate the plugin through the 'Plugins' menu in WordPress
 == Screenshots ==
 
 == Changelog ==
+
+= 2.16 =
+2014-11-12
+Delete question and label divs with nothing in them.
+Nicer formatting of labeled diagram borders in editor.
+Delete <br> in header.
+Separate out "Got it!" from summary text.
+Editing: improve backwards compatibility with data- (identify labels having targets).
 
 = 2.15 =
 2014-11-09

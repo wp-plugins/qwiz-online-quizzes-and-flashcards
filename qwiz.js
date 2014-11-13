@@ -1,4 +1,7 @@
 /*
+ * Version 2.16 2014-11-12
+ * Delete <br> in header.
+ *
  * Version 2.15 2014-11-09
  * Nicer qwiz icon, hover effect.  Hide icon with flip.
  * Ignore empty paragraphs when no [i]: handle multiple paragraphs.
@@ -585,7 +588,8 @@ function add_style () {
    /* All sub-elements of header have zero margin. */
    s.push ('div.qwiz-header * {');
    s.push ('   margin:          0px;');
-   s.push ('   padding:         5px;');
+   //s.push ('   padding:         5px;');
+   s.push ('   padding:         0px 5px 0px 5px;');
    s.push ('}');
 
    s.push ('.qwiz-mode {');
@@ -1816,7 +1820,8 @@ function process_qwizzled (i_qwiz, i_question, question_htm, opening_tags,
 
    // Check that number of feedback items corresponds to number of labels.
    if (n_labels*2 != n_feedback_items) {
-      errmsgs.push (T ('Number of feedback items') + ' (' + n_feedback_items + ') ' + T ('does not match number of labels') + ' (' + n_labels + '): qwiz ' + (1 + i_qwiz) + ', question ' + (1 + i_question) + ' labeled diagram');
+      errmsgs.push (T ('Number of feedback items') + ' (' + n_feedback_items + ') ' + T ('does not match number of labels') + ' (' + n_labels + '): qwiz ' + (1 + i_qwiz) + ', question ' + (1 + i_question) + ' labeled diagram' + '\n'
+                    + '(' + T ('There should be two feedback items -- correct and incorrect -- for each label') + ')');
    }
 
    // Add final feedback div.
@@ -2051,12 +2056,11 @@ function process_header (htm, i_qwiz, i_question, intro_b) {
       // Delete header from htm.
       htm = htm.replace (header_html, '');
 
-      // See if [h] (header this page only) or [H] (persistent, but only until
-      // next header given -- an empty header erases).
-      //header_persist_b = (header_html.search ('[H]') != -1);
-
       // Delete [h] from header.
       header_html = header_html.replace (/\[h\]/ig, '');
+
+      // Delete line-breaks from header.
+      header_html = header_html.replace (/<br.*?>/ig, '');
    }
 
    return htm;
