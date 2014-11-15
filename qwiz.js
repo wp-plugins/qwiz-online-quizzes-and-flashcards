@@ -1094,8 +1094,7 @@ function create_qwiz_divs (i_qwiz, qwiz_tag, htm, exit_html) {
    top_html += '<div id="qwiz' + i_qwiz + '" class="qwiz" ' + attributes + '>\n';
 
    // Header div.  If no initial header, hide.
-   //var style = ' style="margin: 0px; padding: 5px;"';
-   style = '';
+   var style = '';
    if (header_html == '' || header_html == 'NA') {
       style = ' style="display: none;"';
    }
@@ -1158,10 +1157,14 @@ function create_qwiz_divs (i_qwiz, qwiz_tag, htm, exit_html) {
                  +    '</button>\n'
                  + '</div>\n';
 
+   style = '';
+   if (get_qwiz_param ('beta')) {
+      style = 'style = "background: red;"';
+   }
+   bottom_html += '<div class="icon_qwiz" id="icon_qwiz' + i_qwiz + '" ' + style + '>';
    var icon_qwiz = get_qwiz_param ('icon_qwiz');
    if (icon_qwiz != 'Not displayed') {
       var title = 'Qwiz - online quizzes and flashcards';
-      bottom_html += '<div class="icon_qwiz" id="icon_qwiz' + i_qwiz + '">';
       if (icon_qwiz != 'Icon only') {
          bottom_html += '<a href="//dkprojects.net/qwiz">';
       } else {
@@ -1171,8 +1174,8 @@ function create_qwiz_divs (i_qwiz, qwiz_tag, htm, exit_html) {
       if (icon_qwiz != 'Icon only') {
          bottom_html += '</a>';
       }
-      bottom_html += '</div>';
    }
+   bottom_html += '</div>';
 
    // This qwiz closing div.
    bottom_html += '</div>\n';
