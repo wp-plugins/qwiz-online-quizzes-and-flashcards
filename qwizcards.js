@@ -946,16 +946,16 @@ function create_qdeck_divs (i_deck, qdeck_tag) {
    divs.push ('               </tr>');
    divs.push ('            </table>');
 
+   var style = '';
+   if (get_qwiz_param ('beta')) {
+      style = 'style = "background: red;"';
+   }
+   divs.push ('         <div id="icon_qdeck' + i_deck + '" class="icon_qdeck" ' + style + '>');
    var icon_qwiz = get_qwiz_param ('icon_qwiz');
    if (icon_qwiz != 'Not displayed') {
       var title = 'Qwiz - online quizzes and flashcards';
-
-      divs.push ('         <div id="icon_qdeck' + i_deck + '" class="icon_qdeck">');
-
       if (icon_qwiz != 'Icon only') {
-
          divs.push ('         <a href="//dkprojects.net/qwiz">');
-
       } else {
          title += ' - dkprojects.net/qwiz';
       }
@@ -966,8 +966,9 @@ function create_qdeck_divs (i_deck, qdeck_tag) {
 
          divs.push ('         </a>');
       }
-      divs.push ('         </div>');
    }
+   divs.push ('         </div>');
+
    divs.push ('         </div>');
    divs.push ('         <div class="back">');
    divs.push ('            <table class="qcard_table" ' + attributes + ' cellspacing="0" cellpadding="0">');
