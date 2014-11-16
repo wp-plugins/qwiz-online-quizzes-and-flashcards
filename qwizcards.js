@@ -297,6 +297,8 @@ function add_style () {
    s.push ('   padding:             5px;');
    s.push ('   text-align:          center;');
    s.push ('   vertical-align:      middle;');
+   //DKTMP
+   s.push ('   background:          lightgray;');
    s.push ('   font-size:           12pt;');
    s.push ('   font-weight:         bold;');
    s.push ('}');

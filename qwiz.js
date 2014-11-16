@@ -562,6 +562,8 @@ function add_style () {
    s.push ('   width:           500px;');
    s.push ('   min-height:      300px;');
    s.push ('   padding:         5px;');
+   //DKTMP
+   s.push ('   background:      lightgray;');
    s.push ('   box-sizing:      content-box;');
    s.push ('   -moz-box-sizing: content-box;');
    s.push ('}');
