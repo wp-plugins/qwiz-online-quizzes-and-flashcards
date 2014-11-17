@@ -557,7 +557,7 @@ function download_beta_field_input () {
 
    print '<input id="qwiz_download_beta" name="qwiz_options[qwiz_download_beta]" '
          . 'type="checkbox" />' . "\n";
-   print 'Check to do download when click "Save changes"';
+   print 'Check this box to do download when click "Save changes"';
 }
 
 
