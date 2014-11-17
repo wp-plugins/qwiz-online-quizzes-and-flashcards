@@ -171,6 +171,8 @@ function process_html () {
       // See if only whitespace outside [!] ... [/!].
       var comment_htm = $ (this).html ();
       if (comment_htm.search (/\s*(<.+?>)*\s*\[!\][\s\S]*\[\/!\]\s*(<.+?>)*\s*/m) == 0) {
+      //DKTMP - for next beta.
+      //if (comment_htm.search (/\s*(<.+?>)*\s*\[!\][\s\S]*?\[\/!\]\s*(<.+?>)*\s*/m) == 0) {
          $ (this).remove ();
       }
    });

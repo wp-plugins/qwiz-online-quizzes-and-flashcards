@@ -1,4 +1,9 @@
 /*
+ * Version 2.18 2014-11-16
+ * More backwards compatibility fixes (labeled diagrams assoc_id).
+ * Move comments ([!] ... [/!] after labels, delete trailing whitespace in
+ * labels.
+ *
  * Version 2.16 2014-11-12
  * Delete question and label divs with nothing in them.
  * Nicer formatting of labeled diagram borders in editor.
@@ -670,16 +675,12 @@ this.label_clicked = function (local_el_label_div) {
    } else {
 
       // Try data () -- backwards compatibility.
-      var assoc_id = $ (el_label_div).data ('label_target_id');
+      assoc_id = $ (el_label_div).data ('label_target_id');
    }
    if (assoc_id) {
 
       // Yes.  See if user wants to replace target.
       if (confirm ('This label already has a target.\nDo you want to replace the existing target?')) {
-
-         // Get the association number.
-         var m = classes.match (/qtarget_assoc([0-9]*)/);
-         assoc_id = m[1];
          if (debug[0]) {
             console.log ('[label_clicked] classes:', classes, ', assoc_id:', assoc_id);
          }
@@ -687,12 +688,14 @@ this.label_clicked = function (local_el_label_div) {
          // If it's a div -- a rectangle on an image -- delete it.  If it's a
          // span or spans, replace the <span> with its content.
          var div_span_obj = qwizzled_question_obj.find ('.qwizzled_target-' + assoc_id);
-         if (div_span_obj[0].tagName == 'div') {
-            div_span_obj.remove ();
-         } else {
-            div_span_obj.each (function () {
-               $ (this).replaceWith ($ (this).html ());
-            });
+         if (div_span_obj.length) {
+            if (div_span_obj[0].tagName == 'div') {
+               div_span_obj.remove ();
+            } else {
+               div_span_obj.each (function () {
+                  $ (this).replaceWith ($ (this).html ());
+               });
+            }
          }
 
          // Get the label's current border colors/style classes -- re-use for new
@@ -947,6 +950,13 @@ this.target_text_selected = function (e) {
          // Save association with target ID with label.  Use a class to avoid
          // editors that eat the data-... attribute.  Also, set label border
          // same as associated target border.
+         // Remove previous qtarget_assoc class if there.
+         var classes = $ (el_label_div).attr ('class');
+         var m = classes.match (/qtarget_assoc[0-9]*/g);
+         if (m) { 
+            var qtargets = m.join (' ');
+            $ (el_label_div).removeClass (qtargets);
+         }
          $ (el_label_div).addClass ('qtarget_assoc' + assoc_id);
          if (label_border_class == '') {
             if ($ (el_label_div).hasClass ('qwizzled_highlight_label')) {
@@ -1307,12 +1317,28 @@ function process_labels (question_html, label_start_tags, doing_wrapped_b) {
          }
       }
 
+      // If any comments inside label, move to after the label (save, delete,
+      // add back later).  Include whitespace and opening/closing <p> or <h*>
+      // tags.
+      var new_label_html = label_html;
+      var label_comments = '';
+      var re = new RegExp ('\\s*(<[ph][^>]*>)*\\s*\\[!\\][\\s\\S]*?\\[\\/!\\]\\s*(<\\/[ph][^>]*>)*\\s*', 'gm');
+      var m = new_label_html.match (re);
+      if (m) {
+         label_comments = m.join ('');
+         if (debug[0]) {
+            console.log ('[process_labels] new_label_html:', new_label_html);
+            console.log ('[process_labels] label_comments:', label_comments);
+         }
+         new_label_html = new_label_html.replace (re, '');
+      }
+
       // Process label only if not all whitespace.
-      if (! is_only_tags_and_whitespace (label_html)) {
+      if (! is_only_tags_and_whitespace (new_label_html)) {
          any_labels_b = true;
          if (! doing_wrapped_b) {
             any_new_html_b = true;
-            var new_label_html = label_html.replace (/\[l\]/, '[<code><\/code>l]');
+            var new_label_html = new_label_html.replace (/\[l\]/, '[<code><\/code>l]');
             if (debug[0]) {
                console.log ('[process_labels] new_label_html:', new_label_html);
             }
@@ -1338,6 +1364,10 @@ function process_labels (question_html, label_start_tags, doing_wrapped_b) {
                   feedback_htmls.push (feedback_html);
                }
             }
+
+            // Delete trailing whitespace from label, which includes paragraphs
+            // and headers with &nbsp; and/or <br> in them.
+            new_label_html = new_label_html.replace (/(\s*(<[ph][^>]*>)*\s*(&nbsp;|<br[^>]*>)*\s*(<\/[ph][^>]*>)*\s*)*$/gm, '');
 
             // Div for labels (not span: somebody eats spans around <p> elements).
             // Add highlight class to div only if there are no paragraph or header
@@ -1379,6 +1409,9 @@ function process_labels (question_html, label_start_tags, doing_wrapped_b) {
                console.log ('[process_labels] feedback_htmls:', feedback_htmls.join ('\n'));
             }
             new_label_html += feedback_htmls.join ('\n');
+
+            // Add back comments, if any.
+            new_label_html += label_comments;
             new_question_html = new_question_html.replace (label_html, new_label_html);
          }
       }
