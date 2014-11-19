@@ -89,10 +89,10 @@ function qwiz_admin_init () {
    // ........................................................................
    // Use beta version.
    add_settings_section ('qwiz-use_beta-section',
-                         'Use beta version of Qwiz plugin (this login session only) or regular version',
+                         'Test or deploy beta version of Qwiz plugin',
                          'use_beta_text', 'qwiz-options-page');
 
-   add_settings_field ('qwiz-use_beta-field', 'Use version',
+   add_settings_field ('qwiz-use_beta-field', 'Test or deploy beta, or use installed release',
                        'use_beta_field_input', 'qwiz-options-page',
                        'qwiz-use_beta-section');
 
@@ -212,15 +212,31 @@ function qwiz_options_validate ($options) {
    // ............................................
    // Use beta version -- use this as opportunity to do setting.
    $qwiz_beta = $options['qwiz_beta'];
-   if ($qwiz_beta == 'yes') {
+   //error_log ("[qwiz_options_validate] qwiz_beta: $qwiz_beta");
+   if ($qwiz_beta == 'test_beta') {
 
+      // Start session if not started; set session var; turn off beta
+      // deployment in case was on.
       qwiz_start_session ();
       $_SESSION['qwiz_beta'] = 1;
+      $options['deploy_beta'] = '';
    } else {
+
+      // Not testing beta.  Turn off session (no session var).
       qwiz_end_session ();
+
+      // See if deploying beta.
+      if ($qwiz_beta == 'deploy_beta') {
+         $options['deploy_beta'] =  1;
+      } else {
+
+         // Turn off beta_deployment in case was on.
+         $options['deploy_beta'] = '';
+      }
    }
 
-   // Using session var -- don't store anything in options.
+   // qwiz_beta options element just for transfer from input form -- don't
+   // store anything in options.
    $options['qwiz_beta'] = '';
 
    // ............................................
@@ -362,7 +378,8 @@ function rrm ($dir) {
 
 
 // -----------------------------------------------------------------------------
-// Recursive copy files and subdirectories.
+// Recursive copy files and subdirectories (copies files in source_dir to
+// dest_dir; does not copy source_dir itself).
 function cp_R ($source_dir, $dest_dir) {
    @mkdir ("$dest_dir", 0777, true);
    $files = array_diff (scandir($source_dir), array('.','..'));
@@ -525,7 +542,7 @@ function use_beta_field_input () {
       }
       $current_beta_note = '';
    } else {
-      $current_beta_note = '<br />Note: beta version not downloaded.';
+      $current_beta_note = '<p><strong>Note: beta version not downloaded.</strong></p>';
    }
 
    // Find current version of plugin.
@@ -533,16 +550,25 @@ function use_beta_field_input () {
    $plugin_data = get_plugin_data ($plugin_file);
    $current_version = $plugin_data['Version'];
 
-   // Use a session variable -- just this (admin) user, only while stays
-   // logged in.
+   // For testing beta version, use a session variable -- just this (admin)
+   // user, only while stays logged in.  For deploy beta, use option setting.
    $qwiz_beta = isset ($_SESSION['qwiz_beta']);
-   print '<input id="qwiz_beta_yes" name="qwiz_options[qwiz_beta]" type="radio"' 
-         . 'value="yes" ' . ($qwiz_beta ? 'checked' : '') . ' />' . "\n";
-   print $current_beta_version;
-   print '&emsp; &emsp;';
-   print '<input id="qwiz_beta_no" name="qwiz_options[qwiz_beta]" type="radio"' 
-         . 'value="" ' . ($qwiz_beta ? '' : 'checked') . ' />' . "\n";
-   print $current_version;
+   $options = get_option ('qwiz_options');
+   $deploy_beta = $options['deploy_beta'];
+
+   print '<input id="qwiz_test_beta" name="qwiz_options[qwiz_beta]" type="radio"' 
+         . 'value="test_beta" ' . ($qwiz_beta ? 'checked' : '') . ' />' . "\n";
+   print "Test <strong>$current_beta_version</strong> &emsp; (this login session only)";
+   print '<br />';
+
+   print '<input id="qwiz_deploy_beta" name="qwiz_options[qwiz_beta]" type="radio"' 
+         . 'value="deploy_beta" ' . ($deploy_beta ? 'checked' : '') . ' />' . "\n";
+   print "Deploy <strong>$current_beta_version</strong> &emsp; (all users)";
+   print '<br />';
+
+   print '<input id="qwiz_use_current_install" name="qwiz_options[qwiz_beta]" type="radio"' 
+         . 'value="use_current_install" ' . (($deploy_beta || $qwiz_beta) ? '' : 'checked') . ' />' . "\n";
+   print "Use current installed release <strong>$current_version</strong> &emsp; (all users)";
 
    print $current_beta_note;
 }
@@ -557,7 +583,7 @@ function download_beta_field_input () {
 
    print '<input id="qwiz_download_beta" name="qwiz_options[qwiz_download_beta]" '
          . 'type="checkbox" />' . "\n";
-   print 'Check to do download when click "Save changes"';
+   print 'Check this box to do download when click "Save changes"';
 }
 
 

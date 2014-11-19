@@ -112,6 +112,7 @@ $ = jQuery;
 
 // Private data, but global to this qwiz instance.
 var q = this;
+q.processing_complete_b = false;
 
 // The identifier -- including qualifiers like "#" -- of the page content (that
 // perhaps contains inline quizzes) on WordPress.  Multiple-entries default
@@ -170,7 +171,9 @@ function process_html () {
 
       // See if only whitespace outside [!] ... [/!].
       var comment_htm = $ (this).html ();
-      if (comment_htm.search (/\s*(<.+?>)*\s*\[!\][\s\S]*?\[\/!\]\s*(<.+?>)*\s*/m) == 0) {
+      if (comment_htm.search (/\s*(<.+?>)*\s*\[!\][\s\S]*\[\/!\]\s*(<.+?>)*\s*/m) == 0) {
+      //DKTMP - for next beta.
+      //if (comment_htm.search (/\s*(<.+?>)*\s*\[!\][\s\S]*?\[\/!\]\s*(<.+?>)*\s*/m) == 0) {
          $ (this).remove ();
       }
    });
@@ -239,7 +242,12 @@ function process_html () {
                   // Loop over qwiz-tag pairs.
                   for (i_qwiz=0; i_qwiz<n_qwizzes; i_qwiz++) {
                      var new_qwiz_html = process_qwiz_pair (qwiz_matches[i_qwiz]);
-                     new_htm = new_htm.replace (/(<[^\/][^>]*?>\s*)*?\[qwiz[\s\S]*?\[\/qwiz\]/m, new_qwiz_html);
+
+                     // Let's take out <p...> and <h...> from before [qwiz].
+                     new_htm = new_htm.replace (/(<[ph][^>]*?>\s*)*?\[qwiz[\s\S]*?\[\/qwiz\]/m, new_qwiz_html);
+                  }
+                  if (debug[3]) {
+                     console.log ('process_html] new_htm:', new_htm);
                   }
                }
             }
@@ -264,6 +272,9 @@ function process_html () {
          }
       }
    });
+
+   // Set flag to display page (qwizscripts.js).
+   q.processing_complete_b = true;
 }
 
 
@@ -295,7 +306,7 @@ function init_qwizzled (content_obj) {
       if (img_width_px) {
          $ (this).parent ().css ('width', img_width_px + 'px');
       } else {
-         console.log ('[init_qwizzled] Did not find image width');
+         console.log ('[init_qwizzled] Did not find image width - $ (this).attr (\'src\')', $ (this).attr ('src'));
       }
    });
 
@@ -562,8 +573,6 @@ function add_style () {
    s.push ('   width:           500px;');
    s.push ('   min-height:      300px;');
    s.push ('   padding:         5px;');
-   //DKTMP
-   s.push ('   background:      lightgray;');
    s.push ('   box-sizing:      content-box;');
    s.push ('   -moz-box-sizing: content-box;');
    s.push ('}');
@@ -1023,9 +1032,9 @@ function process_qwiz_pair (htm) {
       }
       new_htm += question_divs.join ('\n');
 
-      if (debug[3]) {
-         console.log ('[process_qwiz_pair] new_htm: ', new_htm);
-      }
+      //if (debug[3]) {
+      //   console.log ('[process_qwiz_pair] new_htm: ', new_htm);
+      //}
    }
    no_intro_b.push (no_intro_i_b);
    qwizdata[i_qwiz].n_questions = n_questions;
@@ -1034,9 +1043,9 @@ function process_qwiz_pair (htm) {
    // div elements (progress, summary div, "next" button).
    new_htm = create_qwiz_divs (i_qwiz, qwiz_tag, new_htm, exit_html);
 
-   if (debug[3]) {
-      console.log ('[process_qwiz_pair] new_htm: ', new_htm);
-   }
+   //if (debug[3]) {
+   //   console.log ('[process_qwiz_pair] new_htm: ', new_htm);
+   //}
 
    return new_htm;
 }
@@ -1083,7 +1092,7 @@ function create_qwiz_divs (i_qwiz, qwiz_tag, htm, exit_html) {
    var repeat_incorrect_value = get_attr (attributes, 'repeat_incorrect');
    qwizdata[i_qwiz].repeat_incorrect_b = repeat_incorrect_value != 'false';
    if (debug[0]) {
-      console.log ('[create_qwiz_divs] repeat_incorrect:', repeat_incorrect, ', repeat_incorrect_b:', qwizdata[i_qwiz].repeat_incorrect_b);
+      console.log ('[create_qwiz_divs] repeat_incorrect_value:', repeat_incorrect_value, ', repeat_incorrect_b:', qwizdata[i_qwiz].repeat_incorrect_b);
    }
 
    // Undisplayed version of qwiz div, so can measure default width if need to.
@@ -2369,8 +2378,11 @@ function display_progress (i_qwiz) {
 // -----------------------------------------------------------------------------
 function display_qwizzled_progress (i_qwiz) {
 
-   // Show in case single-question qwiz.
-   var progress_html = 'Correctly labeled ' + qwizdata[i_qwiz].n_labels_correct + ' out of ' + qwizdata[i_qwiz].n_labels + ' items';
+   var i_question  = qwizdata[i_qwiz].i_question + 1;
+   var n_questions = qwizdata[i_qwiz].n_questions;
+   var progress_html = 'Q #' + i_question + '/' + n_questions + '; Correctly labeled ' + qwizdata[i_qwiz].n_labels_correct + ' out of ' + qwizdata[i_qwiz].n_labels + ' items';
+
+   // Do show () in case single-question qwiz.
    $ ('#progress-qwiz' + i_qwiz).html (progress_html).show ();
 }
 

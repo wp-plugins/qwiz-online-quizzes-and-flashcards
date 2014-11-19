@@ -2,7 +2,7 @@
 Contributors: dan_kirshner
 Tags: interactive quiz, quiz, flashcards, labeled diagrams
 Tested up to: 4.0
-Stable tag: 2.17
+Stable tag: 2.18
 License: GPL2
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
@@ -20,9 +20,22 @@ Activate the plugin through the 'Plugins' menu in WordPress
 
 == Changelog ==
 
+= 2.19 =
+2014-11-??
+Hide shortcodes until finished processing.
+Option to deploy beta.
+Add "Q #1/4" to labeled diagram progress.
+
+
+= 2.18 =
+2014-11-16
+Admin/settings: beta capability, revert capability.
+More backwards compatibility fixes (labeled diagrams assoc_id).
+Move comments ([!] ... [/!] after labels, delete trailing whitespace in labels.
+
 = 2.17 =
 2014-11-13
-Bug fix: "text before intro"
+Bug fix - "text before intro"
 
 = 2.16 =
 2014-11-12
