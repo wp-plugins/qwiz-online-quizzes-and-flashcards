@@ -3,7 +3,7 @@
  * Plugin Name: Qwiz - online quizzes and flashcards
  * Plugin URI: http://dkprojects.net/qwiz
  * Description: Easy online quizzes and flashcards for WordPress
- * Version: 2.18
+ * Version: 2.19
  * Author: Dan Kirshner
  * Author URI: http://dkprojects.net/qwiz
  * License: GPL2
@@ -40,15 +40,19 @@ function language_init () {
 }
 
 
-function add_qwiz_js () {
+function add_qwiz_js_and_style () {
+
+   // JavaScript.
    $qwiz                 = qwiz_plugin_url ('qwiz.js');
    $qwizcards            = qwiz_plugin_url ('qwizcards.js');
+   $qwizscripts          = qwiz_plugin_url ('qwizscripts.js');
    $jquery_ui            = qwiz_plugin_url ('jquery-ui.min.js');
    $jquery_ui_touchpunch = qwiz_plugin_url ('jquery.ui.touch-punch.min.js');
-   wp_enqueue_script ('qwiz_handle',                 $qwiz,                 array (), '2.18', true);
-   wp_enqueue_script ('qwizcard_handle',             $qwizcards,            array (), '2.18', true);
-   wp_enqueue_script ('jquery_ui_handle',            $jquery_ui,            array (), '2.18', true);
-   wp_enqueue_script ('jquery_ui_touchpunch_handle', $jquery_ui_touchpunch, array (), '2.18', true);
+   wp_enqueue_script ('qwiz_handle',                 $qwiz,                 array (), '2.19', true);
+   wp_enqueue_script ('qwizcards_handle',            $qwizcards,            array (), '2.19', true);
+   wp_enqueue_script ('qwizscripts_handle',          $qwizscripts,          array (), '2.19', true);
+   wp_enqueue_script ('jquery_ui_handle',            $jquery_ui,            array (), '2.19', true);
+   wp_enqueue_script ('jquery_ui_touchpunch_handle', $jquery_ui_touchpunch, array (), '2.19', true);
 
    // Options/parameters.  Set default content option.
    $plugin_url = qwiz_plugin_url ( '/');
@@ -86,8 +90,12 @@ function add_qwiz_js () {
       'content'   => $content,
       'beta'      => $beta
    );
-   wp_localize_script ('qwiz_handle',     'qwiz_params', $qwiz_params);
-   wp_localize_script ('qwizcard_handle', 'qwiz_params', $qwiz_params);
+   wp_localize_script ('qwiz_handle',      'qwiz_params', $qwiz_params);
+   wp_localize_script ('qwizcards_handle', 'qwiz_params', $qwiz_params);
+
+   // Stylesheets.
+   wp_register_style ('qwiz_styles_handle', qwiz_plugin_url ('qwiz_styles.css'));
+   wp_enqueue_style ('qwiz_styles_handle');
 }
 
 
@@ -139,7 +147,8 @@ function qwiz_plugin_url ($path) {
 function beta_subdir () {
 
    $bsub = '';
-   if (isset ($_SESSION['qwiz_beta'])) {
+   $options = get_option ('qwiz_options');
+   if (isset ($_SESSION['qwiz_beta']) || $options['deploy_beta']) {
       $beta_plugin_file = plugin_dir_path (__FILE__) . BETA_SUBDIR . PLUGIN_FILE;
       if (file_exists ($beta_plugin_file)) {
          $bsub = BETA_SUBDIR;
@@ -152,7 +161,7 @@ function beta_subdir () {
 // =============================================================================
 add_action ('plugins_loaded', 'language_init');
 
-add_action ('wp_enqueue_scripts', 'add_qwiz_js');
+add_action ('wp_enqueue_scripts', 'add_qwiz_js_and_style');
 
 add_action ('admin_init', 'qwizzled_button');
 
@@ -167,5 +176,27 @@ function qwizzled_add_locale ($locales) {
 add_filter ('mce_external_languages', 'qwizzled_add_locale');
 
 
+// -----------------------------------------------------------------------------
+// For each post, look through for [qwiz] or [qdeck].  If there, add a wrapper
+// div, with class for no display.  qwizscripts.js will remove that class
+// once qwiz.js and qwizcards.js are both finished with modifications.
+function qwiz_hide_shortcodes_initially ($content) {
+
+   if (strpos ($content, '[qwiz') !== false || strpos ($content, '[qdeck') !== false) {
+
+      // Add wrapper.  First class is just for debug/identification; second class
+      // does work and gets removed.
+      $content =  '<div class="qwiz_hide_shortcodes_wrapper qwiz_shortcodes_hidden">'
+                 . $content
+                 . '</div>';
+   }
+
+   return $content;
+}
+
+add_filter ('the_content', 'qwiz_hide_shortcodes_initially');
+
+
+// -----------------------------------------------------------------------------
 // Admin page.
 include "qwiz_admin.php";

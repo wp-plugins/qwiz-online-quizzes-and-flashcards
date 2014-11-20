@@ -78,6 +78,7 @@ $ = jQuery;
 
 // Private data, but global to this qcard instance.
 var q = this;
+q.processing_complete_b = false;
 
 // The identifier -- including qualifiers like "#" -- of the page content (that
 // perhaps contains inline flashcard decks) on WordPress.  Default
@@ -217,7 +218,9 @@ function process_html () {
                   // Loop over qdeck-tag pairs.
                   for (var i_deck=0; i_deck<n_decks; i_deck++) {
                      var new_deck_html = process_qdeck_pair (qdeck_matches[i_deck], i_deck);
-                     new_html = new_html.replace (/\[qdeck[\s\S]*?\[\/qdeck\]/m, new_deck_html);
+
+                     // Let's take out <p...> and <h...> from before [qdeck].
+                     new_html = new_html.replace (/(<[ph][^>]*?>\s*)*?\[qdeck[\s\S]*?\[\/qdeck\]/m, new_deck_html);
                   }
                }
             }
@@ -235,6 +238,9 @@ function process_html () {
          }
       }
    });
+
+   // Set flag to display page (qwizscripts.js).
+   q.processing_complete_b = true;
 }
 
 
