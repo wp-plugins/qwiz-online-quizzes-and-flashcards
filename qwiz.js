@@ -1476,7 +1476,11 @@ function display_question (i_qwiz, i_question) {
       // Also, reset progress bar.
       qwizdata[i_qwiz].n_labels_correct = 0;
       qwizdata[i_qwiz].n_label_attempts = 0;
-      qwizdata[i_qwiz].n_label_targets = qwizq_obj.find ('div.qwizzled_target, span.text_target_wrapper').length;
+      if (qwizq_obj.find ('[class*="qwizzled_n_targets"]').length) {
+         qwizdata[i_qwiz].n_label_targets = qwizq_obj.find ('div.qwizzled_target, span.text_target_wrapper').length;
+      } else {
+         qwizdata[i_qwiz].n_label_targets = qwizq_obj.find ('div.qwizzled_label').length;
+      }
       display_qwizzled_progress (i_qwiz);
    }
 
