@@ -1,8 +1,8 @@
 === Qwiz - online quizzes and flashcards ===
 Contributors: dan_kirshner
 Tags: interactive quiz, quiz, flashcards, labeled diagrams
-Tested up to: 4.0
-Stable tag: 2.19
+Tested up to: 4.01
+Stable tag: 2.20
 License: GPL2
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
@@ -19,6 +19,10 @@ Activate the plugin through the 'Plugins' menu in WordPress
 == Screenshots ==
 
 == Changelog ==
+
+= 2.20 =
+2014-11-20
+Handle "smart quotes" in attributes.
 
 = 2.19 =
 2014-11-19

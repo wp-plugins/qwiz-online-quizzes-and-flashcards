@@ -1,4 +1,7 @@
 /*
+ * Version 2.20 2014-11-20
+ * Handle "smart quotes" in attributes.
+ *
  * Version 2.17 2014-11-13
  * Bug fix: "text before intro"
  *
@@ -906,6 +909,9 @@ function create_qdeck_divs (i_deck, qdeck_tag) {
    if (! attributes) {
       attributes = default_style;
    } else {
+
+      // Replace any "smart quotes" with regular quotes.
+      attributes = replace_smart_quotes (attributes);
       if (attributes.search (/style\s*?=/m) == -1) {
          attributes += default_style;
       } else {
@@ -1007,6 +1013,7 @@ function process_topics (i_deck, card_tags) {
       var matches = card_tag.match (/\[q +([^\]]*)\]/);
       if (matches) {
          var attributes = matches[1];
+         attributes = replace_smart_quotes (attributes);
          var card_topics = get_attr (attributes, 'topic');
          if (card_topics) {
             if (debug[4]) {
@@ -1628,6 +1635,14 @@ function get_attr (htm, attr_name) {
    }
 
    return attr_value;
+}
+
+
+// -----------------------------------------------------------------------------
+function replace_smart_quotes (string) {
+   var new_string = string.replace (/[\u201C\u201D]/gm, '"');
+
+   return new_string;
 }
 
 
