@@ -3,7 +3,7 @@
  * Plugin Name: Qwiz - online quizzes and flashcards
  * Plugin URI: http://dkprojects.net/qwiz
  * Description: Easy online quizzes and flashcards for WordPress
- * Version: beta for 2.19
+ * Version: beta for 2.20
  * Author: Dan Kirshner
  * Author URI: http://dkprojects.net/qwiz
  * License: GPL2
@@ -48,11 +48,11 @@ function add_qwiz_js_and_style () {
    $qwizscripts          = qwiz_plugin_url ('qwizscripts.js');
    $jquery_ui            = qwiz_plugin_url ('jquery-ui.min.js');
    $jquery_ui_touchpunch = qwiz_plugin_url ('jquery.ui.touch-punch.min.js');
-   wp_enqueue_script ('qwiz_handle',                 $qwiz,                 array (), '2.19', true);
-   wp_enqueue_script ('qwizcards_handle',            $qwizcards,            array (), '2.19', true);
-   wp_enqueue_script ('qwizscripts_handle',          $qwizscripts,          array (), '2.19', true);
-   wp_enqueue_script ('jquery_ui_handle',            $jquery_ui,            array (), '2.19', true);
-   wp_enqueue_script ('jquery_ui_touchpunch_handle', $jquery_ui_touchpunch, array (), '2.19', true);
+   wp_enqueue_script ('qwiz_handle',                 $qwiz,                 array (), '2.20', true);
+   wp_enqueue_script ('qwizcards_handle',            $qwizcards,            array (), '2.20', true);
+   wp_enqueue_script ('qwizscripts_handle',          $qwizscripts,          array (), '2.20', true);
+   wp_enqueue_script ('jquery_ui_handle',            $jquery_ui,            array (), '2.20', true);
+   wp_enqueue_script ('jquery_ui_touchpunch_handle', $jquery_ui_touchpunch, array (), '2.20', true);
 
    // Options/parameters.  Set default content option.
    $plugin_url = qwiz_plugin_url ( '/');
@@ -178,8 +178,8 @@ add_filter ('mce_external_languages', 'qwizzled_add_locale');
 
 // -----------------------------------------------------------------------------
 // For each post, look through for [qwiz] or [qdeck].  If there, add a wrapper
-// div, set to no display.  qwiz.js/qwizcards.js will redisplay once they are
-// both finished with modifications.
+// div, with class for no display.  qwizscripts.js will remove that class
+// once qwiz.js and qwizcards.js are both finished with modifications.
 function qwiz_hide_shortcodes_initially ($content) {
 
    if (strpos ($content, '[qwiz') !== false || strpos ($content, '[qdeck') !== false) {

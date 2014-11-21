@@ -1086,6 +1086,7 @@ function create_qwiz_divs (i_qwiz, qwiz_tag, htm, exit_html) {
    }
    
    // If non-default width set, set flag.
+   attributes = replace_smart_quotes (attributes);
    var non_default_width_b = attributes.search (/[\s;"\u201C\u201D]width/m) != -1;
 
    // If "repeat_incorrect=..." present, parse out true/false.
@@ -1233,6 +1234,7 @@ function process_topics (i_qwiz, question_tags) {
       if (attributes) {
 
          // Look for "topic=" attribute.
+         attributes = replace_smart_quotes (attributes);
          var question_topics = get_attr (attributes, 'topic');
          if (question_topics) {
             if (debug[4]) {
@@ -1658,6 +1660,7 @@ function process_qwizzled (i_qwiz, i_question, question_htm, opening_tags,
 
          // Look for "labels=" attribute.  Match regular double-quote, or
          // left- or right-double-quote.
+         attributes = replace_smart_quotes (attributes);
          labels_position = get_attr (attributes, 'labels');
          labels_position = labels_position.toLowerCase ();
          if (debug[0]) {
@@ -2442,6 +2445,14 @@ function get_attr (htm, attr_name) {
    }
 
    return attr_value;
+}
+
+
+// -----------------------------------------------------------------------------
+function replace_smart_quotes (string) {
+   var new_string = string.replace (/[\u201C\u201D]/gm, '"');
+
+   return new_string;
 }
 
 

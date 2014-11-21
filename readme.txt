@@ -2,7 +2,7 @@
 Contributors: dan_kirshner
 Tags: interactive quiz, quiz, flashcards, labeled diagrams
 Tested up to: 4.0
-Stable tag: 2.18
+Stable tag: 2.19
 License: GPL2
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
@@ -20,8 +20,12 @@ Activate the plugin through the 'Plugins' menu in WordPress
 
 == Changelog ==
 
+= 2.20 =
+2014-11-20
+Handle "smart quotes" in attributes.
+
 = 2.19 =
-2014-11-??
+2014-11-19
 Hide shortcodes until finished processing.
 Option to deploy beta.
 Add "Q #1/4" to labeled diagram progress.
