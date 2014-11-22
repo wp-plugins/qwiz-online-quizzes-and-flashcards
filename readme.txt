@@ -7,6 +7,7 @@ License: GPL2
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
 Qwiz lets you create quizzes and flashcard decks using simple shortcodes (such as "[q]" for a question) that you include in your page/post.
+Note: Version 2.20 fixes a problem with custom sizing that WordPress 4.01 introduced with at least one theme (Magazine Basic).
 
 
 == Description ==
