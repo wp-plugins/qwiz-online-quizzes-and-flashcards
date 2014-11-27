@@ -1,7 +1,4 @@
 /*
- * Version 2.20 2014-11-??
- * Multiple targets for a single label.
- *
  * Version 2.18 2014-11-16
  * More backwards compatibility fixes (labeled diagrams assoc_id).
  * Move comments ([!] ... [/!] after labels, delete trailing whitespace in
@@ -55,7 +52,7 @@ var qwizzledf = function () {
 var qname = 'qwizzled';
 
 // Debug settings.
-var debug = [true];
+var debug = [false];
 
 $ = jQuery;
 
@@ -75,7 +72,6 @@ var n_qwizzes = 0;
 
 var tinymce_ed;
 var waiting_for_label_click_b = false;
-var label_will_have_multiple_targets_b = false;
 var waiting_for_target_select_b = false;
 var qwizzled_question_obj;
 var el_label_div;
@@ -174,15 +170,9 @@ this.show_main_menu = function (ed, qwiz_button_b) {
    mm.push ('      <img src="' + qwizzled_plugin.url + 'images/icon_exit_red.png" class="icon_main_menu_exit" onclick="qwizzled.exit_main_menu ()" />');
    mm.push ('   </div>');
    mm.push ('   <div id="qwizzled_main_menu_items">');
-   mm.push ('      <div class="qwizzled_main_menu_item" onclick="qwizzled.create_target1 (0)" title="Create a target &ldquo;drop zone&rdquo; for a label - click here, then click label">');
+   mm.push ('      <div class="qwizzled_main_menu_item" onclick="qwizzled.create_target1 ()" title="Create a target &ldquo;drop zone&rdquo; for a label - click here, then click label">');
    mm.push ('         Create target for a label');
-   mm.push ('         <span id="create_target_spinner" class="menu_spinner">');
-   mm.push ('           <img src="' + qwizzled_plugin.url + 'images/spinner16x16.gif" border="0" />');
-   mm.push ('         </span>');
-   mm.push ('      </div>');
-   mm.push ('      <div class="qwizzled_main_menu_item" onclick="qwizzled.create_target1 (1)" title="The same label may be correctply placed in more than one target &ldquo;drop zone&rdquo;">');
-   mm.push ('         Create another target for a label');
-   mm.push ('         <span id="create_another_target_spinner" class="menu_spinner">');
+   mm.push ('         <span id="create_target_spinner">');
    mm.push ('           <img src="' + qwizzled_plugin.url + 'images/spinner16x16.gif" border="0" />');
    mm.push ('         </span>');
    mm.push ('      </div>');
@@ -237,9 +227,8 @@ this.exit_main_menu = function () {
 
    $ ('#qwizzled_main_menu').hide ();
 
-   waiting_for_target_select_b        = false;
-   waiting_for_label_click_b          = false;
-   label_will_have_multiple_targets_b = false;
+   waiting_for_target_select_b = false;
+   waiting_for_label_click_b   = false;
 }
 
 
@@ -301,7 +290,7 @@ function add_style () {
    s.push ('   border:          1px solid white;');
    s.push ('}');
 
-   s.push ('.menu_spinner {');
+   s.push ('#create_target_spinner {');
    s.push ('   visibility:         hidden;');
    s.push ('}');
 
@@ -445,7 +434,7 @@ function add_style_edit_area () {
 
 // -----------------------------------------------------------------------------
 // Create a target for a label -- part 1 -- set up to wait for click on label. 
-this.create_target1 = function (multiple_targets_f) {
+this.create_target1 = function () {
 
    errmsgs = [];
 
@@ -457,22 +446,17 @@ this.create_target1 = function (multiple_targets_f) {
 
    // If already waiting for click on label, do nothing (or somehow reiterate
    // instruction/feedback).
-   // DKTMP
    // ...
 
    // Show spinner -- we're working on it!
-   if (multiple_targets_f) {
-      $ ('#create_another_target_spinner').css ('visibility', 'visible');
-   } else {
-      $ ('#create_target_spinner').css ('visibility', 'visible');
-   }
+   $ ('#create_target_spinner').css ('visibility', 'visible');
 
-   setTimeout ('qwizzled.create_target2 (' + multiple_targets_f + ')', 100);
+   setTimeout ('qwizzled.create_target2 ()', 100);
 }
 
 
 // -----------------------------------------------------------------------------
-this.create_target2 = function (multiple_targets_f) {
+this.create_target2 = function () {
 
    // Preliminary check: Look for already-wrapped labels -- label divs --  and
    // make sure no new [l] shortcodes have been added inside.  If so, move out.
@@ -511,7 +495,7 @@ this.create_target2 = function (multiple_targets_f) {
    if (! check_qwiz_tag_pairs_ok (htm)) {
 
       // Hide spinner.
-      $ ('div#qwizzled_main_menu_items .menu_spinner').css ('visibility', 'hidden');
+      $ ('#create_target_spinner').css ('visibility', 'hidden');
 
       return;
    }
@@ -580,7 +564,7 @@ this.create_target2 = function (multiple_targets_f) {
       }
 
       // Hide spinner.
-      $ ('div#qwizzled_main_menu_items .menu_spinner').css ('visibility', 'hidden');
+      $ ('#create_target_spinner').css ('visibility', 'hidden');
 
       return
    }
@@ -629,16 +613,9 @@ this.create_target2 = function (multiple_targets_f) {
    // Set flag that waiting for label to be clicked.
    waiting_for_label_click_b = true;
 
-   // Set indicator that label can be placed in any of several targets.
-   label_will_have_multiple_targets_b = multiple_targets_f == 1;
-
    // Provide instruction/feedback.
-   var style = 'background: white;';
-   if (multiple_targets_f) {
-      style += ' border-color: red;';
-   }
    var click_on_a_label =   'Click on a '
-                          + '<span class="qwizzled_highlight_label_border" style="' + style + '">'
+                          + '<span class="qwizzled_highlight_label_border" style="background: white;">'
                           +    'label'
                           + '</span>'
                           + '<img src="' + qwizzled_plugin.url + 'images/icon_exit_bw.jpg" class="click_on_a_label_exit" onclick="qwizzled.exit_click_on_a_label ()" />';
@@ -648,7 +625,7 @@ this.create_target2 = function (multiple_targets_f) {
    qwizzled_main_menu_feedback.stop ().html (click_on_a_label).show ().css ('opacity', '1.0');
 
    // Hide spinner -- we're ready.
-   $ ('div#qwizzled_main_menu_items .menu_spinner').css ('visibility', 'hidden');
+   $ ('#create_target_spinner').css ('visibility', 'hidden');
 
    report_errors ();
 };
@@ -659,7 +636,6 @@ this.exit_click_on_a_label = function () {
 
    qwizzled_main_menu_feedback.hide ();
    waiting_for_label_click_b = false;
-   label_will_have_multiple_targets_b = false;
 }
 
 // -----------------------------------------------------------------------------
@@ -703,46 +679,37 @@ this.label_clicked = function (local_el_label_div) {
    }
    if (assoc_id) {
 
-      // Yes, label has a target already.  If adding another target for same
-      // label, get border style and proceed.  Otherwise, see if user wants to
-      // replace target.
-      if (label_will_have_multiple_targets_b) {
-         label_border_class = get_label_border_class (el_label_div);
+      // Yes.  See if user wants to replace target.
+      if (confirm ('This label already has a target.\nDo you want to replace the existing target?')) {
+         if (debug[0]) {
+            console.log ('[label_clicked] classes:', classes, ', assoc_id:', assoc_id);
+         }
+
+         // If it's a div -- a rectangle on an image -- delete it.  If it's a
+         // span or spans, replace the <span> with its content.
+         var div_span_obj = qwizzled_question_obj.find ('.qwizzled_target-' + assoc_id);
+         if (div_span_obj.length) {
+            if (div_span_obj[0].tagName == 'div') {
+               div_span_obj.remove ();
+            } else {
+               div_span_obj.each (function () {
+                  $ (this).replaceWith ($ (this).html ());
+               });
+            }
+         }
+
+         // Get the label's current border colors/style classes -- re-use for new
+         // target.
+         var label_class = $ (el_label_div).find ('.qwizzled_highlight_label').attr ('class');
+         if (debug[0]) {
+            console.log ('[label_clicked] label_class:', label_class);
+         }
+         var m = label_class.match (/qwizzled_border_class_[a-z]*/g);
+         if (m) {
+            label_border_class = m.join (' ');
+         }
       } else {
-         if (confirm ('This label already has a target.\nDo you want to replace the existing target?')) {
-            if (debug[0]) {
-               console.log ('[label_clicked] classes:', classes, ', assoc_id:', assoc_id);
-            }
-
-            // If it's a div -- a rectangle on an image -- delete it.  If it's a
-            // span or spans, replace the <span> with its content.
-            var div_span_obj = qwizzled_question_obj.find ('.qwizzled_target-' + assoc_id);
-            if (div_span_obj.length) {
-               if (div_span_obj[0].tagName == 'div') {
-                  div_span_obj.remove ();
-               } else {
-                  div_span_obj.each (function () {
-                     $ (this).replaceWith ($ (this).html ());
-                  });
-               }
-            }
-
-            // Get the label's current border colors/style classes -- re-use for new
-            // target.
-            label_border_class = get_label_border_class (el_label_div);
-         } else {
-            create_target_b = false;
-         }
-      }
-   } else {
-
-      // Label does not have a target yet.  If user clicked "Create another
-      // target..." ask if should proceed.
-      if (label_will_have_multiple_targets_b) {
-         if (! confirm ('This label does not have a target, while you clicked "Create another target for a label."  Do you want to create a target for this label?')) {
-            create_target_b = false;
-         }
-         label_will_have_multiple_targets_b = false;
+         create_target_b = false;
       }
    }
    if (create_target_b) {
@@ -796,14 +763,13 @@ this.target_text_selected = function (e) {
    if (! assoc_id) {
       var now = new Date ();
       var now_millisec = now.getTime ();
-      assoc_id = parseInt (now_millisec / 1000.0);
+      assoc_id = parseInt( now_millisec / 1000.0 );
    }
 
    // Pick border color and style for this label-target pair.  Count how many
    // labels in this question already associated with a target.  Count old-
    // style, too (backwards compatibility).
-   // Don't do if re-using current label border (new or additional target for an
-   // existing label).
+   // Don't do if re-using current label border (new target for existing label).
    if (label_border_class == '') {
       var labels_w_targets = qwizzled_question_obj.find ('div.qwizzled_label[class*="qtarget_assoc"], div.qwizzled_label[data-label_target_id]');
       var n_labels_w_targets = labels_w_targets.length;
@@ -981,34 +947,26 @@ this.target_text_selected = function (e) {
       }
       if (! caption_b) {
 
-         // If provided an additional target for a label, add or update label
-         // class that indicates how many targets this label can be placed in.
-         if (label_will_have_multiple_targets_b) {
-            set_mult_targets_indicator ($ (el_label_div));
-            label_will_have_multiple_targets_b = false;
-         } else {
-
-            // Save association ID between target and label with label.  Use a
-            // class to avoid editors that eat the data-... attribute.  Also, set
-            // label border same as associated target border.  Remove previous
-            // qtarget_assoc class if there.
-            var classes = $ (el_label_div).attr ('class');
-            var m = classes.match (/qtarget_assoc[0-9]*/g);
-            if (m) { 
-               var qtargets = m.join (' ');
-               $ (el_label_div).removeClass (qtargets);
-            }
-            $ (el_label_div).addClass ('qtarget_assoc' + assoc_id);
-            if (label_border_class == '') {
-               if ($ (el_label_div).hasClass ('qwizzled_highlight_label')) {
-                  $ (el_label_div).removeClass ('qwizzled_highlight_label_border').addClass ('qwizzled_border_class_' + bcolor + ' qwizzled_border_class_' + bstyle + ' qwizzled_border_class_width');
-               } else {
-                  $ (el_label_div).find ('.qwizzled_highlight_label').removeClass ('qwizzled_highlight_label_border').addClass ('qwizzled_border_class_' + bcolor + ' qwizzled_border_class_' + bstyle + ' qwizzled_border_class_width');
-               }
+         // Save association with target ID with label.  Use a class to avoid
+         // editors that eat the data-... attribute.  Also, set label border
+         // same as associated target border.
+         // Remove previous qtarget_assoc class if there.
+         var classes = $ (el_label_div).attr ('class');
+         var m = classes.match (/qtarget_assoc[0-9]*/g);
+         if (m) { 
+            var qtargets = m.join (' ');
+            $ (el_label_div).removeClass (qtargets);
+         }
+         $ (el_label_div).addClass ('qtarget_assoc' + assoc_id);
+         if (label_border_class == '') {
+            if ($ (el_label_div).hasClass ('qwizzled_highlight_label')) {
+               $ (el_label_div).removeClass ('qwizzled_highlight_label_border').addClass ('qwizzled_border_class_' + bcolor + ' qwizzled_border_class_' + bstyle + ' qwizzled_border_class_width');
+            } else {
+               $ (el_label_div).find ('.qwizzled_highlight_label').removeClass ('qwizzled_highlight_label_border').addClass ('qwizzled_border_class_' + bcolor + ' qwizzled_border_class_' + bstyle + ' qwizzled_border_class_width');
             }
          }
 
-         // Add target to image wrapper div.  Position the target where clicked.
+         // Add target to span.  Position the target where clicked.
          // clientX and Y are relative to document -- body in iframe in this case.
          // node_obj is our image, with jQuery offset () also relative to body in
          // iframe.  So subtraction should give us click position in image.
@@ -1052,18 +1010,8 @@ this.target_text_selected = function (e) {
       if (label_border_class == '') {
          label_border_class = 'qwizzled_border_class_' + bstyle + ' qwizzled_border_class_' + bcolor;
       }
-
-      // In case there are multiple targets for a label (also having this
-      // assoc_id, identify just this group of spans with another id).
-      var now = new Date ();
-      var now_millisec = now.getTime ();
-      sib_id = parseInt (now_millisec / 1000.0);
-      var new_txt = create_text_target (selected_text, assoc_id, sib_id, label_border_class);
+      var new_txt = create_text_target (selected_text, assoc_id, label_border_class);
       tinymce_ed.selection.setContent (new_txt);
-      if (label_will_have_multiple_targets_b) {
-         set_mult_targets_indicator ($ (el_label_div));
-         label_will_have_multiple_targets_b = false;
-      }
 
       // Save association with target ID with label.  Use class to avoid editors
       // editors that eat the data-... attribute.  Also, set label border same as
@@ -1078,7 +1026,7 @@ this.target_text_selected = function (e) {
 
 
 // -----------------------------------------------------------------------------
-function create_text_target (htm, assoc_id, sib_id, border_class) {
+function create_text_target (htm, assoc_id, border_class) {
 
    // Parse into tags and text.
    var t = parse_tags_text (htm);
@@ -1104,7 +1052,7 @@ function create_text_target (htm, assoc_id, sib_id, border_class) {
    // Be sure not to include width class from border_class -- widths set by
    // classes added here.
    border_class = border_class.replace ('qwizzled_border_class_width', '');
-   var common = '<span class="qwizzled_target-' + assoc_id + ' qtarget_sib-' + sib_id + ' qwizzled_target ';
+   var common = '<span class="qwizzled_target-' + assoc_id + ' qwizzled_target ';
    if (n_texts == 0) {
       alert (T ('Error: no text selected.'));
    } else if (n_texts == 1) {
@@ -1126,60 +1074,14 @@ function create_text_target (htm, assoc_id, sib_id, border_class) {
       }
    }
 
-   // Reassemble.  Include whole thing in another span, in case need to restrict
-   // siblings search to immediate siblings (multiple targets).
-   var new_htm = '<span class="text_target_wrapper">' + tokens.join ('') + '</span>';
+   // Reassemble.
+   htm = tokens.join ('');
    if (debug[0]) {
       console.log ('[create_text_target] i_first, i_last, n_texts:', i_first, i_last, n_texts);
-      console.log ('[create_text_target] new_htm:', new_htm);
+      console.log ('[create_text_target] htm:', htm);
    }
 
-   return new_htm;
-}
-
-
-// -----------------------------------------------------------------------------
-function get_label_border_class (el_label_div) {
-   var label_border_class = '';
-
-   var label_class = $ (el_label_div).find ('.qwizzled_highlight_label').attr ('class');
-   if (debug[0]) {
-      console.log ('[get_label_border_class] label_class:', label_class);
-   }
-   var m = label_class.match (/qwizzled_border_class_[a-z]*/g);
-   if (m) {
-      label_border_class = m.join (' ');
-   }
-
-   return label_border_class;
-}
-
-
-// -----------------------------------------------------------------------------
-// Add or update label class that indicates how many targets in which this label
-// can be placed.
-function set_mult_targets_indicator (label_obj) {
-   var label_class = label_obj.attr ('class');
-   if (debug[0]) {
-      console.log ('[set_mult_targets_indicator] label_obj:', label_obj);
-      console.log ('[set_mult_targets_indicator] label_class:', label_class);
-   }
-   var m = label_class.match (/qwizzled_n_targets([0-9]*)/);
-   if (m) {
-
-      // Increment.  Remove existing class, add incremented.
-      var current_class = m[0];
-      var n_targets = parseInt (m[1]);
-      if (debug[0]) {
-         console.log ('[set_mult_targets_indicator] current_class:', current_class, ', n_targets:', n_targets);
-      }
-      var new_class = 'qwizzled_n_targets' + (++n_targets);
-      label_obj.removeClass (current_class).addClass (new_class);
-   } else {
-
-      // Create class.  This is first additional target, so total is 2.
-      label_obj.addClass ('qwizzled_n_targets2');
-   }
+   return htm;
 }
 
 
@@ -1544,7 +1446,7 @@ function canned_feedback (correct_b) {
       var i = Math.floor (Math.random () * incorrect.length);
       response = '[fx] ' + incorrect[i] + '&nbsp; Please try again.';
    }
-   response = '<p><strong>' + response + '</strong></p>';
+   response = '<p style="font-weight: bold;">' + response + '</p>';
 
    if (debug[0]) {
       console.log ('[canned_feedback] response:', response);
