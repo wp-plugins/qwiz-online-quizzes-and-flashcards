@@ -1,4 +1,8 @@
 /*
+ * Version 2.21 2014-11-??
+ * Workaround for Firefox 33.1 problem with long regular expression and long
+ * string in intro parse.
+ *
  * Version 2.20 2014-11-20
  * Handle "smart quotes" in attributes.
  *
@@ -574,14 +578,14 @@ function process_qdeck_pair (htm, i_deck) {
       // See if header.  Sets deckdata[i_deck].header_html.
       htm = process_header (htm, i_deck, 0, true);
 
-      // See if intro.
-      var intro_html = parse_html_block (htm, ['[i]'], ['[q]', '[q ']);
+      // See if intro.  Limit to first 2000 characters.
+      var intro_html = parse_html_block (htm.substr (0, 2000), ['[i]'], ['[q]', '[q ']);
 
       // See if no [i].
       if (intro_html == 'NA') {
-         
+
          // No [i] -- intro may be text before [q].  See if there is.
-         intro_html = parse_html_block (htm, ['^'], ['[q]', '[q '], true);
+         intro_html = parse_html_block (htm.substr (0, 2000), ['^'], ['[q]', '[q '], true);
       }
 
       // See if intro was just tags and whitespace.
@@ -873,7 +877,8 @@ function process_header (htm, i_deck, i_question, intro_b) {
       qnext_tags.push ('[i]');
    }
 
-   var header_html = parse_html_block (htm, qtags, qnext_tags);
+   // Limit to first 1000 characters.
+   var header_html = parse_html_block (htm.substr (0, 1000), qtags, qnext_tags);
    if (header_html != 'NA' && header_html != '') {
 
       // Error if text before [h].

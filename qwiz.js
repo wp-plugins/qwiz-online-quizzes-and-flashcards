@@ -1,6 +1,10 @@
 /*
- * Version 2.21 2014-11-??
+ * Version 2.22 2014-11-??
  * Multiple targets for a single label.
+ *
+ * Version 2.21 2014-11-??
+ * Workaround for Firefox 33.1 problem with long regular expression and long
+ * string in intro parse.
  *
  * Version 2.20 2014-11-20
  * Handle "smart quotes" in attributes.
@@ -311,6 +315,16 @@ function init_qwizzled (content_obj) {
       var img_width_px = $ (this).attr ('width');
       if (debug[0]) {
          console.log ('[init_qwizzled] img_width_px:', img_width_px);
+      }
+      if (! img_width_px) {
+
+         // width="235" not present.  Try to get from src, which sometimes
+         // looks like: .../diagram.png?resize=455%2C336   ("%2C" is ",")
+         var src = $ (this).attr ('src');
+         var m = src.match (/resize=([0-9]+)(%2C|,)/);
+         if (m) {
+            img_width_px = m[1];
+         }
       }
       if (img_width_px) {
          $ (this).parent ().css ('width', img_width_px + 'px');
@@ -963,15 +977,15 @@ function process_qwiz_pair (htm) {
       // See if header.  Sets header_html global variable.
       htm = process_header (htm, i_qwiz, 0, true);
 
-      // See if intro.
-      var intro_html = parse_html_block (htm, ['[i]'], ['[q]', '[q ', '<div class="qwizzled_question">']);
+      // See if intro.  Limit to first 2000 characters.
+      var intro_html = parse_html_block (htm.substr (0, 2000), ['[i]'], ['[q]', '[q ', '<div class="qwizzled_question">']);
 
       // See if no [i].
       if (intro_html == 'NA') {
          
          // No [i] -- intro may be text before [q].  See if there is.  Add flag
          // to ignore &nbsp; (empty paragraph).
-         intro_html = parse_html_block (htm, ['^'], ['[q]', '[q ', '<div class="qwizzled_question">'], true);
+         intro_html = parse_html_block (htm.substr (0, 2000), ['^'], ['[q]', '[q ', '<div class="qwizzled_question">'], true);
       }
 
       // See if intro was just tags and whitespace.
@@ -2117,8 +2131,8 @@ function process_header (htm, i_qwiz, i_question, intro_b) {
       qnext_tags.push ('[i]');
    }
 
-   // Global variable.
-   header_html = parse_html_block (htm, qtags, qnext_tags);
+   // Global variable.  Limit to first 1000 characters.
+   header_html = parse_html_block (htm.substr (0, 1000), qtags, qnext_tags);
    if (header_html != 'NA' && header_html != '') {
 
       // Error if text before [h].

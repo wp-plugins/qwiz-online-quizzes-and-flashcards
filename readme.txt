@@ -2,11 +2,12 @@
 Contributors: dan_kirshner
 Tags: interactive quiz, quiz, flashcards, labeled diagrams
 Tested up to: 4.01
-Stable tag: 2.20
+Stable tag: beta0 for 2.21
 License: GPL2
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
 Qwiz lets you create quizzes and flashcard decks using simple shortcodes (such as "[q]" for a question) that you include in your page/post.
+Note: Version 2.20 fixed a problem with custom sizing that WordPress 4.01 introduced with at least one theme (Magazine Basic).
 
 
 == Description ==
@@ -20,9 +21,14 @@ Activate the plugin through the 'Plugins' menu in WordPress
 
 == Changelog ==
 
-= 2.21 =
+= 2.22 =
 2014-11-??
 Multiple targets for a single label.
+
+= 2.21 =
+2014-11-??
+Workaround for Firefox 33.1 problem with long regular expression and long
+string in intro parse.
 
 = 2.20 =
 2014-11-20
