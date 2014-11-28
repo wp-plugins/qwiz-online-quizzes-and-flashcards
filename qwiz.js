@@ -184,9 +184,7 @@ function process_html () {
 
       // See if only whitespace outside [!] ... [/!].
       var comment_htm = $ (this).html ();
-      if (comment_htm.search (/\s*(<.+?>)*\s*\[!\][\s\S]*\[\/!\]\s*(<.+?>)*\s*/m) == 0) {
-      //DKTMP - for next beta.
-      //if (comment_htm.search (/\s*(<.+?>)*\s*\[!\][\s\S]*?\[\/!\]\s*(<.+?>)*\s*/m) == 0) {
+      if (comment_htm.search (/\s*(<.+?>)*\s*\[!\][\s\S]*?\[\/!\]\s*(<.+?>)*\s*/m) == 0) {
          $ (this).remove ();
       }
    });
@@ -1248,7 +1246,7 @@ function create_qwiz_divs (i_qwiz, qwiz_tag, htm, exit_html) {
       } else {
          title += ' - dkprojects.net/qwiz';
       }
-      bottom_html += '<img class="icon_qwiz" src="' + get_qwiz_param ('url', './') + 'images/icon_qwiz16x16.png" style="border: none;" title="' + title + '" />'
+      bottom_html += '<img class="icon_qwiz" style="border: none;" title="' + title + '" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAUCAIAAAALACogAAAABnRSTlMA/wD/AP83WBt9AAAACXBIWXMAAA7EAAAOxAGVKw4bAAABP0lEQVR4nGP8//8/AymAiSTV5GhgwSZ4rcRrxRooW3futlBnJDlGND/cXzXVccFLVP0oepiwqtZJyH2wrenBtogQBgYGhsv9q15j9cO1qTDVW8JEGRgYGBi0PJ0YGBgYrjzCpuH+qv1rGBgYGHQLoaoZGBgYlOTEGRgYGB68uY+h4fXuQy8ZGBgYnLSRvXjv0UsGBgYGBRFFdA1Prm+6x8DAwBBio4XsyO37GBgYGHTkEHaixYO4mszrWTl1CjmH7iMcKe5nhdAAi4cnL6/A3HbrHgMDw56pJ0QYIOHr5JgmgzASZoOFdggDAwPDy03HRCEhs6YJEne6c0uQHYkUcXt76pL3oTqQQbxqVjay8Sh+cC5pmuuEpkFMWQZNBCNpwMDrWTmT2+5hCCu54EqtomkVLjqYwgoiuGzACWifgQDhK2rq5bcX2gAAAABJRU5ErkJggg==" />';
       if (icon_qwiz != 'Icon only') {
          bottom_html += '</a>';
       }
