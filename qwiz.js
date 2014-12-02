@@ -1,4 +1,11 @@
 /*
+ * Version 2.22 2014-11-??
+ * Multiple targets for a single label.
+ *
+ * Version 2.21 2014-12-02
+ * Workaround for Firefox 33.1 problem with long regular expression and long
+ * string in intro parse.
+ *
  * Version 2.20 2014-11-20
  * Handle "smart quotes" in attributes.
  *
@@ -177,9 +184,7 @@ function process_html () {
 
       // See if only whitespace outside [!] ... [/!].
       var comment_htm = $ (this).html ();
-      if (comment_htm.search (/\s*(<.+?>)*\s*\[!\][\s\S]*\[\/!\]\s*(<.+?>)*\s*/m) == 0) {
-      //DKTMP - for next beta.
-      //if (comment_htm.search (/\s*(<.+?>)*\s*\[!\][\s\S]*?\[\/!\]\s*(<.+?>)*\s*/m) == 0) {
+      if (comment_htm.search (/\s*(<.+?>)*\s*\[!\][\s\S]*?\[\/!\]\s*(<.+?>)*\s*/m) == 0) {
          $ (this).remove ();
       }
    });
@@ -309,6 +314,16 @@ function init_qwizzled (content_obj) {
       if (debug[0]) {
          console.log ('[init_qwizzled] img_width_px:', img_width_px);
       }
+      if (! img_width_px) {
+
+         // width="235" not present.  Try to get from src, which sometimes
+         // looks like: .../diagram.png?resize=455%2C336   ("%2C" is ",")
+         var src = $ (this).attr ('src');
+         var m = src.match (/resize=([0-9]+)(%2C|,)/);
+         if (m) {
+            img_width_px = m[1];
+         }
+      }
       if (img_width_px) {
          $ (this).parent ().css ('width', img_width_px + 'px');
       } else {
@@ -431,41 +446,84 @@ this.label_dropped = function (target_obj, label_obj) {
          console.log ('[label_dropped] feedback_selector:', feedback_selector + 'c');
       }
 
-      // Yes.  Show positive feedback for this label.  Disable label drag, and
-      // remove class to signal no re-enable.  Also remove cursor css.
+      // Yes.  Show positive feedback for this label.
       $ (feedback_selector + 'c').show ();
-      label_obj.draggable ('disable').removeClass ('qwizzled_label_unplaced'); 
-      label_obj.find ('.qwizzled_highlight_label').css ('cursor', 'default');
+
+      // See if multiple targets for this label.
+      var multiple_targets_b = false;
+      m = classes.match (/qwizzled_n_targets([0-9]*)/);
+      if (m) {
+         multiple_targets_b = true;
+
+         // Either decrement targets remaining, or, if only one left, remove
+         // class.
+         var current_n_targets = m[0];
+         var n_targets = parseInt (m[1]);
+         var current_n_targets = m[0];
+         if (n_targets == 2) {
+
+            // Will be only one left.  Can treat as "normal".  Remove class.
+            label_obj.removeClass (current_n_targets);
+         } else {
+
+            // Decrement.  Set flag, remove existing class, add decremented
+            // class.
+            var new_class = 'qwizzled_n_targets' + (--n_targets);
+            label_obj.removeClass (current_n_targets).addClass (new_class);
+         }
+      }
 
       // Do-it-myself snap to target.  Make copy of label into child of the
-      // target.  Gray-out original label (apply to children, too, in case need 
-      // to overcome default), move to original position.
-      var label_copy_obj = label_obj.clone (true);
-      label_obj.css ({color: 'lightgray', left: '0px', top: '0px'});
-      label_obj.find ('*').css ({color: 'lightgray'});
+      // target.  Clone false arg says do not copy events (namely, dragging
+      // effect).
+      var label_copy_obj = label_obj.clone (false);
       label_copy_obj.appendTo (target_obj);
       label_copy_obj.css ({position: 'absolute', left: '4px', top: '50%', transform: 'translateY(-50%)'});
+      label_copy_obj.removeClass ('qwizzled_label_unplaced'); 
+      //label_copy_obj.('disable').removeClass ('qwizzled_label_unplaced'); 
+      label_copy_obj.find ('.qwizzled_highlight_label').css ('cursor', 'default');
 
-      // Target no longer droppable.  Use class with id so catch all siblings
-      // (multiple spans of text-target).
-      $ ('div#qwiz' + i_qwiz + '-q' + i_question + ' .qwizzled_target-' + assoc_id).droppable ('option', 'disabled', true);
-      //target_obj.droppable ('option', 'disabled', true);
+      // Move original label back to original position.
+      label_obj.css ({left: '0px', top: '0px'});
+
+      // If not multiple targets, disable drag of original label, and remove 
+      // class to signal no re-enable.  Also remove cursor css.
+      // Gray-out (apply to children, too, in case need to overcome default),
+      // move to original position.
+      if (! multiple_targets_b) {
+         label_obj.draggable ('disable').removeClass ('qwizzled_label_unplaced'); 
+         label_obj.css ({color: 'lightgray', left: '0px', top: '0px'});
+         label_obj.find ('*').css ({color: 'lightgray'});
+         label_obj.find ('.qwizzled_highlight_label').css ('cursor', 'default');
+      }
+
+      // This target no longer droppable.  If div, just this.  If span (text
+      // target, possibly with multiple spans) find relevant siblings.
+      //$ ('div#qwiz' + i_qwiz + '-q' + i_question + ' .qwizzled_target-' + assoc_id).droppable ('option', 'disabled', true);
+      if (target_obj[0].tagName == 'DIV') {
+         target_obj.droppable ('option', 'disabled', true);
+      } else {
+         if (debug[0]) {
+            console.log ('[label_dropped] target_obj.siblings (\'span\').andSelf ():', target_obj.siblings ('span').andSelf ());
+         }
+         target_obj.siblings ('span').andSelf ().droppable ('option', 'disabled', true);
+      }
        
       // Increment number of labels correctly placed.  See if done with
       // diagram.
       qwizdata[i_qwiz].n_labels_correct++;
       var qwizq_id = '#qwiz' + i_qwiz + '-q' + i_question;
-      if (qwizdata[i_qwiz].n_labels_correct == qwizdata[i_qwiz].n_labels) {
+      if (qwizdata[i_qwiz].n_labels_correct == qwizdata[i_qwiz].n_label_targets) {
 
          // Done with labeled diagram.  Show summary, final feedback DKTMP.
          var n_tries = qwizdata[i_qwiz].n_label_attempts;
-         var n_labels = qwizdata[i_qwiz].n_labels;
-         var correct_b = n_tries == n_labels;
+         var n_label_targets = qwizdata[i_qwiz].n_label_targets;
+         var correct_b = n_tries == n_label_targets;
          var qwizzled_summary;
          if (correct_b) {
             qwizzled_summary = 'You placed all of the items correctly on the first try!';
          } else {
-            qwizzled_summary = plural ('It took you one try', 'It took you %s tries', n_tries) + ' ' + plural ('to place this label correctly', 'to place these labels correctly', n_labels) + '.';
+            qwizzled_summary = plural ('It took you one try', 'It took you %s tries', n_tries) + ' ' + plural ('to place this label correctly', 'to place these labels correctly', n_label_targets) + '.';
             qwizzled_summary = qwizzled_summary.replace ('%s', number_to_word (n_tries));
          }
          $ (qwizq_id + '-ff').html (qwizzled_summary).show ();
@@ -917,15 +975,15 @@ function process_qwiz_pair (htm) {
       // See if header.  Sets header_html global variable.
       htm = process_header (htm, i_qwiz, 0, true);
 
-      // See if intro.
-      var intro_html = parse_html_block (htm, ['[i]'], ['[q]', '[q ', '<div class="qwizzled_question">']);
+      // See if intro.  Limit to first 2000 characters.
+      var intro_html = parse_html_block (htm.substr (0, 2000), ['[i]'], ['[q]', '[q ', '<div class="qwizzled_question">']);
 
       // See if no [i].
       if (intro_html == 'NA') {
          
          // No [i] -- intro may be text before [q].  See if there is.  Add flag
          // to ignore &nbsp; (empty paragraph).
-         intro_html = parse_html_block (htm, ['^'], ['[q]', '[q ', '<div class="qwizzled_question">'], true);
+         intro_html = parse_html_block (htm.substr (0, 2000), ['^'], ['[q]', '[q ', '<div class="qwizzled_question">'], true);
       }
 
       // See if intro was just tags and whitespace.
@@ -1093,7 +1151,7 @@ function create_qwiz_divs (i_qwiz, qwiz_tag, htm, exit_html) {
    
    // If non-default width set, set flag.
    attributes = replace_smart_quotes (attributes);
-   var non_default_width_b = attributes.search (/[\s;"\u201C\u201D]width/m) != -1;
+   var non_default_width_b = attributes.search (/[\s;"]width/m) != -1;
 
    // If "repeat_incorrect=..." present, parse out true/false.
    var repeat_incorrect_value = get_attr (attributes, 'repeat_incorrect');
@@ -1188,7 +1246,7 @@ function create_qwiz_divs (i_qwiz, qwiz_tag, htm, exit_html) {
       } else {
          title += ' - dkprojects.net/qwiz';
       }
-      bottom_html += '<img class="icon_qwiz" src="' + get_qwiz_param ('url', './') + 'images/icon_qwiz16x16.png" style="border: none;" title="' + title + '" />'
+      bottom_html += '<img class="icon_qwiz" style="border: none;" title="' + title + '" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAUCAIAAAALACogAAAABnRSTlMA/wD/AP83WBt9AAAACXBIWXMAAA7EAAAOxAGVKw4bAAABP0lEQVR4nGP8//8/AymAiSTV5GhgwSZ4rcRrxRooW3futlBnJDlGND/cXzXVccFLVP0oepiwqtZJyH2wrenBtogQBgYGhsv9q15j9cO1qTDVW8JEGRgYGBi0PJ0YGBgYrjzCpuH+qv1rGBgYGHQLoaoZGBgYlOTEGRgYGB68uY+h4fXuQy8ZGBgYnLSRvXjv0UsGBgYGBRFFdA1Prm+6x8DAwBBio4XsyO37GBgYGHTkEHaixYO4mszrWTl1CjmH7iMcKe5nhdAAi4cnL6/A3HbrHgMDw56pJ0QYIOHr5JgmgzASZoOFdggDAwPDy03HRCEhs6YJEne6c0uQHYkUcXt76pL3oTqQQbxqVjay8Sh+cC5pmuuEpkFMWQZNBCNpwMDrWTmT2+5hCCu54EqtomkVLjqYwgoiuGzACWifgQDhK2rq5bcX2gAAAABJRU5ErkJggg==" />';
       if (icon_qwiz != 'Icon only') {
          bottom_html += '</a>';
       }
@@ -1430,7 +1488,11 @@ function display_question (i_qwiz, i_question) {
       // Also, reset progress bar.
       qwizdata[i_qwiz].n_labels_correct = 0;
       qwizdata[i_qwiz].n_label_attempts = 0;
-      qwizdata[i_qwiz].n_labels = qwizq_obj.find ('div.qwizzled_label').length;
+      if (qwizq_obj.find ('[class*="qwizzled_n_targets"]').length) {
+         qwizdata[i_qwiz].n_label_targets = qwizq_obj.find ('div.qwizzled_target, span.text_target_wrapper').length;
+      } else {
+         qwizdata[i_qwiz].n_label_targets = qwizq_obj.find ('div.qwizzled_label').length;
+      }
       display_qwizzled_progress (i_qwiz);
    }
 
@@ -1782,7 +1844,6 @@ function process_qwizzled (i_qwiz, i_question, question_htm, opening_tags,
       console.log ('[process_qwizzled] label_divs:', label_divs.join ('\n'));
       console.log ('[process_qwizzled] remaining_htm:', remaining_htm);
    }
-   var n_labels = label_divs.length;
 
    // Put labels in labels area.
    var label_head = '<p class="qwizzled_label_head">Move each item to its correct <span class="qwizzled_target_border">place</span></p>';
@@ -1842,6 +1903,7 @@ function process_qwizzled (i_qwiz, i_question, question_htm, opening_tags,
    feedback_divs[n_feedback_items - 1] = feedback_divs[n_feedback_items - 1].replace (/<\/div>\s*/m, '')
 
    // Check that number of feedback items corresponds to number of labels.
+   var n_labels = label_divs.length;
    if (n_labels*2 != n_feedback_items) {
       errmsgs.push (T ('Number of feedback items') + ' (' + n_feedback_items + ') ' + T ('does not match number of labels') + ' (' + n_labels + '): qwiz ' + (1 + i_qwiz) + ', question ' + (1 + i_question) + ' labeled diagram' + '\n'
                     + '(' + T ('There should be two feedback items -- correct and incorrect -- for each label') + ')');
@@ -2067,8 +2129,8 @@ function process_header (htm, i_qwiz, i_question, intro_b) {
       qnext_tags.push ('[i]');
    }
 
-   // Global variable.
-   header_html = parse_html_block (htm, qtags, qnext_tags);
+   // Global variable.  Limit to first 1000 characters.
+   header_html = parse_html_block (htm.substr (0, 1000), qtags, qnext_tags);
    if (header_html != 'NA' && header_html != '') {
 
       // Error if text before [h].
@@ -2389,7 +2451,7 @@ function display_qwizzled_progress (i_qwiz) {
 
    var i_question  = qwizdata[i_qwiz].i_question + 1;
    var n_questions = qwizdata[i_qwiz].n_questions;
-   var progress_html = 'Q #' + i_question + '/' + n_questions + '; Correctly labeled ' + qwizdata[i_qwiz].n_labels_correct + ' out of ' + qwizdata[i_qwiz].n_labels + ' items';
+   var progress_html = 'Q #' + i_question + '/' + n_questions + '; Correctly labeled ' + qwizdata[i_qwiz].n_labels_correct + ' out of ' + qwizdata[i_qwiz].n_label_targets + ' items';
 
    // Do show () in case single-question qwiz.
    $ ('#progress-qwiz' + i_qwiz).html (progress_html).show ();
