@@ -1,8 +1,11 @@
 /*
- * Version 2.22 2014-11-??
+ * Version 2.22 2014-12-??
  * Multiple targets for a single label.
+ * Tolerate whitespace before [h].
+ * Fix check for paragraph with header plus something else -- don't delete.
+ * Reinstate containment for labels.
  *
- * Version 2.21 2014-11-??
+ * Version 2.21 2014-12-02
  * Workaround for Firefox 33.1 problem with long regular expression and long
  * string in intro parse.
  *
@@ -184,16 +187,16 @@ function process_html () {
 
       // See if only whitespace outside [!] ... [/!].
       var comment_htm = $ (this).html ();
-      if (comment_htm.search (/\s*(<.+?>)*\s*\[!\][\s\S]*?\[\/!\]\s*(<.+?>)*\s*/m) == 0) {
+      if (comment_htm.search (/\s*(<.+?>)*\s*\[!*\][\s\S]*?\[\/!*\]\s*(<.+?>)*\s*$/m) == 0) {
          $ (this).remove ();
       }
    });
 
    // Look for [qwiz] and [/qwiz] that are only thing inside parents (e.g.,
    // <p>[qwiz]</p>).  Replace with "unwrapped" content if so.
-   $ ('p:contains("qwiz]"), :header:contains("qwiz]")').each (function () {
+   $ ('p:contains("qwiz"), :header:contains("qwiz")').each (function () {
       var tag_htm = $ (this).html ();
-      if (tag_htm.search (/\s*\[\/{0,1}qwiz\]\s*/m) == 0) {
+      if (tag_htm.search (/\s*\[\/{0,1}qwiz[^\]]*\]\s*/m) == 0) {
          $ (this).replaceWith (tag_htm);
       }
    });
@@ -230,7 +233,7 @@ function process_html () {
 
             // Take out any remaining [!]...[\!] comments (those that were not
             // inside paragraph or header elements).
-            new_htm = new_htm.replace (/\[!\][\s\S]*?\[\/!\]/gm, '');
+            new_htm = new_htm.replace (/\[!*\][\s\S]*?\[\/!*\]/gm, '');
 
             // Check that there are pairs.
             var do_not_process_htm = check_qwiz_tag_pairs (new_htm);
@@ -889,7 +892,7 @@ function add_style () {
    s.push ('}');
 
    s.push ('.qbutton {');
-   s.push ('   margin-bottom: 10px;');
+   s.push ('   margin-bottom: 2px;');
    s.push ('   border-top: 1px solid #96d1f8;');
    s.push ('   background: #65a9d7;');
    s.push ('   background: -webkit-gradient(linear, left top, left bottom, from(#3e779d), to(#65a9d7));');
@@ -897,7 +900,7 @@ function add_style () {
    s.push ('   background: -moz-linear-gradient(top, #3e779d, #65a9d7);');
    s.push ('   background: -ms-linear-gradient(top, #3e779d, #65a9d7);');
    s.push ('   background: -o-linear-gradient(top, #3e779d, #65a9d7);');
-   s.push ('   padding: 5px 10px;');
+   s.push ('   padding: 3px 3px;');
    s.push ('   -webkit-border-radius: 8px;');
    s.push ('   -moz-border-radius: 8px;');
    s.push ('   border-radius: 8px;');
@@ -920,6 +923,9 @@ function add_style () {
    s.push ('.qbutton:active {');
    s.push ('   border-top-color: #1b435e;');
    s.push ('   background: #1b435e;');
+   s.push ('}');
+   s.push ('.qbutton p {');
+   s.push ('   margin: 0px;');
    s.push ('}');
 
    s.push ('</style>');;
@@ -971,6 +977,15 @@ function process_qwiz_pair (htm) {
    if (htm.search (/\[(q|<code><\/code>q)([^\]]*)\]/m) == -1) {
       errmsgs.push (T ('Did not find question tags ("[q]") for') + ' qwiz ' + (i_qwiz + 1));
    } else {
+
+      // See if html up to first shortcode is just whitespace, including empty
+      // paragraphs.  Limit to first 2000 characters.
+      var whitespace = parse_html_block (htm.substr (0, 2000), ['^'], ['[h]', '[i]', '[q]', '[q '], 'return whitespace');
+      if (whitespace) {
+
+         // Yes, delete it.
+         htm = htm.replace (whitespace, '');
+      }
 
       // See if header.  Sets header_html global variable.
       htm = process_header (htm, i_qwiz, 0, true);
@@ -1610,10 +1625,11 @@ function process_question (i_qwiz, i_question, htm, opening_tags) {
                     + choice_html + '</span>';
       } else {
 
-         // Only one choice - do as regular button rather than radio.
+         // Only one choice - do as regular button rather than radio.  Left
+         // margin to clear Qwiz icon on first page.
          choice_html = choice_html.replace (/\[c\*{0,1}\]/m, '');
          n_correct = 1;
-         new_htm += '<button class="qbutton" onclick="' + qname + '.process_choice (\'qwiz' + i_qwiz + '-q' + i_question + '-a' + i_choice + '\')">' + choice_html + '</button>\n'
+         new_htm += '<button class="qbutton" style="margin-left: 20px;" onclick="' + qname + '.process_choice (\'qwiz' + i_qwiz + '-q' + i_question + '-a' + i_choice + '\')">' + choice_html + '</button>\n'
       }
    }
 
@@ -1943,7 +1959,7 @@ this.init_drag_and_drop = function (qwizq_elm) {
          console.log ('                       parents (\'.qwizq\':', $ (this).parents ('.qwizq'));
       }
       $ (this).draggable ({
-         //containment:   $ (this).parents ('.qwizq'),
+         containment:   $ (this).parents ('div.qwizq'),
          start:         function (event, ui) {
 
                            // If label previously incorrectly placed, reset
@@ -2048,6 +2064,10 @@ function parse_html_block (htm, qtags, qnext_tags, ignore_nbsp_b) {
       console.log ('[parse_html_block] qtags: ', qtags, ', htm: ', htm);
    }
 
+   // String is presumably "return whitespace".  Flag to do so only if is all
+   // whitespace (including empty paragraphs).
+   var return_whitespace_b = typeof (ignore_nbsp_b) == 'string';
+
    // Add a default "end" shortcode that will always be found.
    var ZendZ = '[ZendZ]';
    htm += ZendZ;
@@ -2057,7 +2077,6 @@ function parse_html_block (htm, qtags, qnext_tags, ignore_nbsp_b) {
    // -- a series of opening tags with possible whitespace in between, but
    // nothing else.
    var opening_pat = '(\\s*(<[^/][^>]*?>\\s*)*?)'; 
-
    var tags_pat = opening_pat + tags_to_pat (qtags);
    var next_tags_pat = opening_pat + tags_to_pat (qnext_tags);
 
@@ -2087,10 +2106,13 @@ function parse_html_block (htm, qtags, qnext_tags, ignore_nbsp_b) {
 
       // If flag set, also ignore &nbsp;
       if (ignore_nbsp_b != undefined) {
-         htm_wo_tags = htm_wo_tags.replace (/&nbsp;/g, '');
+         htm_wo_tags = htm_wo_tags.replace (/&nbsp;/gm, '');
       }
-      if (htm_wo_tags.search (/\S/) == -1) {
-         htm_block = '';
+      var is_whitespace_b = htm_wo_tags.search (/\S/) == -1;
+      if (is_whitespace_b) {
+         if (! return_whitespace_b) {
+            htm_block = '';
+         }
       /*
       } else {
          var i_qnext_tag = 7 + qtags.length;
@@ -2104,6 +2126,12 @@ function parse_html_block (htm, qtags, qnext_tags, ignore_nbsp_b) {
             htm_block += closing_tags;
          }
       */
+      }
+
+      // If returning only whitespace, and not all whitespace, return empty
+      // string.
+      if (return_whitespace_b && ! is_whitespace_b) {
+         htm_block = '';
       }
    } else {
 

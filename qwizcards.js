@@ -1,5 +1,10 @@
 /*
- * Version 2.21 2014-11-??
+ * Version 2.22 2014-12-??
+ * Tolerate whitespace before [h].
+ * Fix check for paragraph with header plus something else -- don't delete.
+ * Qwiz icon within <td> - keep the icon inside the border.
+ *
+ * Version 2.21 2014-12-02
  * Workaround for Firefox 33.1 problem with long regular expression and long
  * string in intro parse.
  *
@@ -166,8 +171,17 @@ function process_html () {
 
       // See if only whitespace outside [!] ... [/!].
       var comment_htm = $ (this).html ();
-      if (comment_htm.search (/\s*(<.+?>)*\s*\[!\][\s\S]*\[\/!\]\s*(<.+?>)*\s*/m) == 0) {
+      if (comment_htm.search (/\s*(<.+?>)*\s*\[!*\][\s\S]*?\[\/!*\]\s*(<.+?>)*\s*$/m) == 0) {
          $ (this).remove ();
+      }
+   });
+
+   // Look for [qdeck] and [/qdeck] that are only thing inside parents (e.g.,
+   // <p>[qdeck]</p>).  Replace with "unwrapped" content if so.
+   $ ('p:contains("qdeck"), :header:contains("qdeck")').each (function () {
+      var tag_htm = $ (this).html ();
+      if (tag_htm.search (/\s*\[\/{0,1}qdeck[^\]]*\]\s*/m) == 0) {
+         $ (this).replaceWith (tag_htm);
       }
    });
 
@@ -203,7 +217,7 @@ function process_html () {
 
             // Take out any remaining [!]...[\!] comments (those that were not
             // inside paragraph or header elements).
-            new_html = new_html.replace (/\[!\][\s\S]*?\[\/!\]/gm, '');
+            new_html = new_html.replace (/\[!*\][\s\S]*?\[\/!*\]/gm, '');
 
             // Check that there are pairs.
             var do_not_process_html = check_qdeck_tag_pairs (new_html);
@@ -302,11 +316,16 @@ function add_style () {
    s.push ('   margin-top:          0px;');
    s.push ('}');
 
+   s.push ('.qcard_table {');
+   s.push ('   border-collapse:     separate;');
+   s.push ('}');
+
    s.push ('.qcard_card .front {');
    s.push ('   min-height:          280px;');
    s.push ('}');
 
    s.push ('.qcard_card td.center {');
+   s.push ('   position:            relative;');
    s.push ('   padding:             5px;');
    s.push ('   text-align:          center;');
    s.push ('   vertical-align:      middle;');
@@ -325,6 +344,7 @@ function add_style () {
    s.push ('   bottom:          2px;');
    s.push ('   width:           16px;');
    s.push ('   height:          16px;');
+   s.push ('   line-height:     0px;');
    s.push ('}');
 
    s.push ('img.icon_qdeck {');
@@ -354,7 +374,7 @@ function add_style () {
    s.push ('   text-align:          center;');
    s.push ('}');
    s.push ('.qbutton {');
-   s.push ('   margin-bottom: 10px;');
+   s.push ('   margin-bottom: 2px;');
    s.push ('   border-top: 1px solid #96d1f8;');
    s.push ('   background: #65a9d7;');
    s.push ('   background: -webkit-gradient(linear, left top, left bottom, from(#3e779d), to(#65a9d7));');
@@ -362,7 +382,7 @@ function add_style () {
    s.push ('   background: -moz-linear-gradient(top, #3e779d, #65a9d7);');
    s.push ('   background: -ms-linear-gradient(top, #3e779d, #65a9d7);');
    s.push ('   background: -o-linear-gradient(top, #3e779d, #65a9d7);');
-   s.push ('   padding: 5px 10px;');
+   s.push ('   padding: 3px 3px;');
    s.push ('   -webkit-border-radius: 8px;');
    s.push ('   -moz-border-radius: 8px;');
    s.push ('   border-radius: 8px;');
@@ -567,13 +587,19 @@ function process_qdeck_pair (htm, i_deck) {
    // Delete [qdeck], any initial closing tags.
    htm = htm.replace (/\[qdeck[^\]]*\]((<\/[^>]*?>\s*)*)/m, '');
 
-   // Delete any initial whitespace.
-   htm = trim (htm);
-
-   // Make sure there's at least one question.
+   // Make sure there's at least one card.
    if (htm.search (/\[q([^\]]*)\]/m) == -1) {
       errmsgs.push (T ('Did not find question tags ("[q]") for') + ' qdeck ' + (i_deck + 1));
    } else {
+
+      // See if html up to first shortcode is just whitespace, including empty
+      // paragraphs.  Limit to first 2000 characters.
+      var whitespace = parse_html_block (htm.substr (0, 2000), ['^'], ['[h]', '[i]', '[q]', '[q '], 'return whitespace');
+      if (whitespace) {
+
+         // Yes, delete it.
+         htm = htm.replace (whitespace, '');
+      }
 
       // See if header.  Sets deckdata[i_deck].header_html.
       htm = process_header (htm, i_deck, 0, true);
@@ -608,6 +634,9 @@ function process_qdeck_pair (htm, i_deck) {
          } else {
             intro_html += start_button_html;
          }
+
+         // Add Qwiz icon to intro.
+         intro_html += create_qwiz_icon_div (i_deck);
 
          // Save introductory html.
          deckdata[i_deck].intro_html = intro_html;
@@ -691,6 +720,35 @@ function process_qdeck_pair (htm, i_deck) {
    }
 
    return new_html;
+}
+
+
+// -----------------------------------------------------------------------------
+function create_qwiz_icon_div (i_deck) {
+   var style = '';
+   if (get_qwiz_param ('beta')) {
+      style = 'style = "background: red;"';
+   }
+   var divs = [];
+   divs.push ('<div id="icon_qdeck' + i_deck + '" class="icon_qdeck" ' + style + '>');
+   var icon_qwiz = get_qwiz_param ('icon_qwiz');
+   if (icon_qwiz != 'Not displayed') {
+      var title = 'Qwiz - online quizzes and flashcards';
+      if (icon_qwiz != 'Icon only') {
+         divs.push ('<a href="//dkprojects.net/qwiz">');
+      } else {
+         title += ' - dkprojects.net/qwiz';
+      }
+
+      divs.push ('      <img class="icon_qdeck" style="border: none;" title="' + title + '" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAUCAIAAAALACogAAAABnRSTlMA/wD/AP83WBt9AAAACXBIWXMAAA7EAAAOxAGVKw4bAAABP0lEQVR4nGP8//8/AymAiSTV5GhgwSZ4rcRrxRooW3futlBnJDlGND/cXzXVccFLVP0oepiwqtZJyH2wrenBtogQBgYGhsv9q15j9cO1qTDVW8JEGRgYGBi0PJ0YGBgYrjzCpuH+qv1rGBgYGHQLoaoZGBgYlOTEGRgYGB68uY+h4fXuQy8ZGBgYnLSRvXjv0UsGBgYGBRFFdA1Prm+6x8DAwBBio4XsyO37GBgYGHTkEHaixYO4mszrWTl1CjmH7iMcKe5nhdAAi4cnL6/A3HbrHgMDw56pJ0QYIOHr5JgmgzASZoOFdggDAwPDy03HRCEhs6YJEne6c0uQHYkUcXt76pL3oTqQQbxqVjay8Sh+cC5pmuuEpkFMWQZNBCNpwMDrWTmT2+5hCCu54EqtomkVLjqYwgoiuGzACWifgQDhK2rq5bcX2gAAAABJRU5ErkJggg==" />');
+
+      if (icon_qwiz != 'Icon only') {
+         divs.push ('</a>');
+      }
+   }
+   divs.push ('</div>');
+
+   return divs.join ('');
 }
 
 
@@ -806,6 +864,10 @@ function parse_html_block (htm, qtags, qnext_tags, ignore_nbsp_b) {
       console.log ('[parse_html_block] qtags: ', qtags, ', htm: ', htm);
    }
 
+   // String is presumably "return whitespace".  Flag to do so only if is all
+   // whitespace (including empty paragraphs).
+   var return_whitespace_b = typeof (ignore_nbsp_b) == 'string';
+
    // Add a default "end" shortcode that will always be found.
    var ZendZ = '[ZendZ]';
    htm += ZendZ;
@@ -814,9 +876,7 @@ function parse_html_block (htm, qtags, qnext_tags, ignore_nbsp_b) {
    // Include opening tags before the qwiz/qcard tags in each case.
    // -- a series of opening tags with possible whitespace in between, but
    // nothing else.
-   // DKTMP
-   //var opening_pat = '(\\s*(<[^/][^>]*?>\\s*)*?)'; 
-   var opening_pat = '(<[^/][^>]*?>\\s*)*?'; 
+   var opening_pat =  '\\s*(<[^/][^>]*?>\\s*)*?';
    var tags_pat = opening_pat + tags_to_pat (qtags);
    var next_tags_pat = opening_pat + tags_to_pat (qnext_tags);
 
@@ -837,10 +897,13 @@ function parse_html_block (htm, qtags, qnext_tags, ignore_nbsp_b) {
 
       // If flag set, also ignore &nbsp;
       if (ignore_nbsp_b != undefined) {
-         htm_wo_tags = htm_wo_tags.replace (/&nbsp;/g, '');
+         htm_wo_tags = htm_wo_tags.replace (/&nbsp;/gm, '');
       }
-      if (htm_wo_tags.search (/\S/) == -1) {
-         htm_block = '';
+      var is_whitespace_b = htm_wo_tags.search (/\S/) == -1;
+      if (is_whitespace_b) {
+         if (! return_whitespace_b) {
+            htm_block = '';
+         }
       } else {
          var i_qnext_tag = 7 + qtags.length;
          var qnext_tag = htm_match[i_qnext_tag];
@@ -852,6 +915,12 @@ function parse_html_block (htm, qtags, qnext_tags, ignore_nbsp_b) {
          if (closing_tags) {
             htm_block += closing_tags;
          }
+      }
+
+      // If returning only whitespace, and not all whitespace, return empty
+      // string.
+      if (return_whitespace_b && ! is_whitespace_b) {
+         htm_block = '';
       }
    } else {
 
@@ -962,30 +1031,6 @@ function create_qdeck_divs (i_deck, qdeck_tag) {
    divs.push ('                  </td>');
    divs.push ('               </tr>');
    divs.push ('            </table>');
-
-   var style = '';
-   if (get_qwiz_param ('beta')) {
-      style = 'style = "background: red;"';
-   }
-   divs.push ('         <div id="icon_qdeck' + i_deck + '" class="icon_qdeck" ' + style + '>');
-   var icon_qwiz = get_qwiz_param ('icon_qwiz');
-   if (icon_qwiz != 'Not displayed') {
-      var title = 'Qwiz - online quizzes and flashcards';
-      if (icon_qwiz != 'Icon only') {
-         divs.push ('         <a href="//dkprojects.net/qwiz">');
-      } else {
-         title += ' - dkprojects.net/qwiz';
-      }
-
-      divs.push ('               <img class="icon_qdeck" src="' + get_qwiz_param ('url', './') + 'images/icon_qwiz16x16.png" style="border: none;" title="' + title + '" />');
-
-      if (icon_qwiz != 'Icon only') {
-
-         divs.push ('         </a>');
-      }
-   }
-   divs.push ('         </div>');
-
    divs.push ('         </div>');
    divs.push ('         <div class="back">');
    divs.push ('            <table class="qcard_table" ' + attributes + ' cellspacing="0" cellpadding="0">');
@@ -1073,8 +1118,6 @@ this.start_deck = function (i_deck) {
 
    var n_cards = deckdata[i_deck].n_cards;
    deckdata[i_deck].n_to_go = n_cards;
-
-   $ ('div.qcard_window div#icon_qdeck' + i_deck).hide ();
 
    q.set_next_buttons (i_deck);
 
@@ -1465,7 +1508,6 @@ this.set_card_front_and_back = function (i_deck, i_card) {
    // Show progress.
    display_progress (i_deck);
 
-   var i_card = deckdata[i_deck].i_card;
    var ii_card = deckdata[i_deck].card_order[i_card];
    var card = deckdata[i_deck].cards[ii_card];
 
@@ -1474,7 +1516,13 @@ this.set_card_front_and_back = function (i_deck, i_card) {
 
       // Card front/back text.
       if (side == 'card_front') {
-         deckdata[i_deck].el_qcard_card_front.html (card[side]);
+
+         // If no intro, and this is first card, add Qwiz icon to front.
+         var qwiz_icon_div = '';
+         if (no_intro_b[i_deck] && deckdata[i_deck].n_reviewed == 1) {
+            qwiz_icon_div = create_qwiz_icon_div (i_deck);
+         }
+         deckdata[i_deck].el_qcard_card_front.html (card[side] + qwiz_icon_div);
       } else {
          deckdata[i_deck].el_qcard_card_back.html (card[side]);
       }
@@ -1541,11 +1589,6 @@ this.next_card = function (i_deck) {
    var new_direction = directions[i];
    deckdata[i_deck].el_qcard_card.attr ('data-direction', new_direction);
    deckdata[i_deck].el_qcard_card.data('direction', new_direction);
-
-   // Can hide qwiz icon/link now.
-   if (deckdata[i_deck].i_card == 0) {
-      $ ('div.qcard_window div#icon_qdeck' + i_deck).hide ();
-   }
 
    deckdata[i_deck].i_card++;
    if (deckdata[i_deck].i_card >= deckdata[i_deck].n_cards) {
