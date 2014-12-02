@@ -1959,7 +1959,7 @@ this.init_drag_and_drop = function (qwizq_elm) {
          console.log ('                       parents (\'.qwizq\':', $ (this).parents ('.qwizq'));
       }
       $ (this).draggable ({
-         containment:   $ (this).parents ('div.qwizq'),
+         containment:   $ (this).parents ('table.qwizzled_table'),
          start:         function (event, ui) {
 
                            // If label previously incorrectly placed, reset
