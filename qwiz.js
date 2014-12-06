@@ -4,6 +4,7 @@
  * Tolerate whitespace before [h].
  * Fix check for paragraph with header plus something else -- don't delete.
  * Reinstate containment for labels -- by table size.
+ * qtarget_sibs-... instead of text_target_wrapper (except for backwards compatibility).
  * Don't allow draggable labels to be "underneath" already-placed labels.
  *
  * Version 2.21 2014-12-02
@@ -188,7 +189,7 @@ function process_html () {
 
       // See if only whitespace outside [!] ... [/!].
       var comment_htm = $ (this).html ();
-      if (comment_htm.search (/\s*(<.+?>)*\s*\[!*\][\s\S]*?\[\/!*\]\s*(<.+?>)*\s*$/m) == 0) {
+      if (comment_htm.search (/\s*(<.+?>)*\s*\[!+\][\s\S]*?\[\/!+\]\s*(<.+?>)*\s*$/m) == 0) {
          $ (this).remove ();
       }
    });
@@ -234,7 +235,7 @@ function process_html () {
 
             // Take out any remaining [!]...[\!] comments (those that were not
             // inside paragraph or header elements).
-            new_htm = new_htm.replace (/\[!*\][\s\S]*?\[\/!*\]/gm, '');
+            new_htm = new_htm.replace (/\[!+\][\s\S]*?\[\/!+\]/gm, '');
 
             // Check that there are pairs.
             var do_not_process_htm = check_qwiz_tag_pairs (new_htm);
@@ -259,7 +260,7 @@ function process_html () {
                      var new_qwiz_html = process_qwiz_pair (qwiz_matches[i_qwiz]);
 
                      // Let's take out <p...> and <h...> from before [qwiz].
-                     new_htm = new_htm.replace (/(<[ph][^>]*?>\s*)*?\[qwiz[\s\S]*?\[\/qwiz\]/m, new_qwiz_html);
+                     new_htm = new_htm.replace (/(<[ph][^>]*>\s*)*?\[qwiz[\s\S]*?\[\/qwiz\]/m, new_qwiz_html);
                   }
                   if (debug[3]) {
                      console.log ('process_html] new_htm:', new_htm);
@@ -965,7 +966,7 @@ function process_qwiz_pair (htm) {
 
    // Capture any initial closing tags after [qwiz ...] -- will put them in
    // front of <div> that replaces [qwiz ...].
-   var m = htm.match (/\[qwiz[^\]]*\]((<\/[^>]*?>\s*)*)/m, '');
+   var m = htm.match (/\[qwiz[^\]]*\]((<\/[^>]+>\s*)*)/m, '');
    if (m) {
       var initial_closing_tags = m[1];
       new_htm += initial_closing_tags;
@@ -975,7 +976,7 @@ function process_qwiz_pair (htm) {
    }
 
    // Delete [qwiz], any initial closing tags.
-   htm = htm.replace (/\[qwiz[^\]]*\]((<\/[^>]*?>\s*)*)/m, '');
+   htm = htm.replace (/\[qwiz[^\]]*\]((<\/[^>]+>\s*)*)/m, '');
 
    // Delete any initial whitespace.
    htm = trim (htm);
@@ -1042,7 +1043,7 @@ function process_qwiz_pair (htm) {
       process_topics (i_qwiz, question_tags);
 
       // Capture any opening tags before each "[q...] tag.
-      var matches = htm.match (/(<[^\/][^>]*?>\s*)*?(\[q[ \]]|<div class="qwizzled_question">)/gm);
+      var matches = htm.match (/(<[^\/][^>]*>\s*)*?(\[q[ \]]|<div class="qwizzled_question">)/gm);
       var q_opening_tags = [];
       var n_q_opening_tags = matches.length;
       for (var i_tag=0; i_tag<n_q_opening_tags; i_tag++) {
@@ -1511,7 +1512,6 @@ function display_question (i_qwiz, i_question) {
       qwizdata[i_qwiz].n_labels_correct = 0;
       qwizdata[i_qwiz].n_label_attempts = 0;
       if (qwizq_obj.find ('[class*="qwizzled_n_targets"]').length) {
-         //qwizdata[i_qwiz].n_label_targets = qwizq_obj.find ('div.qwizzled_target, span.text_target_wrapper').length;
 
          // This collects multiple spans if they're spread across a text target.
          // If don't have qtarget_sib... just count, but de-dup sibs.
@@ -1568,7 +1568,7 @@ function process_question (i_qwiz, i_question, htm, opening_tags) {
 
    // Span for default indented paragraph style for choices.  Want this ahead of
    // any opening tags user put in before first "[c]".
-   var span_pos = htm.search (/(<[^\/][^>]*?>\s*)*?\[c\*{0,1}\]/m);
+   var span_pos = htm.search (/(<[^\/][^>]*>\s*)*?\[c\*{0,1}\]/m);
    if (span_pos == -1) {
       errmsgs.push (T ('Did not find choices ("[c]") for') + ' qwiz ' + (i_qwiz + 1) + ', question ' + (i_question + 1));
       new_htm = '';
@@ -1677,7 +1677,7 @@ function process_question (i_qwiz, i_question, htm, opening_tags) {
    // . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
    // Find feedback alternatives for this question, make into alternative divs.
    // Feedback html -- from opening tags before first [f] through end.
-   var m = remaining_htm.match (/(<[^\/][^>]*?>\s*)*?\[f\][\s\S]*/m);
+   var m = remaining_htm.match (/(<[^\/][^>]*>\s*)*?\[f\][\s\S]*/m);
    var feedback_html = '';
    if (m) {
       feedback_html = m[0];
@@ -2102,7 +2102,7 @@ function parse_html_block (htm, qtags, qnext_tags, ignore_nbsp_b) {
    // Include opening tags before the qwiz/qcard tags in each case.
    // -- a series of opening tags with possible whitespace in between, but
    // nothing else.
-   var opening_pat = '(\\s*(<[^/][^>]*?>\\s*)*?)'; 
+   var opening_pat = '(\\s*(<[^/][^>]*>\\s*)*?)'; 
    var tags_pat = opening_pat + tags_to_pat (qtags);
    var next_tags_pat = opening_pat + tags_to_pat (qnext_tags);
 

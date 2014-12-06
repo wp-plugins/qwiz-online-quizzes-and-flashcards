@@ -171,7 +171,7 @@ function process_html () {
 
       // See if only whitespace outside [!] ... [/!].
       var comment_htm = $ (this).html ();
-      if (comment_htm.search (/\s*(<.+?>)*\s*\[!*\][\s\S]*?\[\/!*\]\s*(<.+?>)*\s*$/m) == 0) {
+      if (comment_htm.search (/\s*(<.+?>)*\s*\[!+\][\s\S]*?\[\/!+\]\s*(<.+?>)*\s*$/m) == 0) {
          $ (this).remove ();
       }
    });
@@ -217,7 +217,7 @@ function process_html () {
 
             // Take out any remaining [!]...[\!] comments (those that were not
             // inside paragraph or header elements).
-            new_html = new_html.replace (/\[!*\][\s\S]*?\[\/!*\]/gm, '');
+            new_html = new_html.replace (/\[!+\][\s\S]*?\[\/!+\]/gm, '');
 
             // Check that there are pairs.
             var do_not_process_html = check_qdeck_tag_pairs (new_html);
@@ -241,7 +241,7 @@ function process_html () {
                      var new_deck_html = process_qdeck_pair (qdeck_matches[i_deck], i_deck);
 
                      // Let's take out <p...> and <h...> from before [qdeck].
-                     new_html = new_html.replace (/(<[ph][^>]*?>\s*)*?\[qdeck[\s\S]*?\[\/qdeck\]/m, new_deck_html);
+                     new_html = new_html.replace (/(<[ph][^>]*>\s*)*?\[qdeck[\s\S]*?\[\/qdeck\]/m, new_deck_html);
                   }
                }
             }
@@ -567,7 +567,7 @@ function process_qdeck_pair (htm, i_deck) {
    deckdata[i_deck].exit_html = '';
 
    // Include any opening tags (e.g., "<p>" in WordPress).
-   var qdeck_tag = htm.match (/(<[^\/][^>\/]*?>\s*)*?\[qdeck[^\]]*\]/m)[0];
+   var qdeck_tag = htm.match (/(<[^\/][^>]*>\s*)*?\[qdeck[^\]]*\]/m)[0];
 
    var n_decks = 0;
    var new_html = '';
@@ -578,14 +578,14 @@ function process_qdeck_pair (htm, i_deck) {
 
    // Capture any initial closing tags after [qdeck ...] -- will put them in
    // front of <div> that replaces [qdeck ...].
-   var m = htm.match (/\[qdeck[^\]]*\]((<\/[^>]*?>\s*)*)/m, '');
+   var m = htm.match (/\[qdeck[^\]]*\]((<\/[^>]+>\s*)*)/m, '');
    if (m) {
       var initial_closing_tags = m[1];
       new_html += initial_closing_tags;
    }
 
    // Delete [qdeck], any initial closing tags.
-   htm = htm.replace (/\[qdeck[^\]]*\]((<\/[^>]*?>\s*)*)/m, '');
+   htm = htm.replace (/\[qdeck[^\]]*\]((<\/[^>]+>\s*)*)/m, '');
 
    // Make sure there's at least one card.
    if (htm.search (/\[q([^\]]*)\]/m) == -1) {
@@ -664,7 +664,7 @@ function process_qdeck_pair (htm, i_deck) {
       process_topics (i_deck, card_tags);
 
       // Capture any opening tags before each "[q...] tag.  Skip "[qdeck]".
-      var matches = htm.match (/(<[^\/][^>\/]*?>\s*)*?\[q[ \]]/gm);
+      var matches = htm.match (/(<[^\/][^>]*>\s*)*?\[q[ \]]/gm);
       var q_opening_tags = [];
       for (var i_card=0; i_card<n_cards; i_card++) {
          var len = matches[i_card].length;
@@ -798,7 +798,7 @@ function process_card_input (i_deck, i_card, htm, opening_tags) {
 
    // Capture any opening tags before "[a]" tag.
    var a_opening_tags;
-   var m = htm.match (/(<[^\/][^>\/]*?>\s*)*?\[a\]/m);
+   var m = htm.match (/(<[^\/][^>]*>\s*)*?\[a\]/m);
    if (m && m[1]) {
       a_opening_tags = m[1];
       if (debug[0]) {
@@ -876,12 +876,12 @@ function parse_html_block (htm, qtags, qnext_tags, ignore_nbsp_b) {
    // Include opening tags before the qwiz/qcard tags in each case.
    // -- a series of opening tags with possible whitespace in between, but
    // nothing else.
-   var opening_pat =  '\\s*(<[^/][^>]*?>\\s*)*?';
+   var opening_pat =  '\\s*(<[^/][^>]*>\\s*)*?';
    var tags_pat = opening_pat + tags_to_pat (qtags);
    var next_tags_pat = opening_pat + tags_to_pat (qnext_tags);
 
    // Final term collects any immediate closing tags after next qtags.
-   var closing_pat = '((</[^>]*?>\\s*)*)';
+   var closing_pat = '((</[^>]+>\\s*)*)';
    var re = new RegExp ('([\\s\\S]*?)(' + tags_pat + '[\\s\\S]*?)' + next_tags_pat + closing_pat, 'im');
    var htm_match = htm.match (re);
    var htm_block = '';

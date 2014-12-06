@@ -29,8 +29,10 @@ Tolerate whitespace before [h].
 Fix check for paragraph with header plus something else -- don't delete.
 Qwiz icon within <td> - keep the icon inside the border.
 Reinstate containment for labels -- by table size.
+qtarget_sibs-... instead of text_target_wrapper (except for backwards compatibility).
 Don't allow draggable labels to be "underneath" already-placed labels.
 Keep [!] comments at end of labeled-diagram question outside the question div.
+Fix: made headers into labels.
 
 = 2.21 =
 2014-12-02

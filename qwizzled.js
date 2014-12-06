@@ -2,7 +2,9 @@
  * Version 2.22 2014-11-??
  * Multiple targets for a single label.
  * Accommodate image resizing (resize wrapper, reposition targets).
+ * Don't use text_target_wrapper (rely on qtarget_sibs-... instead).
  * Keep [!] comments at end of labeled-diagram question outside the question div.
+ * Fix: made headers into labels.
  *
  * Version 2.18 2014-11-16
  * More backwards compatibility fixes (labeled diagrams assoc_id).
@@ -622,7 +624,7 @@ this.create_target2 = function (multiple_targets_f) {
    if (any_new_html_b || any_new_question_div_b) {
       // Find paragraphs and headers within labels, wrap their inner html with 
       // highlight span if haven't already done so.
-      edit_area.find ('*.qwizzled_label > p, :header').each (function () {
+      edit_area.find ('*.qwizzled_label > p, *.qwizzled_label > :header').each (function () {
          var innerhtm = $ (this).html ();
          if (innerhtm.search ('qwizzled_highlight_label') == -1) {
             $ (this).html ('<span class="qwizzled_highlight_label qwizzled_highlight_label_border">' + innerhtm + '</span>');
@@ -1424,8 +1426,9 @@ function process_question (question_html, doing_wrapped_b) {
    var comment_html = '';
 
    // This regex assumes no left square bracket in comment -- couldn't get non-
-   // greedy match to work.
-   var comment_pos = question_html.search (/(<[^\/][^>]*>\s*)*\[!*\][^\[]*\[\/!*\]\s*(<\/[^>]*>s*)*$/m);
+   // greedy match to work.  After comment, also look for opening/closing tags
+   // around whitespace/non-breaking space.
+   var comment_pos = question_html.search (/(<[^\/][^>]*>\s*)*\[!+\][^\[]*\[\/!+\]\s*(<\/[^>]+>s*)*(<[^>]+>|&nbsp;|\s)*$/m);
    if (comment_pos != -1) {
       comment_html = question_html.substr (comment_pos);
       question_html = question_html.substr (0, comment_pos);
@@ -1503,7 +1506,7 @@ function process_labels (question_html, label_start_tags, doing_wrapped_b) {
       // add back later).  Include whitespace and opening/closing tags.
       var new_label_html = label_html;
       var label_comments = '';
-      var re = new RegExp ('\\s*(<[^\/][^>]*>)*\\s*\\[!*\\][\\s\\S]*?\\[\\/!*\\]\\s*(<\\/[^>]*>)*\\s*', 'gm');
+      var re = new RegExp ('\\s*(<[^\/][^>]*>)*\\s*\\[!+\\][\\s\\S]*?\\[\\/!+\\]\\s*(<\\/[^>]+>)*\\s*', 'gm');
       var m = new_label_html.match (re);
       if (m) {
          label_comments = m.join ('');
