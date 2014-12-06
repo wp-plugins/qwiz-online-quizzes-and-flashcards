@@ -567,7 +567,7 @@ function process_qdeck_pair (htm, i_deck) {
    deckdata[i_deck].exit_html = '';
 
    // Include any opening tags (e.g., "<p>" in WordPress).
-   var qdeck_tag = htm.match (/(<[^>\/]*?>\s*)*?\[qdeck[^\]]*\]/m)[0];
+   var qdeck_tag = htm.match (/(<[^\/][^>\/]*?>\s*)*?\[qdeck[^\]]*\]/m)[0];
 
    var n_decks = 0;
    var new_html = '';
@@ -664,7 +664,7 @@ function process_qdeck_pair (htm, i_deck) {
       process_topics (i_deck, card_tags);
 
       // Capture any opening tags before each "[q...] tag.  Skip "[qdeck]".
-      var matches = htm.match (/(<[^>\/]*?>\s*)*?\[q[ \]]/gm);
+      var matches = htm.match (/(<[^\/][^>\/]*?>\s*)*?\[q[ \]]/gm);
       var q_opening_tags = [];
       for (var i_card=0; i_card<n_cards; i_card++) {
          var len = matches[i_card].length;
@@ -798,7 +798,7 @@ function process_card_input (i_deck, i_card, htm, opening_tags) {
 
    // Capture any opening tags before "[a]" tag.
    var a_opening_tags;
-   var m = htm.match (/(<[^>\/]*?>\s*)*?\[a\]/m);
+   var m = htm.match (/(<[^\/][^>\/]*?>\s*)*?\[a\]/m);
    if (m && m[1]) {
       a_opening_tags = m[1];
       if (debug[0]) {

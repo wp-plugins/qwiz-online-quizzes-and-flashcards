@@ -3,7 +3,8 @@
  * Multiple targets for a single label.
  * Tolerate whitespace before [h].
  * Fix check for paragraph with header plus something else -- don't delete.
- * Reinstate containment for labels.
+ * Reinstate containment for labels -- by table size.
+ * Don't allow draggable labels to be "underneath" already-placed labels.
  *
  * Version 2.21 2014-12-02
  * Workaround for Firefox 33.1 problem with long regular expression and long
@@ -483,7 +484,6 @@ this.label_dropped = function (target_obj, label_obj) {
       label_copy_obj.appendTo (target_obj);
       label_copy_obj.css ({position: 'absolute', left: '4px', top: '50%', transform: 'translateY(-50%)'});
       label_copy_obj.removeClass ('qwizzled_label_unplaced'); 
-      //label_copy_obj.('disable').removeClass ('qwizzled_label_unplaced'); 
       label_copy_obj.find ('.qwizzled_highlight_label').css ('cursor', 'default');
 
       // Move original label back to original position.
@@ -502,14 +502,18 @@ this.label_dropped = function (target_obj, label_obj) {
 
       // This target no longer droppable.  If div, just this.  If span (text
       // target, possibly with multiple spans) find relevant siblings.
-      //$ ('div#qwiz' + i_qwiz + '-q' + i_question + ' .qwizzled_target-' + assoc_id).droppable ('option', 'disabled', true);
-      if (target_obj[0].tagName == 'DIV') {
+      if (target_obj[0].tagName.toLowerCase () == 'div') {
          target_obj.droppable ('option', 'disabled', true);
       } else {
-         if (debug[0]) {
-            console.log ('[label_dropped] target_obj.siblings (\'span\').andSelf ():', target_obj.siblings ('span').andSelf ());
+         var classes = target_obj.attr ('class');
+         var m = classes.match (/qtarget_sib-[0-9]*/);
+         if (m) {
+            $ ('span.' + m[0]).droppable ('option', 'disabled', true);
+         } else {
+
+            // Backwards compatibility -- assume they're in a wrapper span.
+            target_obj.siblings ('span').andSelf ().droppable ('option', 'disabled', true);
          }
-         target_obj.siblings ('span').andSelf ().droppable ('option', 'disabled', true);
       }
        
       // Increment number of labels correctly placed.  See if done with
@@ -864,8 +868,11 @@ function add_style () {
    s.push ('}');
 
    s.push ('.qwizzled_label {');
-   s.push ('   z-index:         2;');
    s.push ('   -webkit-user-select: none;');
+   s.push ('}');
+
+   s.push ('.qwizzled_label_unplaced {');
+   s.push ('   z-index:         2;');
    s.push ('}');
 
    s.push ('.qwizzled_highlight_label {');
@@ -1504,7 +1511,23 @@ function display_question (i_qwiz, i_question) {
       qwizdata[i_qwiz].n_labels_correct = 0;
       qwizdata[i_qwiz].n_label_attempts = 0;
       if (qwizq_obj.find ('[class*="qwizzled_n_targets"]').length) {
-         qwizdata[i_qwiz].n_label_targets = qwizq_obj.find ('div.qwizzled_target, span.text_target_wrapper').length;
+         //qwizdata[i_qwiz].n_label_targets = qwizq_obj.find ('div.qwizzled_target, span.text_target_wrapper').length;
+
+         // This collects multiple spans if they're spread across a text target.
+         // If don't have qtarget_sib... just count, but de-dup sibs.
+         var n_label_targets = 0;
+         var target_count = new Object ();
+         qwizq_obj.find ('div.qwizzled_target, span.qwizzled_target').each (function () {
+            var classes = $ (this).attr ('class');
+            var m = classes.match (/qtarget_sib-[0-9]*/);
+            if (m) {
+               var qwizzled_target_assoc_id = m[0];
+               target_count[qwizzled_target_assoc_id] = 1;
+            } else {
+               n_label_targets++;
+            }
+         });
+         qwizdata[i_qwiz].n_label_targets = n_label_targets + Object.keys (target_count).length;
       } else {
          qwizdata[i_qwiz].n_label_targets = qwizq_obj.find ('div.qwizzled_label').length;
       }
@@ -1655,7 +1678,10 @@ function process_question (i_qwiz, i_question, htm, opening_tags) {
    // Find feedback alternatives for this question, make into alternative divs.
    // Feedback html -- from opening tags before first [f] through end.
    var m = remaining_htm.match (/(<[^\/][^>]*?>\s*)*?\[f\][\s\S]*/m);
-   var feedback_html = m[0];
+   var feedback_html = '';
+   if (m) {
+      feedback_html = m[0];
+   }
    if (debug[2]) {
       console.log ('[process_question] feedback_html: ', feedback_html);
    }
@@ -1688,7 +1714,7 @@ function process_question (i_qwiz, i_question, htm, opening_tags) {
             console.log ('[process_question] feedback_item_html: ', feedback_item_html);
          }
 
-         // Create a div for each 
+         // Create a div for each.
          feedback_divs.push (
                create_feedback_div_html (i_qwiz, i_question, i_item,
                                          feedback_item_html)
@@ -1905,7 +1931,7 @@ function process_qwizzled (i_qwiz, i_question, question_htm, opening_tags,
          console.log ('[process_qwizzled] feedback_item_html: ', feedback_item_html);
       }
 
-      // Create a div for each 
+      // Create a div for each.
       feedback_divs.push (
             create_feedback_div_html (i_qwiz, i_question, parseInt (i_item/2),
                                       feedback_item_html, c_x)

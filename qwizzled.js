@@ -2,6 +2,7 @@
  * Version 2.22 2014-11-??
  * Multiple targets for a single label.
  * Accommodate image resizing (resize wrapper, reposition targets).
+ * Keep [!] comments at end of labeled-diagram question outside the question div.
  *
  * Version 2.18 2014-11-16
  * More backwards compatibility fixes (labeled diagrams assoc_id).
@@ -743,12 +744,14 @@ this.label_clicked = function (local_el_label_div) {
             // span or spans, replace the <span> with its content.
             var div_span_obj = qwizzled_question_obj.find ('.qwizzled_target-' + assoc_id);
             if (div_span_obj.length) {
-               if (div_span_obj[0].tagName == 'div') {
+               if (div_span_obj[0].tagName.toLowerCase () == 'div') {
                   div_span_obj.remove ();
                } else {
-                  div_span_obj.each (function () {
-                     $ (this).replaceWith ($ (this).html ());
-                  });
+
+                  // Remove wrapper if there (backwards compatibility), remove
+                  // qwizzled_target spans (keeping content).
+                  div_span_obj.parents ('span.text_target_wrapper').contents ().unwrap ();
+                  div_span_obj.contents ().unwrap ();
                }
             }
 
@@ -819,9 +822,7 @@ this.target_text_selected = function (e) {
    // time (in seconds) as unique ID.  We'll also use it to identify image
    // wrapper.
    if (! assoc_id) {
-      var now = new Date ();
-      var now_millisec = now.getTime ();
-      assoc_id = parseInt (now_millisec / 1000.0);
+      assoc_id = time_id ();
    }
 
    // Pick border color and style for this label-target pair.  Count how many
@@ -871,7 +872,7 @@ this.target_text_selected = function (e) {
 
          // Won't work with captions.  Alert to delete caption and try again.
          parent_parent_tagname = node_obj.parent ().parent ()[0].tagName;
-         caption_b = parent_parent_tagname == 'DT';
+         caption_b = parent_parent_tagname.toLowerCase () == 'dt';
          if (caption_b) {
             alert (T ('Sorry, labeled diagrams do not work with images that have captions.  Please edit the image, delete the caption, and try again.'));
 
@@ -1080,9 +1081,7 @@ this.target_text_selected = function (e) {
 
       // In case there are multiple targets for a label (also having this
       // assoc_id, identify just this group of spans with another id).
-      var now = new Date ();
-      var now_millisec = now.getTime ();
-      sib_id = parseInt (now_millisec / 1000.0);
+      sib_id = time_id ();
       var new_txt = create_text_target (selected_text, assoc_id, sib_id, label_border_class);
       tinymce_ed.selection.setContent (new_txt);
       if (label_will_have_multiple_targets_b) {
@@ -1151,9 +1150,8 @@ function create_text_target (htm, assoc_id, sib_id, border_class) {
       }
    }
 
-   // Reassemble.  Include whole thing in another span, in case need to restrict
-   // siblings search to immediate siblings (multiple targets).
-   var new_htm = '<span class="text_target_wrapper">' + tokens.join ('') + '</span>';
+   // Reassemble.
+   var new_htm = tokens.join ('');
    if (debug[0]) {
       console.log ('[create_text_target] i_first, i_last, n_texts:', i_first, i_last, n_texts);
       console.log ('[create_text_target] new_htm:', new_htm);
@@ -1420,6 +1418,22 @@ function process_question (question_html, doing_wrapped_b) {
       question_html = r.new_html;
    }
 
+   // If there's a comment at the end -- that is, just opening tags, 
+   // comment, closing tags, and whitespace -- delete it temporarily, add
+   // back to end when done.
+   var comment_html = '';
+
+   // This regex assumes no left square bracket in comment -- couldn't get non-
+   // greedy match to work.
+   var comment_pos = question_html.search (/(<[^\/][^>]*>\s*)*\[!*\][^\[]*\[\/!*\]\s*(<\/[^>]*>s*)*$/m);
+   if (comment_pos != -1) {
+      comment_html = question_html.substr (comment_pos);
+      question_html = question_html.substr (0, comment_pos);
+      if (debug[0]) {
+         console.log ('[process_question] comment_html:', comment_html);
+      }
+   }
+
    // Look for not-yet-wrapped labels in this question.  If not followed by
    // [f*] and [fx], add shortcodes and canned responses after wrap.
    label_start_tags = ['[l]'];
@@ -1432,13 +1446,15 @@ function process_question (question_html, doing_wrapped_b) {
       question_html = r.new_html;
 
       // Add wrapper for question only if not wrapped already.  Include div
-      // at bottom for title for div bottom border.
+      // at bottom for title for div bottom border.  Add comment, if there,
+      // back.
       if (! doing_wrapped_b) {
          question_html = '<div class="qwizzled_question">'
                        +    question_html 
                        +    '<div class="qwizzled_question_bottom_border_title" title="' + T ('End of labeled-diagram question') +'">'
                        +    '</div>'
-                       + '</div>';
+                       + '</div>'
+                       + comment_html;
       }
    }
 
@@ -1484,11 +1500,10 @@ function process_labels (question_html, label_start_tags, doing_wrapped_b) {
       }
 
       // If any comments inside label, move to after the label (save, delete,
-      // add back later).  Include whitespace and opening/closing <p> or <h*>
-      // tags.
+      // add back later).  Include whitespace and opening/closing tags.
       var new_label_html = label_html;
       var label_comments = '';
-      var re = new RegExp ('\\s*(<[ph][^>]*>)*\\s*\\[!\\][\\s\\S]*?\\[\\/!\\]\\s*(<\\/[ph][^>]*>)*\\s*', 'gm');
+      var re = new RegExp ('\\s*(<[^\/][^>]*>)*\\s*\\[!*\\][\\s\\S]*?\\[\\/!*\\]\\s*(<\\/[^>]*>)*\\s*', 'gm');
       var m = new_label_html.match (re);
       if (m) {
          label_comments = m.join ('');
@@ -1548,6 +1563,9 @@ function process_labels (question_html, label_start_tags, doing_wrapped_b) {
             }
             new_label_html = '<div class="qwizzled_label' + highlight + '"' + style + '>' + new_label_html + '</div>'; 
 
+            // Add back comments, if any.
+            new_label_html += label_comments;
+
             // Now check feedback for this label.
             var fc_b = false;
             var fx_b = false;
@@ -1576,8 +1594,6 @@ function process_labels (question_html, label_start_tags, doing_wrapped_b) {
             }
             new_label_html += feedback_htmls.join ('\n');
 
-            // Add back comments, if any.
-            new_label_html += label_comments;
             new_question_html = new_question_html.replace (label_html, new_label_html);
          }
       }
@@ -1716,7 +1732,7 @@ function parse_html_block (htm, qtags, qnext_tags, is_all_whitespace_b) {
    // Include opening tags before the qwiz/qcard tags in each case
    // -- a series of opening tags with possible whitespace in between, but
    // nothing else.
-   var opening_pat = '(\\s*(<[^/][^>]*?>\\s*)*?)'; 
+   var opening_pat = '(\\s*(<[^/][^>]*>\\s*)*?)'; 
 
    var tags_pat = opening_pat + tags_to_pat (qtags);
    var next_tags_pat = opening_pat + tags_to_pat (qnext_tags);
@@ -1815,6 +1831,15 @@ function T (string) {
    var t_string = tinymce.translate (string);
 
    return t_string;
+}
+
+
+// -----------------------------------------------------------------------------
+// Current system seconds as unique ID.
+function time_id () {
+   var now = new Date ();
+   var now_millisec = now.getTime ();
+   return parseInt (now_millisec / 1000.0);
 }
 
 
