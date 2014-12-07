@@ -1,6 +1,11 @@
 /*
- * Version 2.22 2014-11-??
+ * Version 2.22 2014-12-07
  * Multiple targets for a single label.
+ * Tolerate whitespace before [h].
+ * Fix check for paragraph with header plus something else -- don't delete.
+ * Reinstate containment for labels -- by table size.
+ * qtarget_sibs-... instead of text_target_wrapper (except for backwards compatibility).
+ * Don't allow draggable labels to be "underneath" already-placed labels.
  *
  * Version 2.21 2014-12-02
  * Workaround for Firefox 33.1 problem with long regular expression and long
@@ -184,16 +189,16 @@ function process_html () {
 
       // See if only whitespace outside [!] ... [/!].
       var comment_htm = $ (this).html ();
-      if (comment_htm.search (/\s*(<.+?>)*\s*\[!\][\s\S]*?\[\/!\]\s*(<.+?>)*\s*/m) == 0) {
+      if (comment_htm.search (/\s*(<.+?>)*\s*\[!+\][\s\S]*?\[\/!+\]\s*(<.+?>)*\s*$/m) == 0) {
          $ (this).remove ();
       }
    });
 
    // Look for [qwiz] and [/qwiz] that are only thing inside parents (e.g.,
    // <p>[qwiz]</p>).  Replace with "unwrapped" content if so.
-   $ ('p:contains("qwiz]"), :header:contains("qwiz]")').each (function () {
+   $ ('p:contains("qwiz"), :header:contains("qwiz")').each (function () {
       var tag_htm = $ (this).html ();
-      if (tag_htm.search (/\s*\[\/{0,1}qwiz\]\s*/m) == 0) {
+      if (tag_htm.search (/\s*\[\/{0,1}qwiz[^\]]*\]\s*/m) == 0) {
          $ (this).replaceWith (tag_htm);
       }
    });
@@ -230,7 +235,7 @@ function process_html () {
 
             // Take out any remaining [!]...[\!] comments (those that were not
             // inside paragraph or header elements).
-            new_htm = new_htm.replace (/\[!\][\s\S]*?\[\/!\]/gm, '');
+            new_htm = new_htm.replace (/\[!+\][\s\S]*?\[\/!+\]/gm, '');
 
             // Check that there are pairs.
             var do_not_process_htm = check_qwiz_tag_pairs (new_htm);
@@ -255,7 +260,7 @@ function process_html () {
                      var new_qwiz_html = process_qwiz_pair (qwiz_matches[i_qwiz]);
 
                      // Let's take out <p...> and <h...> from before [qwiz].
-                     new_htm = new_htm.replace (/(<[ph][^>]*?>\s*)*?\[qwiz[\s\S]*?\[\/qwiz\]/m, new_qwiz_html);
+                     new_htm = new_htm.replace (/(<[ph][^>]*>\s*)*?\[qwiz[\s\S]*?\[\/qwiz\]/m, new_qwiz_html);
                   }
                   if (debug[3]) {
                      console.log ('process_html] new_htm:', new_htm);
@@ -480,7 +485,6 @@ this.label_dropped = function (target_obj, label_obj) {
       label_copy_obj.appendTo (target_obj);
       label_copy_obj.css ({position: 'absolute', left: '4px', top: '50%', transform: 'translateY(-50%)'});
       label_copy_obj.removeClass ('qwizzled_label_unplaced'); 
-      //label_copy_obj.('disable').removeClass ('qwizzled_label_unplaced'); 
       label_copy_obj.find ('.qwizzled_highlight_label').css ('cursor', 'default');
 
       // Move original label back to original position.
@@ -499,14 +503,18 @@ this.label_dropped = function (target_obj, label_obj) {
 
       // This target no longer droppable.  If div, just this.  If span (text
       // target, possibly with multiple spans) find relevant siblings.
-      //$ ('div#qwiz' + i_qwiz + '-q' + i_question + ' .qwizzled_target-' + assoc_id).droppable ('option', 'disabled', true);
-      if (target_obj[0].tagName == 'DIV') {
+      if (target_obj[0].tagName.toLowerCase () == 'div') {
          target_obj.droppable ('option', 'disabled', true);
       } else {
-         if (debug[0]) {
-            console.log ('[label_dropped] target_obj.siblings (\'span\').andSelf ():', target_obj.siblings ('span').andSelf ());
+         var classes = target_obj.attr ('class');
+         var m = classes.match (/qtarget_sib-[0-9]*/);
+         if (m) {
+            $ ('span.' + m[0]).droppable ('option', 'disabled', true);
+         } else {
+
+            // Backwards compatibility -- assume they're in a wrapper span.
+            target_obj.siblings ('span').andSelf ().droppable ('option', 'disabled', true);
          }
-         target_obj.siblings ('span').andSelf ().droppable ('option', 'disabled', true);
       }
        
       // Increment number of labels correctly placed.  See if done with
@@ -861,8 +869,11 @@ function add_style () {
    s.push ('}');
 
    s.push ('.qwizzled_label {');
-   s.push ('   z-index:         2;');
    s.push ('   -webkit-user-select: none;');
+   s.push ('}');
+
+   s.push ('.qwizzled_label_unplaced {');
+   s.push ('   z-index:         2;');
    s.push ('}');
 
    s.push ('.qwizzled_highlight_label {');
@@ -889,7 +900,7 @@ function add_style () {
    s.push ('}');
 
    s.push ('.qbutton {');
-   s.push ('   margin-bottom: 10px;');
+   s.push ('   margin-bottom: 2px;');
    s.push ('   border-top: 1px solid #96d1f8;');
    s.push ('   background: #65a9d7;');
    s.push ('   background: -webkit-gradient(linear, left top, left bottom, from(#3e779d), to(#65a9d7));');
@@ -897,7 +908,7 @@ function add_style () {
    s.push ('   background: -moz-linear-gradient(top, #3e779d, #65a9d7);');
    s.push ('   background: -ms-linear-gradient(top, #3e779d, #65a9d7);');
    s.push ('   background: -o-linear-gradient(top, #3e779d, #65a9d7);');
-   s.push ('   padding: 5px 10px;');
+   s.push ('   padding: 3px 3px;');
    s.push ('   -webkit-border-radius: 8px;');
    s.push ('   -moz-border-radius: 8px;');
    s.push ('   border-radius: 8px;');
@@ -920,6 +931,9 @@ function add_style () {
    s.push ('.qbutton:active {');
    s.push ('   border-top-color: #1b435e;');
    s.push ('   background: #1b435e;');
+   s.push ('}');
+   s.push ('.qbutton p {');
+   s.push ('   margin: 0px;');
    s.push ('}');
 
    s.push ('</style>');;
@@ -952,7 +966,7 @@ function process_qwiz_pair (htm) {
 
    // Capture any initial closing tags after [qwiz ...] -- will put them in
    // front of <div> that replaces [qwiz ...].
-   var m = htm.match (/\[qwiz[^\]]*\]((<\/[^>]*?>\s*)*)/m, '');
+   var m = htm.match (/\[qwiz[^\]]*\]((<\/[^>]+>\s*)*)/m, '');
    if (m) {
       var initial_closing_tags = m[1];
       new_htm += initial_closing_tags;
@@ -962,7 +976,7 @@ function process_qwiz_pair (htm) {
    }
 
    // Delete [qwiz], any initial closing tags.
-   htm = htm.replace (/\[qwiz[^\]]*\]((<\/[^>]*?>\s*)*)/m, '');
+   htm = htm.replace (/\[qwiz[^\]]*\]((<\/[^>]+>\s*)*)/m, '');
 
    // Delete any initial whitespace.
    htm = trim (htm);
@@ -971,6 +985,15 @@ function process_qwiz_pair (htm) {
    if (htm.search (/\[(q|<code><\/code>q)([^\]]*)\]/m) == -1) {
       errmsgs.push (T ('Did not find question tags ("[q]") for') + ' qwiz ' + (i_qwiz + 1));
    } else {
+
+      // See if html up to first shortcode is just whitespace, including empty
+      // paragraphs.  Limit to first 2000 characters.
+      var whitespace = parse_html_block (htm.substr (0, 2000), ['^'], ['[h]', '[i]', '[q]', '[q '], 'return whitespace');
+      if (whitespace) {
+
+         // Yes, delete it.
+         htm = htm.replace (whitespace, '');
+      }
 
       // See if header.  Sets header_html global variable.
       htm = process_header (htm, i_qwiz, 0, true);
@@ -1020,7 +1043,7 @@ function process_qwiz_pair (htm) {
       process_topics (i_qwiz, question_tags);
 
       // Capture any opening tags before each "[q...] tag.
-      var matches = htm.match (/(<[^\/][^>]*?>\s*)*?(\[q[ \]]|<div class="qwizzled_question">)/gm);
+      var matches = htm.match (/(<[^\/][^>]*>\s*)*?(\[q[ \]]|<div class="qwizzled_question">)/gm);
       var q_opening_tags = [];
       var n_q_opening_tags = matches.length;
       for (var i_tag=0; i_tag<n_q_opening_tags; i_tag++) {
@@ -1489,7 +1512,22 @@ function display_question (i_qwiz, i_question) {
       qwizdata[i_qwiz].n_labels_correct = 0;
       qwizdata[i_qwiz].n_label_attempts = 0;
       if (qwizq_obj.find ('[class*="qwizzled_n_targets"]').length) {
-         qwizdata[i_qwiz].n_label_targets = qwizq_obj.find ('div.qwizzled_target, span.text_target_wrapper').length;
+
+         // This collects multiple spans if they're spread across a text target.
+         // If don't have qtarget_sib... just count, but de-dup sibs.
+         var n_label_targets = 0;
+         var target_count = new Object ();
+         qwizq_obj.find ('div.qwizzled_target, span.qwizzled_target').each (function () {
+            var classes = $ (this).attr ('class');
+            var m = classes.match (/qtarget_sib-[0-9]*/);
+            if (m) {
+               var qwizzled_target_assoc_id = m[0];
+               target_count[qwizzled_target_assoc_id] = 1;
+            } else {
+               n_label_targets++;
+            }
+         });
+         qwizdata[i_qwiz].n_label_targets = n_label_targets + Object.keys (target_count).length;
       } else {
          qwizdata[i_qwiz].n_label_targets = qwizq_obj.find ('div.qwizzled_label').length;
       }
@@ -1530,7 +1568,7 @@ function process_question (i_qwiz, i_question, htm, opening_tags) {
 
    // Span for default indented paragraph style for choices.  Want this ahead of
    // any opening tags user put in before first "[c]".
-   var span_pos = htm.search (/(<[^\/][^>]*?>\s*)*?\[c\*{0,1}\]/m);
+   var span_pos = htm.search (/(<[^\/][^>]*>\s*)*?\[c\*{0,1}\]/m);
    if (span_pos == -1) {
       errmsgs.push (T ('Did not find choices ("[c]") for') + ' qwiz ' + (i_qwiz + 1) + ', question ' + (i_question + 1));
       new_htm = '';
@@ -1610,10 +1648,11 @@ function process_question (i_qwiz, i_question, htm, opening_tags) {
                     + choice_html + '</span>';
       } else {
 
-         // Only one choice - do as regular button rather than radio.
+         // Only one choice - do as regular button rather than radio.  Left
+         // margin to clear Qwiz icon on first page.
          choice_html = choice_html.replace (/\[c\*{0,1}\]/m, '');
          n_correct = 1;
-         new_htm += '<button class="qbutton" onclick="' + qname + '.process_choice (\'qwiz' + i_qwiz + '-q' + i_question + '-a' + i_choice + '\')">' + choice_html + '</button>\n'
+         new_htm += '<button class="qbutton" style="margin-left: 20px;" onclick="' + qname + '.process_choice (\'qwiz' + i_qwiz + '-q' + i_question + '-a' + i_choice + '\')">' + choice_html + '</button>\n'
       }
    }
 
@@ -1638,8 +1677,11 @@ function process_question (i_qwiz, i_question, htm, opening_tags) {
    // . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
    // Find feedback alternatives for this question, make into alternative divs.
    // Feedback html -- from opening tags before first [f] through end.
-   var m = remaining_htm.match (/(<[^\/][^>]*?>\s*)*?\[f\][\s\S]*/m);
-   var feedback_html = m[0];
+   var m = remaining_htm.match (/(<[^\/][^>]*>\s*)*?\[f\][\s\S]*/m);
+   var feedback_html = '';
+   if (m) {
+      feedback_html = m[0];
+   }
    if (debug[2]) {
       console.log ('[process_question] feedback_html: ', feedback_html);
    }
@@ -1672,7 +1714,7 @@ function process_question (i_qwiz, i_question, htm, opening_tags) {
             console.log ('[process_question] feedback_item_html: ', feedback_item_html);
          }
 
-         // Create a div for each 
+         // Create a div for each.
          feedback_divs.push (
                create_feedback_div_html (i_qwiz, i_question, i_item,
                                          feedback_item_html)
@@ -1889,7 +1931,7 @@ function process_qwizzled (i_qwiz, i_question, question_htm, opening_tags,
          console.log ('[process_qwizzled] feedback_item_html: ', feedback_item_html);
       }
 
-      // Create a div for each 
+      // Create a div for each.
       feedback_divs.push (
             create_feedback_div_html (i_qwiz, i_question, parseInt (i_item/2),
                                       feedback_item_html, c_x)
@@ -1943,7 +1985,7 @@ this.init_drag_and_drop = function (qwizq_elm) {
          console.log ('                       parents (\'.qwizq\':', $ (this).parents ('.qwizq'));
       }
       $ (this).draggable ({
-         //containment:   $ (this).parents ('.qwizq'),
+         containment:   $ (this).parents ('table.qwizzled_table'),
          start:         function (event, ui) {
 
                            // If label previously incorrectly placed, reset
@@ -2048,6 +2090,10 @@ function parse_html_block (htm, qtags, qnext_tags, ignore_nbsp_b) {
       console.log ('[parse_html_block] qtags: ', qtags, ', htm: ', htm);
    }
 
+   // String is presumably "return whitespace".  Flag to do so only if is all
+   // whitespace (including empty paragraphs).
+   var return_whitespace_b = typeof (ignore_nbsp_b) == 'string';
+
    // Add a default "end" shortcode that will always be found.
    var ZendZ = '[ZendZ]';
    htm += ZendZ;
@@ -2056,8 +2102,7 @@ function parse_html_block (htm, qtags, qnext_tags, ignore_nbsp_b) {
    // Include opening tags before the qwiz/qcard tags in each case.
    // -- a series of opening tags with possible whitespace in between, but
    // nothing else.
-   var opening_pat = '(\\s*(<[^/][^>]*?>\\s*)*?)'; 
-
+   var opening_pat = '(\\s*(<[^/][^>]*>\\s*)*?)'; 
    var tags_pat = opening_pat + tags_to_pat (qtags);
    var next_tags_pat = opening_pat + tags_to_pat (qnext_tags);
 
@@ -2087,10 +2132,13 @@ function parse_html_block (htm, qtags, qnext_tags, ignore_nbsp_b) {
 
       // If flag set, also ignore &nbsp;
       if (ignore_nbsp_b != undefined) {
-         htm_wo_tags = htm_wo_tags.replace (/&nbsp;/g, '');
+         htm_wo_tags = htm_wo_tags.replace (/&nbsp;/gm, '');
       }
-      if (htm_wo_tags.search (/\S/) == -1) {
-         htm_block = '';
+      var is_whitespace_b = htm_wo_tags.search (/\S/) == -1;
+      if (is_whitespace_b) {
+         if (! return_whitespace_b) {
+            htm_block = '';
+         }
       /*
       } else {
          var i_qnext_tag = 7 + qtags.length;
@@ -2104,6 +2152,12 @@ function parse_html_block (htm, qtags, qnext_tags, ignore_nbsp_b) {
             htm_block += closing_tags;
          }
       */
+      }
+
+      // If returning only whitespace, and not all whitespace, return empty
+      // string.
+      if (return_whitespace_b && ! is_whitespace_b) {
+         htm_block = '';
       }
    } else {
 

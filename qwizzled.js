@@ -1,4 +1,11 @@
 /*
+ * Version 2.22 2014-11-07
+ * Multiple targets for a single label.
+ * Accommodate image resizing (resize wrapper, reposition targets).
+ * Don't use text_target_wrapper (rely on qtarget_sibs-... instead).
+ * Keep [!] comments at end of labeled-diagram question outside the question div.
+ * Fix: made headers into labels.
+ *
  * Version 2.18 2014-11-16
  * More backwards compatibility fixes (labeled diagrams assoc_id).
  * Move comments ([!] ... [/!] after labels, delete trailing whitespace in
@@ -70,8 +77,12 @@ var errmsgs = [];
 
 var n_qwizzes = 0;
 
+var no_q_code_b;
+var any_labeled_diagram_questions_b;
+
 var tinymce_ed;
 var waiting_for_label_click_b = false;
+var label_will_have_multiple_targets_b = false;
 var waiting_for_target_select_b = false;
 var qwizzled_question_obj;
 var el_label_div;
@@ -170,9 +181,15 @@ this.show_main_menu = function (ed, qwiz_button_b) {
    mm.push ('      <img src="' + qwizzled_plugin.url + 'images/icon_exit_red.png" class="icon_main_menu_exit" onclick="qwizzled.exit_main_menu ()" />');
    mm.push ('   </div>');
    mm.push ('   <div id="qwizzled_main_menu_items">');
-   mm.push ('      <div class="qwizzled_main_menu_item" onclick="qwizzled.create_target1 ()" title="Create a target &ldquo;drop zone&rdquo; for a label - click here, then click label">');
+   mm.push ('      <div class="qwizzled_main_menu_item" onclick="qwizzled.create_target1 (0)" title="Create a target &ldquo;drop zone&rdquo; for a label - click here, then click label">');
    mm.push ('         Create target for a label');
-   mm.push ('         <span id="create_target_spinner">');
+   mm.push ('         <span id="create_target_spinner" class="menu_spinner">');
+   mm.push ('           <img src="' + qwizzled_plugin.url + 'images/spinner16x16.gif" border="0" />');
+   mm.push ('         </span>');
+   mm.push ('      </div>');
+   mm.push ('      <div class="qwizzled_main_menu_item" onclick="qwizzled.create_target1 (1)" title="The same label may be correctply placed in more than one target &ldquo;drop zone&rdquo;">');
+   mm.push ('         Create another target for a label');
+   mm.push ('         <span id="create_another_target_spinner" class="menu_spinner">');
    mm.push ('           <img src="' + qwizzled_plugin.url + 'images/spinner16x16.gif" border="0" />');
    mm.push ('         </span>');
    mm.push ('      </div>');
@@ -187,6 +204,64 @@ this.show_main_menu = function (ed, qwiz_button_b) {
    // Make menu draggable.
    $ ('#qwizzled_main_menu').draggable ({handle: '#qwizzled_main_menu_header'});
 
+   // Make anything that was previously draggable draggable and anything that 
+   // was previously resizable resizable.
+   reinit_dragging ();
+
+   // Bind TinyMCE image/object selects (note: doesn't apply to text) to
+   // function.  UNNEEDED.  Mouseup plus TinyMCE selection.getContent () works
+   // for <img .../> html.
+   /*
+   tinymce_ed.on ('ObjectSelected', function (e) {
+      q.target_object_selected (e);
+   });
+   */
+
+   // Listen for resize events -- if a wrapped image (one that has associated
+   // targets) is resized, resize wrapper with it.
+   tinymce_ed.on ('ObjectResized', function (e) {
+      if (e.target.nodeName == 'IMG') {
+         var image_obj = $ (e.target);
+
+         // Look for parent with id that starts with "qwizzled_img_wrapper".
+         var image_wrapper_obj = image_obj.parents ('[id^="qwizzled_img_wrapper"]');
+         if (debug[0]) {
+            console.log ('resized:', e.target);
+            console.log ('width:', e.width, 'height:', e.height);
+            console.log ('image_obj:', image_obj);
+            console.log ('image_wrapper_obj:', image_wrapper_obj);
+         }
+         if (image_wrapper_obj.length) {
+
+            // Grab current width and height to calculate scaling factors.
+            var old_width  = image_wrapper_obj.width ();
+            var old_height = image_wrapper_obj.height ();
+            var width_factor  = e.width  / old_width;
+            var height_factor = e.height / old_height;
+
+            // data-mce-style attribute clobbers resize info (presumably during
+            // TinyMCE save process).
+            image_wrapper_obj.removeAttr ('data-mce-style').css ({width: e.width + 'px', height: e.height + 'px'});;
+
+            // Reposition the targets consistent with the resize (but let's not
+            // resize the targets).
+            image_wrapper_obj.find ('.qwizzled_target').each (function () {
+               var position = $ (this).position ();
+               var old_left = position.left;
+               var old_top  = position.top;
+               var new_left = old_left * width_factor;
+               var new_top  = old_top  * height_factor;
+               $ (this).css ({left: new_left + 'px', top: new_top + 'px'});
+            });
+         }
+      }
+   });
+
+};
+
+
+// -----------------------------------------------------------------------------
+function reinit_dragging () {
    // Make anything that was previously draggable draggable and anything that 
    // was previously resizable resizable.  Also, remove the 'data-mce-style'
    // attribute -- however it's used, it clobbers drag and resize info.
@@ -208,17 +283,7 @@ this.show_main_menu = function (ed, qwiz_button_b) {
          $ (this).css ({'margin-right': -(ui_obj.size.width + horizontal_margin_adjust) + 'px', 'margin-bottom': -(ui_obj.size.height + vertical_margin_adjust) + 'px'});
       }
    }).removeAttr ('data-mce-style');
-
-   // Bind TinyMCE image/object selects (note: doesn't apply to text) to
-   // function.  UNNEEDED.  Mouseup plus TinyMCE selection.getContent () works
-   // for <img .../> html.
-   /*
-   tinymce_ed.on ('ObjectSelected', function (e) {
-      q.target_object_selected (e);
-   });
-   */
-
-};
+}
 
 
 // -----------------------------------------------------------------------------
@@ -227,8 +292,9 @@ this.exit_main_menu = function () {
 
    $ ('#qwizzled_main_menu').hide ();
 
-   waiting_for_target_select_b = false;
-   waiting_for_label_click_b   = false;
+   waiting_for_target_select_b        = false;
+   waiting_for_label_click_b          = false;
+   label_will_have_multiple_targets_b = false;
 }
 
 
@@ -290,7 +356,7 @@ function add_style () {
    s.push ('   border:          1px solid white;');
    s.push ('}');
 
-   s.push ('#create_target_spinner {');
+   s.push ('.menu_spinner {');
    s.push ('   visibility:         hidden;');
    s.push ('}');
 
@@ -434,7 +500,7 @@ function add_style_edit_area () {
 
 // -----------------------------------------------------------------------------
 // Create a target for a label -- part 1 -- set up to wait for click on label. 
-this.create_target1 = function () {
+this.create_target1 = function (multiple_targets_f) {
 
    errmsgs = [];
 
@@ -444,19 +510,19 @@ this.create_target1 = function () {
       return;
    }
 
-   // If already waiting for click on label, do nothing (or somehow reiterate
-   // instruction/feedback).
-   // ...
-
    // Show spinner -- we're working on it!
-   $ ('#create_target_spinner').css ('visibility', 'visible');
+   if (multiple_targets_f) {
+      $ ('#create_another_target_spinner').css ('visibility', 'visible');
+   } else {
+      $ ('#create_target_spinner').css ('visibility', 'visible');
+   }
 
-   setTimeout ('qwizzled.create_target2 ()', 100);
+   setTimeout ('qwizzled.create_target2 (' + multiple_targets_f + ')', 100);
 }
 
 
 // -----------------------------------------------------------------------------
-this.create_target2 = function () {
+this.create_target2 = function (multiple_targets_f) {
 
    // Preliminary check: Look for already-wrapped labels -- label divs --  and
    // make sure no new [l] shortcodes have been added inside.  If so, move out.
@@ -481,6 +547,13 @@ this.create_target2 = function () {
       }
    });
 
+   // Use jQuery to get html for already-wrapped questions.  Process labels, etc.
+   // within each.  Need to do before grab editor HTML content.
+   // Set flags (global variables).
+   no_q_code_b = true;
+   any_labeled_diagram_questions_b = false;
+   var any_new_question_div_b = process_wrapped_questions ();
+
    // Grab current editor HTML content.
    var htm = edit_area.html ();
    if (debug[0]) {
@@ -495,14 +568,13 @@ this.create_target2 = function () {
    if (! check_qwiz_tag_pairs_ok (htm)) {
 
       // Hide spinner.
-      $ ('#create_target_spinner').css ('visibility', 'hidden');
+      $ ('div#qwizzled_main_menu_items .menu_spinner').css ('visibility', 'hidden');
 
       return;
    }
 
-   // See if there are labels.  Labels already wrapped in span element look
-   // like [<code></code>l].  Get all labels between [qwiz]...[/qwiz] pairs.
-   // If any labels not yet wrapped in an inline-block span element, do so.
+   // We'll get all labels in unwrapped questions (wrapped questions done above)
+   // [qwiz]...[/qwiz] pairs.  Check that there are such pairs.
    var qwiz_matches = htm.match (/\[qwiz[\s\S]*?\[\/qwiz\]/gm);
    if (! qwiz_matches) {
       report_errors ();
@@ -513,50 +585,24 @@ this.create_target2 = function () {
       console.log ('[create_target2] n_qwizzes: ', n_qwizzes);
    }
 
-   // Loop over qwiz-tag pairs, and over [q] questions within pair.
-   var no_q_code_b = true;
-   var any_labeled_diagram_questions_b = false;
+   // For not-yet-wrapped questions, loop over qwiz-tag pairs, and then over
+   // [q] questions within each pair.
+   // If any labels not yet wrapped in an inline-block span element, do so.
    var any_new_html_b = false;
    for (i_qwiz=0; i_qwiz<n_qwizzes; i_qwiz++) {
 
-      // Find questions that have already been wrapped -- check that no
-      // new [q] tags inside, find labels that haven't been wrapped, wrap 
-      // them.  If empty div (where "empty" includes <p>&nbsp;</p>), delete.
-      var question_start_tags = ['<div class="qwizzled_question">'];
-      var r = process_questions (qwiz_matches[i_qwiz], question_start_tags, true);
-      var any_wrapped_question_has_labels_b = r.any_labels_b;
-      var new_html = r.new_html;
-      if (new_html) {
-         any_new_html_b = true;
-         htm = htm.replace (qwiz_matches[i_qwiz], new_html);
-      }
-
-      // Find questions that haven't been wrapped -- see if labels [l] inside,
-      // along with associated feedback ([f*] and [fx]).  Wrap labels.  If no
-      // feedback given, create empty (= use canned response) shortcodes.
-      // html returned only if labels inside.  '[q {^]}+]'
+      // See if labels [l] inside, along with associated feedback ([f*] and
+      // [fx]).  Wrap labels.  If no feedback given, create with canned
+      // response.  html returned only if labels inside.  
       question_start_tags = ['[q]', '[q '];
-      r = process_questions (qwiz_matches[i_qwiz], question_start_tags, false);
-      var any_notwrapped_question_has_labels_b = r.any_labels_b;
-      new_html = r.new_html;
+      new_html = process_notwrapped_questions (qwiz_matches[i_qwiz], question_start_tags, false);
       if (new_html) {
          any_new_html_b = true;
          htm = htm.replace (qwiz_matches[i_qwiz], new_html);
-      }
-
-      if (any_wrapped_question_has_labels_b || any_notwrapped_question_has_labels_b) {
-         any_labeled_diagram_questions_b = true;
-      } else {
-
-         // See if reason for no labeled diagrams is no [q] shortcodes.
-         if (qwiz_matches[i_qwiz].search (/<div class="qwizzled_question|\[q[ \]]/m) != -1) {
-            no_q_code_b = false;
-         }
       }
    }
 
    if (! any_labeled_diagram_questions_b) {
-
       if (no_q_code_b) {
          alert (T ('Did not find any questions [q] within [qwiz]...[/qwiz] shortcode pairs'));
       } else {
@@ -564,7 +610,7 @@ this.create_target2 = function () {
       }
 
       // Hide spinner.
-      $ ('#create_target_spinner').css ('visibility', 'hidden');
+      $ ('div#qwizzled_main_menu_items .menu_spinner').css ('visibility', 'hidden');
 
       return
    }
@@ -573,19 +619,17 @@ this.create_target2 = function () {
 
       // Update displayed content.
       edit_area.html (htm);
+   }
 
+   if (any_new_html_b || any_new_question_div_b) {
       // Find paragraphs and headers within labels, wrap their inner html with 
       // highlight span if haven't already done so.
-      edit_area.find ('*.qwizzled_label > p, :header').each (function () {
+      edit_area.find ('*.qwizzled_label > p, *.qwizzled_label > :header').each (function () {
          var innerhtm = $ (this).html ();
          if (innerhtm.search ('qwizzled_highlight_label') == -1) {
             $ (this).html ('<span class="qwizzled_highlight_label qwizzled_highlight_label_border">' + innerhtm + '</span>');
          }
       });
-
-      // Find targets.  Get rid of <br> that WordPress likes to put in.
-      // DKTMP
-      //edit_area.find ('div.qwizzled_target').html ('');
    }
 
    // For all images within qwizzled divs, ignore max-width set by WordPress.
@@ -613,9 +657,16 @@ this.create_target2 = function () {
    // Set flag that waiting for label to be clicked.
    waiting_for_label_click_b = true;
 
+   // Set indicator that label can be placed in any of several targets.
+   label_will_have_multiple_targets_b = multiple_targets_f == 1;
+
    // Provide instruction/feedback.
+   var style = 'background: white;';
+   if (multiple_targets_f) {
+      style += ' border-color: red;';
+   }
    var click_on_a_label =   'Click on a '
-                          + '<span class="qwizzled_highlight_label_border" style="background: white;">'
+                          + '<span class="qwizzled_highlight_label_border" style="' + style + '">'
                           +    'label'
                           + '</span>'
                           + '<img src="' + qwizzled_plugin.url + 'images/icon_exit_bw.jpg" class="click_on_a_label_exit" onclick="qwizzled.exit_click_on_a_label ()" />';
@@ -625,7 +676,7 @@ this.create_target2 = function () {
    qwizzled_main_menu_feedback.stop ().html (click_on_a_label).show ().css ('opacity', '1.0');
 
    // Hide spinner -- we're ready.
-   $ ('#create_target_spinner').css ('visibility', 'hidden');
+   $ ('div#qwizzled_main_menu_items .menu_spinner').css ('visibility', 'hidden');
 
    report_errors ();
 };
@@ -636,6 +687,7 @@ this.exit_click_on_a_label = function () {
 
    qwizzled_main_menu_feedback.hide ();
    waiting_for_label_click_b = false;
+   label_will_have_multiple_targets_b = false;
 }
 
 // -----------------------------------------------------------------------------
@@ -679,37 +731,48 @@ this.label_clicked = function (local_el_label_div) {
    }
    if (assoc_id) {
 
-      // Yes.  See if user wants to replace target.
-      if (confirm ('This label already has a target.\nDo you want to replace the existing target?')) {
-         if (debug[0]) {
-            console.log ('[label_clicked] classes:', classes, ', assoc_id:', assoc_id);
-         }
-
-         // If it's a div -- a rectangle on an image -- delete it.  If it's a
-         // span or spans, replace the <span> with its content.
-         var div_span_obj = qwizzled_question_obj.find ('.qwizzled_target-' + assoc_id);
-         if (div_span_obj.length) {
-            if (div_span_obj[0].tagName == 'div') {
-               div_span_obj.remove ();
-            } else {
-               div_span_obj.each (function () {
-                  $ (this).replaceWith ($ (this).html ());
-               });
-            }
-         }
-
-         // Get the label's current border colors/style classes -- re-use for new
-         // target.
-         var label_class = $ (el_label_div).find ('.qwizzled_highlight_label').attr ('class');
-         if (debug[0]) {
-            console.log ('[label_clicked] label_class:', label_class);
-         }
-         var m = label_class.match (/qwizzled_border_class_[a-z]*/g);
-         if (m) {
-            label_border_class = m.join (' ');
-         }
+      // Yes, label has a target already.  If adding another target for same
+      // label, get border style and proceed.  Otherwise, see if user wants to
+      // replace target.
+      if (label_will_have_multiple_targets_b) {
+         label_border_class = get_label_border_class (el_label_div);
       } else {
-         create_target_b = false;
+         if (confirm ('This label already has a target.\nDo you want to replace the existing target?')) {
+            if (debug[0]) {
+               console.log ('[label_clicked] classes:', classes, ', assoc_id:', assoc_id);
+            }
+
+            // If it's a div -- a rectangle on an image -- delete it.  If it's a
+            // span or spans, replace the <span> with its content.
+            var div_span_obj = qwizzled_question_obj.find ('.qwizzled_target-' + assoc_id);
+            if (div_span_obj.length) {
+               if (div_span_obj[0].tagName.toLowerCase () == 'div') {
+                  div_span_obj.remove ();
+               } else {
+
+                  // Remove wrapper if there (backwards compatibility), remove
+                  // qwizzled_target spans (keeping content).
+                  div_span_obj.parents ('span.text_target_wrapper').contents ().unwrap ();
+                  div_span_obj.contents ().unwrap ();
+               }
+            }
+
+            // Get the label's current border colors/style classes -- re-use for new
+            // target.
+            label_border_class = get_label_border_class (el_label_div);
+         } else {
+            create_target_b = false;
+         }
+      }
+   } else {
+
+      // Label does not have a target yet.  If user clicked "Create another
+      // target..." ask if should proceed.
+      if (label_will_have_multiple_targets_b) {
+         if (! confirm ('This label does not have a target, while you clicked "Create another target for a label."  Do you want to create a target for this label?')) {
+            create_target_b = false;
+         }
+         label_will_have_multiple_targets_b = false;
       }
    }
    if (create_target_b) {
@@ -761,15 +824,14 @@ this.target_text_selected = function (e) {
    // time (in seconds) as unique ID.  We'll also use it to identify image
    // wrapper.
    if (! assoc_id) {
-      var now = new Date ();
-      var now_millisec = now.getTime ();
-      assoc_id = parseInt( now_millisec / 1000.0 );
+      assoc_id = time_id ();
    }
 
    // Pick border color and style for this label-target pair.  Count how many
    // labels in this question already associated with a target.  Count old-
    // style, too (backwards compatibility).
-   // Don't do if re-using current label border (new target for existing label).
+   // Don't do if re-using current label border (new or additional target for an
+   // existing label).
    if (label_border_class == '') {
       var labels_w_targets = qwizzled_question_obj.find ('div.qwizzled_label[class*="qtarget_assoc"], div.qwizzled_label[data-label_target_id]');
       var n_labels_w_targets = labels_w_targets.length;
@@ -812,7 +874,7 @@ this.target_text_selected = function (e) {
 
          // Won't work with captions.  Alert to delete caption and try again.
          parent_parent_tagname = node_obj.parent ().parent ()[0].tagName;
-         caption_b = parent_parent_tagname == 'DT';
+         caption_b = parent_parent_tagname.toLowerCase () == 'dt';
          if (caption_b) {
             alert (T ('Sorry, labeled diagrams do not work with images that have captions.  Please edit the image, delete the caption, and try again.'));
 
@@ -947,26 +1009,34 @@ this.target_text_selected = function (e) {
       }
       if (! caption_b) {
 
-         // Save association with target ID with label.  Use a class to avoid
-         // editors that eat the data-... attribute.  Also, set label border
-         // same as associated target border.
-         // Remove previous qtarget_assoc class if there.
-         var classes = $ (el_label_div).attr ('class');
-         var m = classes.match (/qtarget_assoc[0-9]*/g);
-         if (m) { 
-            var qtargets = m.join (' ');
-            $ (el_label_div).removeClass (qtargets);
-         }
-         $ (el_label_div).addClass ('qtarget_assoc' + assoc_id);
-         if (label_border_class == '') {
-            if ($ (el_label_div).hasClass ('qwizzled_highlight_label')) {
-               $ (el_label_div).removeClass ('qwizzled_highlight_label_border').addClass ('qwizzled_border_class_' + bcolor + ' qwizzled_border_class_' + bstyle + ' qwizzled_border_class_width');
-            } else {
-               $ (el_label_div).find ('.qwizzled_highlight_label').removeClass ('qwizzled_highlight_label_border').addClass ('qwizzled_border_class_' + bcolor + ' qwizzled_border_class_' + bstyle + ' qwizzled_border_class_width');
+         // If provided an additional target for a label, add or update label
+         // class that indicates how many targets this label can be placed in.
+         if (label_will_have_multiple_targets_b) {
+            set_mult_targets_indicator ($ (el_label_div));
+            label_will_have_multiple_targets_b = false;
+         } else {
+
+            // Save association ID between target and label with label.  Use a
+            // class to avoid editors that eat the data-... attribute.  Also, set
+            // label border same as associated target border.  Remove previous
+            // qtarget_assoc class if there.
+            var classes = $ (el_label_div).attr ('class');
+            var m = classes.match (/qtarget_assoc[0-9]*/g);
+            if (m) { 
+               var qtargets = m.join (' ');
+               $ (el_label_div).removeClass (qtargets);
+            }
+            $ (el_label_div).addClass ('qtarget_assoc' + assoc_id);
+            if (label_border_class == '') {
+               if ($ (el_label_div).hasClass ('qwizzled_highlight_label')) {
+                  $ (el_label_div).removeClass ('qwizzled_highlight_label_border').addClass ('qwizzled_border_class_' + bcolor + ' qwizzled_border_class_' + bstyle + ' qwizzled_border_class_width');
+               } else {
+                  $ (el_label_div).find ('.qwizzled_highlight_label').removeClass ('qwizzled_highlight_label_border').addClass ('qwizzled_border_class_' + bcolor + ' qwizzled_border_class_' + bstyle + ' qwizzled_border_class_width');
+               }
             }
          }
 
-         // Add target to span.  Position the target where clicked.
+         // Add target to image wrapper div.  Position the target where clicked.
          // clientX and Y are relative to document -- body in iframe in this case.
          // node_obj is our image, with jQuery offset () also relative to body in
          // iframe.  So subtraction should give us click position in image.
@@ -1010,8 +1080,16 @@ this.target_text_selected = function (e) {
       if (label_border_class == '') {
          label_border_class = 'qwizzled_border_class_' + bstyle + ' qwizzled_border_class_' + bcolor;
       }
-      var new_txt = create_text_target (selected_text, assoc_id, label_border_class);
+
+      // In case there are multiple targets for a label (also having this
+      // assoc_id, identify just this group of spans with another id).
+      sib_id = time_id ();
+      var new_txt = create_text_target (selected_text, assoc_id, sib_id, label_border_class);
       tinymce_ed.selection.setContent (new_txt);
+      if (label_will_have_multiple_targets_b) {
+         set_mult_targets_indicator ($ (el_label_div));
+         label_will_have_multiple_targets_b = false;
+      }
 
       // Save association with target ID with label.  Use class to avoid editors
       // editors that eat the data-... attribute.  Also, set label border same as
@@ -1026,7 +1104,7 @@ this.target_text_selected = function (e) {
 
 
 // -----------------------------------------------------------------------------
-function create_text_target (htm, assoc_id, border_class) {
+function create_text_target (htm, assoc_id, sib_id, border_class) {
 
    // Parse into tags and text.
    var t = parse_tags_text (htm);
@@ -1052,7 +1130,7 @@ function create_text_target (htm, assoc_id, border_class) {
    // Be sure not to include width class from border_class -- widths set by
    // classes added here.
    border_class = border_class.replace ('qwizzled_border_class_width', '');
-   var common = '<span class="qwizzled_target-' + assoc_id + ' qwizzled_target ';
+   var common = '<span class="qwizzled_target-' + assoc_id + ' qtarget_sib-' + sib_id + ' qwizzled_target ';
    if (n_texts == 0) {
       alert (T ('Error: no text selected.'));
    } else if (n_texts == 1) {
@@ -1075,13 +1153,58 @@ function create_text_target (htm, assoc_id, border_class) {
    }
 
    // Reassemble.
-   htm = tokens.join ('');
+   var new_htm = tokens.join ('');
    if (debug[0]) {
       console.log ('[create_text_target] i_first, i_last, n_texts:', i_first, i_last, n_texts);
-      console.log ('[create_text_target] htm:', htm);
+      console.log ('[create_text_target] new_htm:', new_htm);
    }
 
-   return htm;
+   return new_htm;
+}
+
+
+// -----------------------------------------------------------------------------
+function get_label_border_class (el_label_div) {
+   var label_border_class = '';
+
+   var label_class = $ (el_label_div).find ('.qwizzled_highlight_label').attr ('class');
+   if (debug[0]) {
+      console.log ('[get_label_border_class] label_class:', label_class);
+   }
+   var m = label_class.match (/qwizzled_border_class_[a-z]*/g);
+   if (m) {
+      label_border_class = m.join (' ');
+   }
+
+   return label_border_class;
+}
+
+
+// -----------------------------------------------------------------------------
+// Add or update label class that indicates how many targets in which this label
+// can be placed.
+function set_mult_targets_indicator (label_obj) {
+   var label_class = label_obj.attr ('class');
+   if (debug[0]) {
+      console.log ('[set_mult_targets_indicator] label_obj:', label_obj);
+      console.log ('[set_mult_targets_indicator] label_class:', label_class);
+   }
+   var m = label_class.match (/qwizzled_n_targets([0-9]*)/);
+   if (m) {
+
+      // Increment.  Remove existing class, add incremented.
+      var current_class = m[0];
+      var n_targets = parseInt (m[1]);
+      if (debug[0]) {
+         console.log ('[set_mult_targets_indicator] current_class:', current_class, ', n_targets:', n_targets);
+      }
+      var new_class = 'qwizzled_n_targets' + (++n_targets);
+      label_obj.removeClass (current_class).addClass (new_class);
+   } else {
+
+      // Create class.  This is first additional target, so total is 2.
+      label_obj.addClass ('qwizzled_n_targets2');
+   }
 }
 
 
@@ -1157,9 +1280,52 @@ function add_attr_value (attr, value, attributes) {
 
 
 // -----------------------------------------------------------------------------
+function process_wrapped_questions () {
+
+   var any_new_question_div_b = false;
+   edit_area.find ('div.qwizzled_question').each (function () {
+      var htm = $ (this).html ();
+      if (debug[0]) {
+         console.log ('[process_wrapped_questions] htm:', htm);
+      }
+
+      // If just tags and whitespace, delete div.
+      if (is_only_tags_and_whitespace (htm)) {
+         $ (this).remove ();
+      } else {
+      
+         // Error if new [q] inside question div.
+         if (htm.search (/\[q[ \]]/m) != -1) {
+            alert (T ('A new question shortcode [q] has been placed inside an existing question.  Please move it outside and try again.'));
+            $ ('div#qwizzled_main_menu_items .menu_spinner').css ('visibility', 'hidden');
+            exit_click_on_a_label ();
+         }
+
+         // Can set flag -- got at least one question.
+         no_q_code_b = false;
+
+         // Process already-wrapped and not-yet-wrapped labels and feedback, if any.
+         htm = process_question (htm, true);
+
+         // Replace htm if any change.
+         if (htm) {
+            any_new_question_div_b = true;
+            $ (this).html (htm);
+
+            // Reinitialize dragging.
+            reinit_dragging ();
+         }
+      }
+   });
+
+   return any_new_question_div_b;
+}
+
+
+// -----------------------------------------------------------------------------
 // Look for questions in qwiz html.  Do for each question.  doing_wrapped_b is
 // true if question start tag is "<div ...".
-function process_questions (qwiz_html, question_start_tags, doing_wrapped_b) {
+function process_notwrapped_questions (qwiz_html, question_start_tags, doing_wrapped_b) {
 
    var question_next_tags  = ['[q]', '[q ', '<div class="qwizzled_question">', '[x]', '[/qwiz]'];
 
@@ -1182,90 +1348,40 @@ function process_questions (qwiz_html, question_start_tags, doing_wrapped_b) {
          break;
       }
 
+      // Set global var.
+      no_q_code_b = false;
       var new_question_html = question_html;
-      if (doing_wrapped_b) {
 
-         // If just tags and whitespace, delete div.
-         if (rqwiz.all_whitespace) {
-            new_qwiz_html = new_qwiz_html.replace (question_html, '');
-            ipos += rqwiz.htm_index + question_html.length;
-            any_new_html_b = true;
-            continue
-         }
-
-         // Make sure nothing extraneous (label, feedback, etc.) inside "canvas"
-         // div, if there.  To check that no new '[q]' inside div, have to make
-         // sure it closes properly.
-         // DKTMP.
-         // ...
-      } else {
-
-         // Create canvas div -- up to first label if or feedback shortcode or
-         // hint if one of these present, otherwise everything.
-         var label_pos = new_question_html.search (/\[l\]|\[f*\]|\[fx\]|\[hint\]/m);
-         var label_etc_start_tags = ['[l]', '[f*]', '[fx]', '[hint]'];
-         var r = parse_html_block (new_question_html, question_start_tags, label_etc_start_tags);
-         var canvas_div_content = r.htm_block;
-         if (debug[0]) {
-            console.log ('[process_questions] canvas_div_content:', canvas_div_content);
-         }
-
-         // Include clear div in case any images.
-         var canvas_div = '<div class="qwizzled_canvas">'
-                          + canvas_div_content.replace (/\[q/, '[<code><\/code>q')
-                          + '<div style="clear: both;"></div>'
-                          + '</div>';
-         new_question_html = new_question_html.replace (canvas_div_content, canvas_div);
-         if (debug[0]) {
-            console.log ('[process_questions] new_question_html:', new_question_html);
-         }
+      // Create canvas div -- up to first label if or feedback shortcode or
+      // hint if one of these present, otherwise everything.
+      var label_pos = new_question_html.search (/\[l\]|\[f*\]|\[fx\]|\[hint\]/m);
+      var label_etc_start_tags = ['[l]', '[f*]', '[fx]', '[hint]'];
+      var r = parse_html_block (new_question_html, question_start_tags, label_etc_start_tags);
+      var canvas_div_content = r.htm_block;
+      if (debug[0]) {
+         console.log ('[process_notwrapped_questions] canvas_div_content:', canvas_div_content);
       }
 
-      // Look for already-wrapped labels in this question.  Delete empty divs.
-      // "[", "]", "*" normally escaped (so can match "[c*]", for example).
-      // "{" translated to "[", "}" to "]", "#" to "*".
-      var label_start_tags = ['<div{^>}#?class\\s#=\\s#"{^"}#?qwizzled_label'];
-      var r = process_labels (new_question_html, label_start_tags, true);
-      var any_wrapped_labels_b = r.any_labels_b;
-      var new_new_question_html = r.new_html;
-      if (new_new_question_html) {
-
-         // Since we found wrapped labels, must be case that question already
-         // wrapped.
-         any_new_html_b = true;
-         new_qwiz_html = new_qwiz_html.replace (question_html, new_new_question_html);
+      // Include clear div in case any images.
+      var canvas_div = '<div class="qwizzled_canvas">'
+                       + canvas_div_content.replace (/\[q/, '[<code><\/code>q')
+                       + '<div style="clear: both;"></div>'
+                       + '</div>';
+      new_question_html = new_question_html.replace (canvas_div_content, canvas_div);
+      if (debug[0]) {
+         console.log ('[process_notwrapped_questions] new_question_html:', new_question_html);
       }
 
-      // Look for not-yet-wrapped labels in this question.  If not followed by
-      // [f*] and [fx], add shortcodes and canned responses after wrap.
-      label_start_tags = ['[l]'];
-      var r = process_labels (new_question_html, label_start_tags, false);
-      var any_notwrapped_labels_b = r.any_labels_b;
-      var new_new_question_html = r.new_html;
-      if (new_new_question_html) {
-         any_new_html_b = true;
+      // Process labels and feedback.
+      new_question_html = process_question (new_question_html, doing_wrapped_b);
 
-         // Add wrapper for question only if not wrapped already.  Include div
-         // at bottom for title for div bottom border.
-         if (! doing_wrapped_b) {
-            new_new_question_html =   '<div class="qwizzled_question">'
-                                    +    new_new_question_html 
-                                    +    '<div class="qwizzled_question_bottom_border_title" title="' + T ('End of labeled-diagram question') +'">'
-                                    +    '</div>'
-                                    + '</div>';
-         }
-         new_qwiz_html = new_qwiz_html.replace (question_html, new_new_question_html);
-         if (debug[0]) {
-            console.log ('[process_questions] new_qwiz_html: ', new_qwiz_html);
-         }
+      if (new_question_html) {
+         any_new_html_b = true;
+         new_qwiz_html = new_qwiz_html.replace (question_html, new_question_html);
       }
 
       // Skip visited.
       ipos += rqwiz.htm_index + question_html.length;
-
-      if (any_wrapped_labels_b || any_notwrapped_labels_b) {
-         any_labels_b = true;
-      }
    }
 
    if (! any_new_html_b) {
@@ -1273,10 +1389,79 @@ function process_questions (qwiz_html, question_start_tags, doing_wrapped_b) {
    }
 
    if (debug[0]) {
-      console.log ('[process_questions] any_labels_b: ', any_labels_b, ', new_qwiz_html: ', new_qwiz_html);
+      console.log ('[process_notwrapped_questions] new_qwiz_html:', new_qwiz_html);
    }
 
-   return {'any_labels_b': any_labels_b, 'new_html': new_qwiz_html};
+   return new_qwiz_html;
+}
+
+
+// -----------------------------------------------------------------------------
+function process_question (question_html, doing_wrapped_b) {
+
+   if (debug[0]) {
+      console.log ('[process_question] doing_wrapped_b:', doing_wrapped_b);
+      console.log ('[process_question] question_html:', question_html);
+   }
+   var any_new_html_b = false;
+
+   // Look for already-wrapped labels in this question.  Delete empty divs.
+   // "[", "]", "*" normally escaped (so can match "[c*]", for example).
+   // "{" translated to "[", "}" to "]", "#" to "*".
+   var label_start_tags = ['<div{^>}#?class\\s#=\\s#"{^"}#?qwizzled_label'];
+   var r = process_labels (question_html, label_start_tags, true);
+   if (r.any_labels_b) {
+
+      // Global var.
+      any_labeled_diagram_questions_b = true;
+   }
+   if (r.new_html) {
+      any_new_html_b = true;
+      question_html = r.new_html;
+   }
+
+   // If there's a comment at the end -- that is, just opening tags, 
+   // comment, closing tags, and whitespace -- delete it temporarily, add
+   // back to end when done.
+   var comment_html = '';
+
+   // This regex assumes no left square bracket in comment -- couldn't get non-
+   // greedy match to work.  After comment, also look for opening/closing tags
+   // around whitespace/non-breaking space.
+   var comment_pos = question_html.search (/(<[^\/][^>]*>\s*)*\[!+\][^\[]*\[\/!+\]\s*(<\/[^>]+>s*)*(<[^>]+>|&nbsp;|\s)*$/m);
+   if (comment_pos != -1) {
+      comment_html = question_html.substr (comment_pos);
+      question_html = question_html.substr (0, comment_pos);
+      if (debug[0]) {
+         console.log ('[process_question] comment_html:', comment_html);
+      }
+   }
+
+   // Look for not-yet-wrapped labels in this question.  If not followed by
+   // [f*] and [fx], add shortcodes and canned responses after wrap.
+   label_start_tags = ['[l]'];
+   var r = process_labels (question_html, label_start_tags, false);
+   if (r.any_labels_b) {
+      any_labeled_diagram_questions_b = true;
+   }
+   if (r.new_html) {
+      any_new_html_b = true;
+      question_html = r.new_html;
+
+      // Add wrapper for question only if not wrapped already.  Include div
+      // at bottom for title for div bottom border.  Add comment, if there,
+      // back.
+      if (! doing_wrapped_b) {
+         question_html = '<div class="qwizzled_question">'
+                       +    question_html 
+                       +    '<div class="qwizzled_question_bottom_border_title" title="' + T ('End of labeled-diagram question') +'">'
+                       +    '</div>'
+                       + '</div>'
+                       + comment_html;
+      }
+   }
+
+   return any_new_html_b ? question_html : '';
 }
 
 
@@ -1318,11 +1503,10 @@ function process_labels (question_html, label_start_tags, doing_wrapped_b) {
       }
 
       // If any comments inside label, move to after the label (save, delete,
-      // add back later).  Include whitespace and opening/closing <p> or <h*>
-      // tags.
+      // add back later).  Include whitespace and opening/closing tags.
       var new_label_html = label_html;
       var label_comments = '';
-      var re = new RegExp ('\\s*(<[ph][^>]*>)*\\s*\\[!\\][\\s\\S]*?\\[\\/!\\]\\s*(<\\/[ph][^>]*>)*\\s*', 'gm');
+      var re = new RegExp ('\\s*(<[^\/][^>]*>)*\\s*\\[!+\\][\\s\\S]*?\\[\\/!+\\]\\s*(<\\/[^>]+>)*\\s*', 'gm');
       var m = new_label_html.match (re);
       if (m) {
          label_comments = m.join ('');
@@ -1382,6 +1566,9 @@ function process_labels (question_html, label_start_tags, doing_wrapped_b) {
             }
             new_label_html = '<div class="qwizzled_label' + highlight + '"' + style + '>' + new_label_html + '</div>'; 
 
+            // Add back comments, if any.
+            new_label_html += label_comments;
+
             // Now check feedback for this label.
             var fc_b = false;
             var fx_b = false;
@@ -1410,8 +1597,6 @@ function process_labels (question_html, label_start_tags, doing_wrapped_b) {
             }
             new_label_html += feedback_htmls.join ('\n');
 
-            // Add back comments, if any.
-            new_label_html += label_comments;
             new_question_html = new_question_html.replace (label_html, new_label_html);
          }
       }
@@ -1446,7 +1631,7 @@ function canned_feedback (correct_b) {
       var i = Math.floor (Math.random () * incorrect.length);
       response = '[fx] ' + incorrect[i] + '&nbsp; Please try again.';
    }
-   response = '<p style="font-weight: bold;">' + response + '</p>';
+   response = '<p><strong>' + response + '</strong></p>';
 
    if (debug[0]) {
       console.log ('[canned_feedback] response:', response);
@@ -1550,7 +1735,7 @@ function parse_html_block (htm, qtags, qnext_tags, is_all_whitespace_b) {
    // Include opening tags before the qwiz/qcard tags in each case
    // -- a series of opening tags with possible whitespace in between, but
    // nothing else.
-   var opening_pat = '(\\s*(<[^/][^>]*?>\\s*)*?)'; 
+   var opening_pat = '(\\s*(<[^/][^>]*>\\s*)*?)'; 
 
    var tags_pat = opening_pat + tags_to_pat (qtags);
    var next_tags_pat = opening_pat + tags_to_pat (qnext_tags);
@@ -1649,6 +1834,15 @@ function T (string) {
    var t_string = tinymce.translate (string);
 
    return t_string;
+}
+
+
+// -----------------------------------------------------------------------------
+// Current system seconds as unique ID.
+function time_id () {
+   var now = new Date ();
+   var now_millisec = now.getTime ();
+   return parseInt (now_millisec / 1000.0);
 }
 
 

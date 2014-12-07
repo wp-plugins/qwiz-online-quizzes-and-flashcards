@@ -2,7 +2,7 @@
 Contributors: dan_kirshner
 Tags: interactive quiz, quiz, flashcards, labeled diagrams
 Tested up to: 4.01
-Stable tag: 2.21
+Stable tag: 2.22
 License: GPL2
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
@@ -10,7 +10,8 @@ Qwiz lets you create quizzes and flashcard decks using simple shortcodes (such a
 
 
 == Description ==
-Easy online quizzes and flashcards for WordPress - use simple shortcodes (such as "[q]" for a question) in your page or post.  See http://dkprojects.net/qwiz   Note: Version 2.20 fixed a problem with custom widths, borders, etc. of quizzes and flashcard decks that WordPress 4.01 introduced with at least one theme (Magazine Basic).
+Easy online quizzes and flashcards for WordPress - use simple shortcodes (such as "[q]" for a question) in your page or post.  See http://dkprojects.net/qwiz
+Note: Version 2.20 fixed a problem with custom widths, borders, etc. of quizzes and flashcard decks that WordPress 4.01 introduced with at least one theme (Magazine Basic).
 
 == Installation ==
 Upload 'qwiz-online-qwizzes-wp-plugin.php' to your plugins directory ('.../wp-content/plugins').
@@ -21,8 +22,17 @@ Activate the plugin through the 'Plugins' menu in WordPress
 == Changelog ==
 
 = 2.22 =
-2014-11-??
+2014-12-07
 Multiple targets for a single label.
+Accommodate image resizing (resize wrapper, reposition targets).
+Tolerate whitespace before [h].
+Fix check for paragraph with header plus something else -- don't delete.
+Qwiz icon within <td> - keep the icon inside the border.
+Reinstate containment for labels -- by table size.
+qtarget_sibs-... instead of text_target_wrapper (except for backwards compatibility).
+Don't allow draggable labels to be "underneath" already-placed labels.
+Keep [!] comments at end of labeled-diagram question outside the question div.
+Fix: made headers into labels.
 
 = 2.21 =
 2014-12-02
