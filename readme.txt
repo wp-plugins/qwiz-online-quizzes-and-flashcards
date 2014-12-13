@@ -2,7 +2,7 @@
 Contributors: dan_kirshner
 Tags: interactive quiz, quiz, flashcards, labeled diagrams
 Tested up to: 4.01
-Stable tag: beta for 2.22
+Stable tag: 2.22
 License: GPL2
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
@@ -21,8 +21,12 @@ Activate the plugin through the 'Plugins' menu in WordPress
 
 == Changelog ==
 
-= 2.22 =
+= 2.23 =
 2014-12-??
+Explicit visible/hidden for card front/back (Chrome backface-visibility?)
+
+= 2.22 =
+2014-12-07
 Multiple targets for a single label.
 Accommodate image resizing (resize wrapper, reposition targets).
 Tolerate whitespace before [h].

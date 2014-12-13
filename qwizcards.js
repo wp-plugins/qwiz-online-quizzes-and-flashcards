@@ -1,5 +1,8 @@
 /*
- * Version 2.22 2014-12-??
+ * Version 2.23 2014-12-??
+ * Explicit visible/hidden for card front/back (Chrome backface-visibility?)
+ *
+ * Version 2.22 2014-12-07
  * Tolerate whitespace before [h].
  * Fix check for paragraph with header plus something else -- don't delete.
  * Qwiz icon within <td> - keep the icon inside the border.
@@ -48,7 +51,7 @@
  *
  * Version 2.00 2014-09-07
  * Labeled-diagrams capability, including interactive editing.
- * Chrome on Mac: fallback for Flashcards; others: prevent sub/sup showing 
+ * Chrome on Mac: fallback for Flashcards; others: prevent sub/sup showing
  * through.
  * Don't focus on textarea if first flashcard initially displayed.
  *
@@ -56,7 +59,7 @@
  * Turn off debugs!
  *
  * Version 1.01 2014-08-16
- * Remove <p>s and headers that contain only [!] ... [/!] comments.  Paragraph 
+ * Remove <p>s and headers that contain only [!] ... [/!] comments.  Paragraph
  * marks that remained after comments were deleted were taking space.
  *
  * Remove <br />s after textentry.
@@ -851,7 +854,7 @@ function tags_to_pat (tags) {
    var tags_pat = '(' + tags.join (')|(') + ')';
    tags_pat = tags_pat.replace (/([\[\]\*])/g, '\\$1');
    tags_pat = '((' + tags_pat + ')\\s*)';
-   
+
    return tags_pat;
 }
 
@@ -1413,9 +1416,13 @@ this.flip = function (i_deck) {
    var set_front_back;
    if (deckdata[i_deck].showing_front_b) {
 
-      // Hide superscripts and subscripts (!) (shows through in Safari, Chrome,
-      // "flashing" in Chrome on Mac).
-      el_front.find ('sup, sub').css ('visibility', 'hidden');
+      // Hide whole thing (Chrome randomly ignoring backface-visibility?),
+      // superscripts and subscripts (!) (shows through in Safari, Chrome,
+      // "flashing" in Chrome on Mac).  Closure for setTimeout ().
+      var hideFrontElements = function () {
+         el_front.css ('visibility', 'hidden');
+         el_front.find ('sup, sub').css ('visibility', 'hidden');
+      }
 
       // Hide qwiz icon/link.
       if (deckdata[i_deck].i_card == 0) {
@@ -1459,14 +1466,18 @@ this.flip = function (i_deck) {
       if (el_textentry.length) {
          el_textentry.css ('visibility', 'visible');
       }
+      el_front.css ('visibility', 'visible');
       el_front.find ('sup, sub').css ('visibility', 'visible');
    };
 
-   // In case was hidden, show front text box and super/subscripts, but wait 
-   // till after flip completes ("flashing" in Chrome).  (Time equal to that in
-   // flipCard.css.)
-   if (! deckdata[i_deck].showing_front_b) {
-      setTimeout (showFrontElements, 700);
+   // Doing explicit show/hide for whole front back -- Chrome seemed to 
+   // randomly ignore "backface-visibility."  Also do for front text box and
+   // super/subscripts ("flashing" in Chrome). Wait till after flip is halfway
+   // through  (Time based on that in flipCard.css.)
+   if (deckdata[i_deck].showing_front_b) {
+      setTimeout (hideFrontElements, 300);
+   } else {
+      setTimeout (showFrontElements, 300);
    }
 
    // Keep track whether showing front or back.
@@ -1756,7 +1767,7 @@ function get_qwiz_param (key, default_value) {
    }
    if (value == '') {
 
-      // qwiz_params object or key not present.  Return default value, if 
+      // qwiz_params object or key not present.  Return default value, if
       // given, or ''.
       if (default_value != undefined) {
          value = default_value;
@@ -1790,7 +1801,7 @@ qcardf.call (qcard_);
 
 // =============================================================================
 // =============================================================================
-/* ======================================================= 
+/* =======================================================
  * Flipping Cards 3D
  * By David Blanco
  *
@@ -1831,7 +1842,7 @@ qcardf.call (qcard_);
 
          var isAtLeastIE11 = !!(navigator.userAgent.match(/Trident/) && !navigator.userAgent.match(/MSIE/));
          if(isAtLeastIE11){
-               rv = 11; //if it is IE 11 
+               rv = 11; //if it is IE 11
          }
 
          return rv;
@@ -1846,28 +1857,28 @@ qcardf.call (qcard_);
 
 
       // -----------------------------------------------------------------------
-      var supports = (function() {  
-         var   div = document.createElement('div'),  
-           vendors = 'Khtml Ms O Moz Webkit'.split(' '),  
-               len = vendors.length;  
+      var supports = (function() {
+         var   div = document.createElement('div'),
+           vendors = 'Khtml Ms O Moz Webkit'.split(' '),
+               len = vendors.length;
 
-         return function(prop) {  
-           if ( prop in div.style ) return true;  
+         return function(prop) {
+           if ( prop in div.style ) return true;
 
-           prop = prop.replace(/^[a-z]/, function(val) {  
-              return val.toUpperCase();  
-           });  
+           prop = prop.replace(/^[a-z]/, function(val) {
+              return val.toUpperCase();
+           });
 
-           while(len--) {  
-              if ( vendors[len] + prop in div.style ) {  
-                 // browser supports box-shadow. Do what you need.  
-                 // Or use a bang (!) to test if the browser doesn't.  
-                 return true;  
-              }   
-           }  
-           return false;  
-         };  
-      })();  
+           while(len--) {
+              if ( vendors[len] + prop in div.style ) {
+                 // browser supports box-shadow. Do what you need.
+                 // Or use a bang (!) to test if the browser doesn't.
+                 return true;
+              }
+           }
+           return false;
+         };
+      })();
       // -----------------------------------------------------------------------
 
 
@@ -1950,7 +1961,7 @@ qcardf.call (qcard_);
             if(!$this.hasClass('mouseenter')){
                $this.addClass('mouseenter');
             }
-            
+
             direction($this.find('.over'));
 
          });
@@ -1988,12 +1999,12 @@ qcardf.call (qcard_);
          function direction($this, index){
 
             $this.stop(true, true);
-            
+
             if($this.data('autoflip') != undefined && index != undefined){
                intervals[index] = setTimeout(function(){
                                  direction($this, index);
                               }, $this.data('autoflip'));
-            }  
+            }
 
             //In auto flip feature if it has a mouseover
             if($this.data('mouse') == 'true'){
@@ -2028,23 +2039,23 @@ qcardf.call (qcard_);
             }
 
             if($this.data('direction') === 'right'){
-               
+
                $this.toggleClass('flipping-right');
 
             }else if($this.data('direction') === 'left'){
-               
+
                $this.toggleClass('flipping-left');
 
             }else if($this.data('direction') === 'top'){
-               
+
                $this.toggleClass('flipping-top');
-               
+
             }else if($this.data('direction') === 'bottom'){
-               
+
                $this.toggleClass('flipping-bottom');
-               
+
             }
-            
+
          }
 
 
@@ -2066,7 +2077,7 @@ qcardf.call (qcard_);
 
                      intervals[index] = setTimeout(function(){
                                        direction(c, index);
-                                    }, autoStart); 
+                                    }, autoStart);
 
                   })($this);
 
@@ -2090,7 +2101,7 @@ qcardf.call (qcard_);
          };
 
          if (window.addEventListener){
-           window.addEventListener('focus', restart, false); 
+           window.addEventListener('focus', restart, false);
          } else if (window.attachEvent){
            window.attachEvent('onfocus', restart);
          }
