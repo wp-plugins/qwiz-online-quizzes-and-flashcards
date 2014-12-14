@@ -1,5 +1,5 @@
 /*
- * Version 2.22 2014-11-??
+ * Version 2.22 2014-11-07
  * Multiple targets for a single label.
  * Accommodate image resizing (resize wrapper, reposition targets).
  * Don't use text_target_wrapper (rely on qtarget_sibs-... instead).
@@ -61,7 +61,7 @@ var qname = 'qwizzled';
 // Debug settings.
 var debug = [false];
 
-$ = jQuery;
+var $ = jQuery;
 
 // Private data, but global to this qwiz instance.
 var q = this;

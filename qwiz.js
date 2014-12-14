@@ -1,5 +1,5 @@
 /*
- * Version 2.22 2014-12-??
+ * Version 2.22 2014-12-07
  * Multiple targets for a single label.
  * Tolerate whitespace before [h].
  * Fix check for paragraph with header plus something else -- don't delete.
@@ -126,7 +126,7 @@ debug.push (false);    // 2 - feedback html.
 debug.push (false);    // 3 - old/new html dump.
 debug.push (false);    // 4 - question tags/topics.
 
-$ = jQuery;
+var $ = jQuery;
 
 // Private data, but global to this qwiz instance.
 var q = this;
