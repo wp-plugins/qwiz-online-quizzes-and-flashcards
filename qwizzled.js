@@ -1,4 +1,8 @@
 /*
+ * Version 2.24 2014-12-15
+ * Make $ (= jQuery) private.
+ * Alternate edit-area iframe id: wpb_tinymce_content_ifr.
+ *
  * Version 2.22 2014-11-07
  * Multiple targets for a single label.
  * Accommodate image resizing (resize wrapper, reposition targets).
@@ -61,14 +65,14 @@ var qname = 'qwizzled';
 // Debug settings.
 var debug = [false];
 
-$ = jQuery;
+var $ = jQuery;
 
 // Private data, but global to this qwiz instance.
 var q = this;
 
 // The identifier -- including qualifiers like "#" -- of the editing frame on
 // WordPress.
-var edit_area_selector = 'iframe#content_ifr';
+var edit_area_selector = 'iframe#content_ifr, iframe#wpb_tinymce_content_ifr';
 var edit_page_header;
 var edit_area;
 var qwizzled_main_menu_feedback;

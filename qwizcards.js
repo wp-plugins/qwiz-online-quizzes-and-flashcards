@@ -1,4 +1,7 @@
 /*
+ * Version 2.24 2014-12-15
+ * Make $ (= jQuery) private.
+ *
  * Version 2.23 2014-12-13
  * Explicit visible/hidden for card front/back (Chrome backface-visibility?)
  *
@@ -89,7 +92,7 @@ debug.push (false);    // 3 - old/new html dump.
 debug.push (false);    // 4 - card tags/topics.
 debug.push (false);    // 5 - "next" buttons, element objects.
 
-$ = jQuery;
+var $ = jQuery;
 
 // Private data, but global to this qcard instance.
 var q = this;

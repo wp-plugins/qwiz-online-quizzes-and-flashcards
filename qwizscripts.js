@@ -2,7 +2,7 @@
 // Once page has loaded, look for completion of both qwiz.js and qwizcards.js,
 // then turn on content display.
 // -----------------------------------------------------------------------------
-$ (document).ready (function () {
+jQuery (document).ready (function () {
 
    var n_tries = 0;
    display_content = function () {

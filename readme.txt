@@ -2,7 +2,7 @@
 Contributors: dan_kirshner
 Tags: interactive quiz, quiz, flashcards, labeled diagrams
 Tested up to: 4.01
-Stable tag: 2.23
+Stable tag: 2.24
 License: GPL2
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
@@ -21,9 +21,15 @@ Activate the plugin through the 'Plugins' menu in WordPress
 
 == Changelog ==
 
+= 2.24 =
+2014-12-15
+Alternate edit-area iframe id: wpb_tinymce_content_ifr.
+Make $ (= jQuery) private.
+Use jQuery rather than $ in qwizscripts.js.
+
 = 2.23 =
 2014-12-13
-Explicit visible/hidden for card front/back (Chrome backface-visibility?)
+Explicit visible/hidden for card front/back. (Chrome backface-visibility?)
 
 = 2.22 =
 2014-12-07

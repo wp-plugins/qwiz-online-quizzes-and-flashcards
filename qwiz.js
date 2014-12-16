@@ -1,4 +1,7 @@
 /*
+ * Version 2.24 2014-12-15
+ * Make $ (= jQuery) private.
+ *
  * Version 2.22 2014-12-07
  * Multiple targets for a single label.
  * Tolerate whitespace before [h].
@@ -126,7 +129,7 @@ debug.push (false);    // 2 - feedback html.
 debug.push (false);    // 3 - old/new html dump.
 debug.push (false);    // 4 - question tags/topics.
 
-$ = jQuery;
+var $ = jQuery;
 
 // Private data, but global to this qwiz instance.
 var q = this;
