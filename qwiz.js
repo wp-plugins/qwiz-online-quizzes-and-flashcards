@@ -1,4 +1,7 @@
 /*
+ * Version 2.25 2014-12-16
+ * Fix search for any [qwiz] shortcode.
+ *
  * Version 2.24 2014-12-15
  * Make $ (= jQuery) private.
  *
@@ -216,7 +219,7 @@ function process_html () {
       } else {
 
          // See if there is a qwiz or qwizzes.
-         var qwiz_pos = htm.search ('[qwiz]');
+         var qwiz_pos = htm.search (/\[qwiz/);
          if (qwiz_pos != -1) {
 
             // Remove and save text inside [qwizdemo] ... [/qwizdemo] pairs.
@@ -2312,7 +2315,6 @@ function check_qwiz_tag_pairs (htm) {
 
          // Check proper pairs.
          for (var i=0; i<n_tags; i++) {
-            var tag = matches[i];
             if (i % 2 == 0) {
                if (matches[i] != '[qwiz') {
                   error_b = true;

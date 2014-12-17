@@ -21,6 +21,11 @@ Activate the plugin through the 'Plugins' menu in WordPress
 
 == Changelog ==
 
+= 2.25 =
+2014-12-16
+Fix search for any [qwiz] or [qdeck] shortcodes.
+Reorder flashcard buttons, default translation: "Flip" -> "Check answer".
+
 = 2.24 =
 2014-12-15
 Alternate edit-area iframe id: wpb_tinymce_content_ifr.

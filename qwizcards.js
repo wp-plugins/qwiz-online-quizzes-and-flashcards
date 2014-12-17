@@ -1,4 +1,8 @@
 /*
+ * Version 2.25 2014-12-16
+ * Fix search for any [qdeck] shortcode.
+ * Reorder buttons, default translation: "Flip" -> "Check answer".
+ *
  * Version 2.24 2014-12-15
  * Make $ (= jQuery) private.
  *
@@ -201,7 +205,7 @@ function process_html () {
       } else {
 
          // See if there is a deck or decks.
-         var qdeck_pos = htm.search ('[qdeck]');
+         var qdeck_pos = htm.search (/\[qdeck/);
          if (qdeck_pos != -1) {
 
             // Remove and save text inside [qcarddemo] ... [/qcarddemo] pairs.
@@ -1158,7 +1162,6 @@ function check_qdeck_tag_pairs (htm) {
 
          // Check proper pairs.
          for (var i=0; i<n_tags; i++) {
-            var tag = matches[i];
             if (i % 2 == 0) {
                if (matches[i] != '[qdeck') {
                   error_b = true;
@@ -1313,11 +1316,19 @@ function init_card_order (i_deck) {
 // onclick ().  "this" for "this qcard instance".
 this.set_next_buttons = function (i_deck) {
    var htm = '';
-   htm += '<button class="qbutton" onclick="' + qname + '.got_it (' + i_deck + ')" title="' + T ('Remove this card from the stack') + '">' + T ('Got it!') + '</button> &nbsp; ';
+
+   // "Flip" / "Check answer".
+   htm += '<button class="qbutton" onclick="' + qname + '.flip (' + i_deck + ')" title="' + T ('Show the other side') + '">' + T ('Flip') + '</button> &nbsp; ';
+
+   // "Need more practice".
    if (deckdata[i_deck].n_to_go > 1) {
       htm += '<button class="qbutton next_card-qdeck' + i_deck + '" onclick="' + qname + '.next_card (' + i_deck + ')" title="' + T ('Put this card at the bottom of stack, show the next card') + '">' + T ('Need more practice') + '</button> &nbsp; ';
    }
-   htm += '<button class="qbutton" onclick="' + qname + '.flip (' + i_deck + ')" title="' + T ('Show the other side') + '">' + T ('Flip') + '</button> &nbsp; ';
+
+   // "Got it". 
+   htm += '<button class="qbutton" onclick="' + qname + '.got_it (' + i_deck + ')" title="' + T ('Remove this card from the stack') + '">' + T ('Got it!') + '</button> &nbsp; ';
+
+   // "Shuffle".
    if (deckdata[i_deck].n_to_go > 1) {
       htm += '<button class="qbutton shuffle-qdeck' + i_deck + '" onclick="' + qname + '.shuffle_order (' + i_deck + ')" title="' + T ('Randomly shuffle the remaining cards') +'">' + T ('Shuffle') + '</button> &nbsp; ';
    }
@@ -2034,10 +2045,8 @@ qcardf.call (qcard_);
                   setTimeout (toggle_front, 500);
                }
 
-               /*
-               $this.find('div.front').fadeToggle();
-               $this.find('div.back').fadeToggle();
-               */
+               //$this.find('div.front').fadeToggle();
+               //$this.find('div.back').fadeToggle();
                return;
             }
 

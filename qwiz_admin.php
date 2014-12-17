@@ -177,8 +177,10 @@ function qwiz_options_validate ($options) {
                $new_translate_strings[] = $old_string . '; ' . $new_string;
             } else {
 
-               // Check if string exists in list.
-               if (! array_key_exists ($old_string, $qwiz_T)) {
+               // Check if string exists in list.  Translation of "Flip" to
+               // "Check answer" is default.  Allow "Check answer" to be
+               // translated.
+               if ($old_string != "Check answer" && ! array_key_exists ($old_string, $qwiz_T)) {
                   add_settings_error ('qwiz-content-section', 'qwiz-translate_strings-errmsg3',
                                       'Custom labels line' . ($i + 1) . ': could not find current string ("' . $old_string . '") in list of strings.  Either incorrectly entered or missing from list (see languages/strings_to_translate.php in the Qwiz plugin directory).');
                }
