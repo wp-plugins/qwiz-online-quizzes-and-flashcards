@@ -2,7 +2,7 @@
 Contributors: dan_kirshner
 Tags: interactive quiz, quiz, flashcards, labeled diagrams
 Tested up to: 4.01
-Stable tag: 2.24
+Stable tag: 2.25
 License: GPL2
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
