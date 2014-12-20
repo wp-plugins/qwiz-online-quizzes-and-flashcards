@@ -12,7 +12,7 @@ jQuery (document).ready (function () {
          if ((qwiz_.processing_complete_b && qcard_.processing_complete_b)
                                                               || n_tries > 30) {
               
-            jQuery ('div.qwiz_wrapper, div.qdeck_wrapper').removeClass ('qwiz_shortcodes_hidden');
+            jQuery ('div.qwiz_hide_shortcodes_wrapper').removeClass ('qwiz_shortcodes_hidden');
             ok_b = true;
          }
       }

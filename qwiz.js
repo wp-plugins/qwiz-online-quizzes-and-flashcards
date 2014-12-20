@@ -312,10 +312,15 @@ function process_html () {
          }
 
          // If wrapper divs, unwrap.
-         $ (this).contents ().unwrap ();
+         if (qwiz_divs_obj.length) {
+            $ (this).contents ().unwrap ();
+         }
       }
       n_qwizzes = i_qwiz;
    });
+
+   // Set flag to display page (qwizscripts.js).
+   q.processing_complete_b = true;
 }
 
 

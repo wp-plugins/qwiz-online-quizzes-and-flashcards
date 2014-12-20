@@ -289,10 +289,15 @@ function process_html () {
          }
 
          // If wrapper divs, unwrap.
-         $ (this).contents ().unwrap ();
+         if (qdeck_divs_obj.length) {
+            $ (this).contents ().unwrap ();
+         }
       }
       n_decks = i_deck;
    });
+
+   // Set flag to display page (qwizscripts.js).
+   q.processing_complete_b = true;
 }
 
 
