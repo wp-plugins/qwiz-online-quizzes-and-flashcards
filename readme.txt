@@ -1,8 +1,8 @@
 === Qwiz - online quizzes and flashcards ===
 Contributors: dan_kirshner
 Tags: interactive quiz, quiz, flashcards, labeled diagrams
-Tested up to: 4.01
-Stable tag: 2.22
+Tested up to: 4.1
+Stable tag: 2.26
 License: GPL2
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
@@ -21,9 +21,27 @@ Activate the plugin through the 'Plugins' menu in WordPress
 
 == Changelog ==
 
-= 2.23 =
+= 2.26 =
 2014-12-??
-Explicit visible/hidden for card front/back (Chrome backface-visibility?)
+Avoid clobbering other plugins' events - WP content filter creates divs for each qwiz/qdeck - rewrite only those divs.
+On back side of card, "Flip"/"Check answer" -> "Flip back".
+Gray-out/disable "Got it!" until user clicks "Check answer".
+
+
+= 2.25 =
+2014-12-16
+Fix search for any [qwiz] or [qdeck] shortcodes.
+Reorder flashcard buttons, default translation: "Flip" -> "Check answer".
+
+= 2.24 =
+2014-12-15
+Alternate edit-area iframe id: wpb_tinymce_content_ifr.
+Make $ (= jQuery) private.
+Use jQuery rather than $ in qwizscripts.js.
+
+= 2.23 =
+2014-12-13
+Explicit visible/hidden for card front/back. (Chrome backface-visibility?)
 
 = 2.22 =
 2014-12-07

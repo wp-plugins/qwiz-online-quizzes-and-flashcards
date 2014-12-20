@@ -1,4 +1,13 @@
 /*
+ * Version 2.26 2014-12-??
+ * Look for WP content filter-created divs, rewrite only that HTML.
+ *
+ * Version 2.25 2014-12-16
+ * Fix search for any [qwiz] shortcode.
+ *
+ * Version 2.24 2014-12-15
+ * Make $ (= jQuery) private.
+ *
  * Version 2.22 2014-12-07
  * Multiple targets for a single label.
  * Tolerate whitespace before [h].
@@ -203,9 +212,23 @@ function process_html () {
       }
    });
 
-   // Read WordPress user content divs, look for inline qwiz "tags", loop
-   // over tag pairs.
-   $ (content).each (function () {
+   // We're either going to deal with HTML (stand-alone version) or divs (added
+   // by WordPress content filter).  The divs allow us to replace content
+   // specific to qwiz/qdeck -- avoid clobbering any events bound to remaining
+   // html by other plugins.  See if there are such divs.  WP content filter
+   // always adds at least one empty div, so don't have to do HTML branch.
+   var div_html_selector = '';
+   var qwiz_divs_obj = $ ('div.qwiz_wrapper');
+   if (qwiz_divs_obj.length) {
+      div_html_selector = 'div.qwiz_wrapper';
+   } else {
+      div_html_selector = content;
+   }
+
+   // Read appropriate divs, look for inline qcard shortcodes, loop over
+   // shortcode pairs.
+   var i_qwiz = 0;
+   $ (div_html_selector).each (function () {
       var htm = $ (this).html ();
       if (! htm) {
 
@@ -213,7 +236,7 @@ function process_html () {
       } else {
 
          // See if there is a qwiz or qwizzes.
-         var qwiz_pos = htm.search ('[qwiz]');
+         var qwiz_pos = htm.search (/\[qwiz/);
          if (qwiz_pos != -1) {
 
             // Remove and save text inside [qwizdemo] ... [/qwizdemo] pairs.
@@ -249,18 +272,19 @@ function process_html () {
                qwizzled_b = false;
                var qwiz_matches = new_htm.match (/\[qwiz[\s\S]*?\[\/qwiz\]/gm);
                if (qwiz_matches) {
-                  n_qwizzes = qwiz_matches.length;
+                  var local_n_qwizzes = qwiz_matches.length;
                   if (debug[0]) {
-                     console.log ('[process_html] n_qwizzes: ', n_qwizzes);
+                     console.log ('[process_html] local_n_qwizzes: ', local_n_qwizzes);
                      console.log ('               qwiz_matches[0]: ', qwiz_matches[0]);
                   }
 
                   // Loop over qwiz-tag pairs.
-                  for (i_qwiz=0; i_qwiz<n_qwizzes; i_qwiz++) {
-                     var new_qwiz_html = process_qwiz_pair (qwiz_matches[i_qwiz]);
+                  for (ii_qwiz=0; ii_qwiz<local_n_qwizzes; ii_qwiz++) {
+                     var new_qwiz_html = process_qwiz_pair (qwiz_matches[ii_qwiz], i_qwiz);
 
                      // Let's take out <p...> and <h...> from before [qwiz].
                      new_htm = new_htm.replace (/(<[ph][^>]*>\s*)*?\[qwiz[\s\S]*?\[\/qwiz\]/m, new_qwiz_html);
+                     i_qwiz++;
                   }
                   if (debug[3]) {
                      console.log ('process_html] new_htm:', new_htm);
@@ -283,19 +307,20 @@ function process_html () {
             // If any labeled diagrams in this content div, do prep: targets
             // no longer draggable, targets, size image wrappers.
             if (qwizzled_b) {
-               init_qwizzled ($ (this));
+               init_qwizzled ($ (this), local_n_qwizzes);
             }
          }
-      }
-   });
 
-   // Set flag to display page (qwizscripts.js).
-   q.processing_complete_b = true;
+         // If wrapper divs, unwrap.
+         $ (this).contents ().unwrap ();
+      }
+      n_qwizzes = i_qwiz;
+   });
 }
 
 
 // -----------------------------------------------------------------------------
-function init_qwizzled (content_obj) {
+function init_qwizzled (content_obj, local_n_qwizzes) {
 
    // Targets no longer draggable (from qwizzled create/edit step).
    // Also reset borders.
@@ -338,7 +363,7 @@ function init_qwizzled (content_obj) {
 
    // Save deep copy of each qwizzled question -- in case restart quiz.
    // Set up object.
-   for (var i_qwiz=0; i_qwiz<n_qwizzes; i_qwiz++) {
+   for (var i_qwiz=n_qwizzes; i_qwiz<n_qwizzes+local_n_qwizzes; i_qwiz++) {
       if (qwizdata[i_qwiz].qwizzled_b) {
          qwizdata[i_qwiz].qwizzled = {};
 
@@ -943,7 +968,7 @@ function add_style () {
 
 
 // -----------------------------------------------------------------------------
-function process_qwiz_pair (htm) {
+function process_qwiz_pair (htm, i_qwiz) {
 
    // Data object for this qwiz.
    qwizdata.push ({});
@@ -1462,7 +1487,6 @@ this.next_question = function (i_qwiz) {
    if (! qwizdata[i_qwiz].repeat_incorrect_b) {
       n_done += qwizdata[i_qwiz].n_incorrect;
    }
-   //if (qwizdata[i_qwiz].repeat_incorrect_b) {
    if (n_done == n_questions) {
       display_summary_and_exit (i_qwiz);
    } else {
@@ -2309,7 +2333,6 @@ function check_qwiz_tag_pairs (htm) {
 
          // Check proper pairs.
          for (var i=0; i<n_tags; i++) {
-            var tag = matches[i];
             if (i % 2 == 0) {
                if (matches[i] != '[qwiz') {
                   error_b = true;
