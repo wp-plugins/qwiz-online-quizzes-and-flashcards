@@ -1,4 +1,9 @@
 /*
+ * Version 2.26 2014-12-21
+ * Look for WP content filter-created divs, rewrite only that HTML.
+ * On back side of card, "Flip"/"Check answer" -> "Flip back".
+ * Gray-out/disable "Need more practice" and "Got it!" until user clicks "Check answer".
+ *
  * Version 2.25 2014-12-16
  * Fix search for any [qdeck] shortcode.
  * Reorder buttons, default translation: "Flip" -> "Check answer".
@@ -195,9 +200,23 @@ function process_html () {
       }
    });
 
-   // Read WordPress user content divs, look for inline qcard "tags", loop
-   // over tag pairs.
-   $(content).each (function () {
+   // We're either going to deal with HTML (stand-alone version) or divs (added
+   // by WordPress content filter).  The divs allow us to replace content
+   // specific to qwiz/qdeck -- avoid clobbering any events bound to remaining
+   // html by other plugins.  See if there are such divs.  WP content filter
+   // always adds at least one empty div, so don't have to do HTML branch.
+   var div_html_selector = '';
+   var qdeck_divs_obj = $ ('div.qdeck_wrapper');
+   if (qdeck_divs_obj.length) {
+      div_html_selector = 'div.qdeck_wrapper';
+   } else {
+      div_html_selector = content;
+   }
+
+   // Read appropriate divs, look for inline qcard shortcodes, loop over
+   // shortcode pairs.
+   var i_deck = 0;
+   $(div_html_selector).each (function () {
       var htm = $(this).html ();
       if (! htm) {
 
@@ -208,16 +227,16 @@ function process_html () {
          var qdeck_pos = htm.search (/\[qdeck/);
          if (qdeck_pos != -1) {
 
-            // Remove and save text inside [qcarddemo] ... [/qcarddemo] pairs.
-            // Replace with <qcarddemo></qcarddemo> pairs as placeholder.
-            var qcarddemo_re = new RegExp ('\\[qcarddemo\\][\\s\\S]*?\\[\\/qcarddemo\\]', 'gm');
-            var qcarddemos = htm.match (qcarddemo_re);
-            var n_qcarddemos = 0;
-            if (qcarddemos) {
-               n_qcarddemos = qcarddemos.length;
-               htm = htm.replace (qcarddemo_re, '<qcarddemo></qcarddemo>');
+            // Remove and save text inside [qdeckdemo] ... [/qdeckdemo] pairs.
+            // Replace with <qdeckdemo></qdeckdemo> pairs as placeholder.
+            var qdeckdemo_re = new RegExp ('\\[qdeckdemo\\][\\s\\S]*?\\[\\/qdeckdemo\\]', 'gm');
+            var qdeckdemos = htm.match (qdeckdemo_re);
+            var n_qdeckdemos = 0;
+            if (qdeckdemos) {
+               n_qdeckdemos = qdeckdemos.length;
+               htm = htm.replace (qdeckdemo_re, '<qdeckdemo></qdeckdemo>');
                if (debug[0]) {
-                  console.log ('[process_html] n_qcarddemos: ', n_qcarddemos);
+                  console.log ('[process_html] n_qdeckdemos: ', n_qdeckdemos);
                }
             }
 
@@ -240,34 +259,41 @@ function process_html () {
                // construct.  Non-greedy search, global, multiline.
                var qdeck_matches = new_html.match (/\[qdeck[\s\S]*?\[\/qdeck\]/gm);
                if (qdeck_matches) {
-                  n_decks = qdeck_matches.length;
+                  var local_n_decks = qdeck_matches.length;
                   if (debug[0]) {
-                     console.log ('[process_html] n_decks: ', n_decks);
+                     console.log ('[process_html] local_n_decks: ', local_n_decks);
                      console.log ('               qdeck_matches[0]: ', qdeck_matches[0]);
                   }
 
                   // Loop over qdeck-tag pairs.
-                  for (var i_deck=0; i_deck<n_decks; i_deck++) {
-                     var new_deck_html = process_qdeck_pair (qdeck_matches[i_deck], i_deck);
+                  for (var ii_deck=0; ii_deck<local_n_decks; ii_deck++) {
+                     var new_deck_html = process_qdeck_pair (qdeck_matches[ii_deck], i_deck);
 
                      // Let's take out <p...> and <h...> from before [qdeck].
                      new_html = new_html.replace (/(<[ph][^>]*>\s*)*?\[qdeck[\s\S]*?\[\/qdeck\]/m, new_deck_html);
+                     i_deck++;
                   }
                }
             }
 
-            // Restore examples, but without [qcarddemo] ... [/qcarddemo] tags.
-            for (var i_qcarddemo=0; i_qcarddemo< n_qcarddemos; i_qcarddemo++) {
-               var qcarddemo_i = qcarddemos[i_qcarddemo];
-               var len = qcarddemo_i.length;
-               qcarddemo_i = qcarddemo_i.substring (11, len - 12);
-               new_html = new_html.replace ('<qcarddemo></qcarddemo>', qcarddemo_i);
+            // Restore examples, but without [qdeckdemo] ... [/qdeckdemo] tags.
+            for (var i_qdeckdemo=0; i_qdeckdemo< n_qdeckdemos; i_qdeckdemo++) {
+               var qdeckdemo_i = qdeckdemos[i_qdeckdemo];
+               var len = qdeckdemo_i.length;
+               qdeckdemo_i = qdeckdemo_i.substring (11, len - 12);
+               new_html = new_html.replace ('<qdeckdemo></qdeckdemo>', qdeckdemo_i);
             }
 
             // Replace content html.
-            $(this).html (new_html);
+            $ (this).html (new_html);
+         }
+
+         // If wrapper divs, unwrap.
+         if (qdeck_divs_obj.length) {
+            $ (this).contents ().unwrap ();
          }
       }
+      n_decks = i_deck;
    });
 
    // Set flag to display page (qwizscripts.js).
@@ -401,6 +427,25 @@ function add_style () {
    s.push ('   box-shadow: rgba(0,0,0,1) 0 1px 0;');
    s.push ('   text-shadow: rgba(0,0,0,.4) 0 1px 0;');
    s.push ('   color: white;');
+   s.push ('   font-size: 14px;');
+   s.push ('   font-weight: bold;');
+   s.push ('   font-family: arial, verdana, sans-serif;');
+   s.push ('   text-decoration: none;');
+   s.push ('   vertical-align: middle;');
+   s.push ('}');
+   s.push ('.qbutton_disabled {');
+   s.push ('   margin-bottom: 2px;');
+   s.push ('   border-top: 1px solid #cccccc;');
+   s.push ('   background: #cccccc;');
+   s.push ('   padding: 3px 3px;');
+   s.push ('   -webkit-border-radius: 8px;');
+   s.push ('   -moz-border-radius: 8px;');
+   s.push ('   border-radius: 8px;');
+   s.push ('   -webkit-box-shadow: none;');
+   s.push ('   -moz-box-shadow: none;');
+   s.push ('   box-shadow: none;');
+   s.push ('   text-shadow: none;');
+   s.push ('   color: #e6e6e6;');
    s.push ('   font-size: 14px;');
    s.push ('   font-weight: bold;');
    s.push ('   font-family: arial, verdana, sans-serif;');
@@ -1052,7 +1097,7 @@ function create_qdeck_divs (i_deck, qdeck_tag) {
    divs.push ('         </div>');
    divs.push ('      </div>');
    divs.push ('   </div>');
-   divs.push ('   <div id="qcard_next_buttons-qdeck' + i_deck + '" + class="qcard_next_buttons">');
+   divs.push ('   <div id="qcard_next_buttons-qdeck' + i_deck + '" class="qcard_next_buttons">');
    divs.push ('   </div>');
    divs.push ('</div>');
 
@@ -1318,15 +1363,15 @@ this.set_next_buttons = function (i_deck) {
    var htm = '';
 
    // "Flip" / "Check answer".
-   htm += '<button class="qbutton" onclick="' + qname + '.flip (' + i_deck + ')" title="' + T ('Show the other side') + '">' + T ('Flip') + '</button> &nbsp; ';
+   htm += '<button class="qbutton flip-qdeck' + i_deck + '" onclick="' + qname + '.flip (' + i_deck + ')" title="' + T ('Show the other side') + '">' + T ('Flip') + '</button> &nbsp; ';
 
-   // "Need more practice".
+   // "Need more practice".  Starts out disabled, gray.
    if (deckdata[i_deck].n_to_go > 1) {
-      htm += '<button class="qbutton next_card-qdeck' + i_deck + '" onclick="' + qname + '.next_card (' + i_deck + ')" title="' + T ('Put this card at the bottom of stack, show the next card') + '">' + T ('Need more practice') + '</button> &nbsp; ';
+      htm += '<button class="qbutton_disabled next_card-qdeck' + i_deck + '" disabled="true" onclick="' + qname + '.next_card (' + i_deck + ')" title="' + T ('Put this card at the bottom of stack, show the next card') + '">' + T ('Need more practice') + '</button> &nbsp; ';
    }
 
-   // "Got it". 
-   htm += '<button class="qbutton" onclick="' + qname + '.got_it (' + i_deck + ')" title="' + T ('Remove this card from the stack') + '">' + T ('Got it!') + '</button> &nbsp; ';
+   // "Got it".  Starts out disabled, gray.
+   htm += '<button class="qbutton_disabled got_it-qdeck' + i_deck + '" disabled="true" onclick="' + qname + '.got_it (' + i_deck + ')" title="' + T ('Remove this card from the stack') + '">' + T ('Got it!') + '</button> &nbsp; ';
 
    // "Shuffle".
    if (deckdata[i_deck].n_to_go > 1) {
@@ -1357,14 +1402,18 @@ this.process_card = function (i_deck) {
          var ii_card = deckdata[i_deck].card_order[i_card];
          if (! deckdata[i_deck].cards[ii_card].got_it) {
 
-            // Display card.  If only one to go, disable and gray out
+            // Display card.  "Need more practice" and "Got it!" buttons start
+            // out disabled, gray.
+            $ ('button.got_it-qdeck' + i_deck + ', button.next_card-qdeck' + i_deck).attr ('disabled', true).removeClass ('qbutton').addClass ('qbutton_disabled');
+
+            // If only one to go, disable and gray out
             // more practice/next card and shuffle buttons.
             if (deckdata[i_deck].n_to_go == 1) {
-               $('.next_card-qdeck' + i_deck).attr ('disabled', true);
-               $('.next_card-qdeck' + i_deck).css ({color: '#e6e6e6', background: '#cccccc', 'border-top-color': '#cccccc', 'text-shadow': 'none', 'box-shadow': 'none'});
+               $ ('button.next_card-qdeck' + i_deck).attr ('disabled', true);
+               $ ('button.next_card-qdeck' + i_deck).removeClass ('qbutton').addClass ('qbutton_disabled');
 
-               $('.shuffle-qdeck' + i_deck).attr ('disabled', true);
-               $('.shuffle-qdeck' + i_deck).css ({color: '#e6e6e6', background: '#cccccc', 'border-top-color': '#cccccc', 'text-shadow': 'none', 'box-shadow': 'none'});
+               $ ('button.shuffle-qdeck' + i_deck).attr ('disabled', true);
+               $ ('button.shuffle-qdeck' + i_deck).removeClass ('qbutton').addClass ('qbutton_disabled');
             }
             deckdata[i_deck].i_card = i_card;
             deckdata[i_deck].n_reviewed++;
@@ -1443,6 +1492,12 @@ this.flip = function (i_deck) {
          $ ('div.qcard_window div#icon_qdeck' + i_deck).hide ();
       }
 
+      // "Flip"/"Check answer" button - for back, change to "Flip back";
+      $ ('button.flip-qdeck' + i_deck).html (T ('Flip back'));
+
+      // Enable "Need more practice" and "Got it!" buttons, un-gray.
+      $ ('button.got_it-qdeck' + i_deck + ', button.next_card-qdeck' + i_deck).attr ('disabled', false).removeClass ('qbutton_disabled').addClass ('qbutton');
+
       // If there's a text entry box...
       if (el_textentry.length) {
 
@@ -1467,6 +1522,10 @@ this.flip = function (i_deck) {
       set_front_back = 'back';
    } else {
       set_front_back = 'front';
+
+      // "Flip"/"Check answer" button - for front, change back.
+      $ ('button.flip-qdeck' + i_deck).html (T ('Flip'));
+
    }
 
    // Set the widths of the progress, header, and next-button divs to match

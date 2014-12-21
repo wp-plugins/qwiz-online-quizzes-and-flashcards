@@ -1,4 +1,8 @@
 /*
+ * Version 2.26 2014-12-21
+ * Look for WP content filter-created divs, rewrite only that HTML.
+ * Take xqwiz sizing div out of flow.
+ *
  * Version 2.25 2014-12-16
  * Fix search for any [qwiz] shortcode.
  *
@@ -209,9 +213,23 @@ function process_html () {
       }
    });
 
-   // Read WordPress user content divs, look for inline qwiz "tags", loop
-   // over tag pairs.
-   $ (content).each (function () {
+   // We're either going to deal with HTML (stand-alone version) or divs (added
+   // by WordPress content filter).  The divs allow us to replace content
+   // specific to qwiz/qdeck -- avoid clobbering any events bound to remaining
+   // html by other plugins.  See if there are such divs.  WP content filter
+   // always adds at least one empty div, so don't have to do HTML branch.
+   var div_html_selector = '';
+   var qwiz_divs_obj = $ ('div.qwiz_wrapper');
+   if (qwiz_divs_obj.length) {
+      div_html_selector = 'div.qwiz_wrapper';
+   } else {
+      div_html_selector = content;
+   }
+
+   // Read appropriate divs, look for inline qcard shortcodes, loop over
+   // shortcode pairs.
+   var i_qwiz = 0;
+   $ (div_html_selector).each (function () {
       var htm = $ (this).html ();
       if (! htm) {
 
@@ -255,18 +273,19 @@ function process_html () {
                qwizzled_b = false;
                var qwiz_matches = new_htm.match (/\[qwiz[\s\S]*?\[\/qwiz\]/gm);
                if (qwiz_matches) {
-                  n_qwizzes = qwiz_matches.length;
+                  var local_n_qwizzes = qwiz_matches.length;
                   if (debug[0]) {
-                     console.log ('[process_html] n_qwizzes: ', n_qwizzes);
+                     console.log ('[process_html] local_n_qwizzes: ', local_n_qwizzes);
                      console.log ('               qwiz_matches[0]: ', qwiz_matches[0]);
                   }
 
                   // Loop over qwiz-tag pairs.
-                  for (i_qwiz=0; i_qwiz<n_qwizzes; i_qwiz++) {
-                     var new_qwiz_html = process_qwiz_pair (qwiz_matches[i_qwiz]);
+                  for (ii_qwiz=0; ii_qwiz<local_n_qwizzes; ii_qwiz++) {
+                     var new_qwiz_html = process_qwiz_pair (qwiz_matches[ii_qwiz], i_qwiz);
 
                      // Let's take out <p...> and <h...> from before [qwiz].
                      new_htm = new_htm.replace (/(<[ph][^>]*>\s*)*?\[qwiz[\s\S]*?\[\/qwiz\]/m, new_qwiz_html);
+                     i_qwiz++;
                   }
                   if (debug[3]) {
                      console.log ('process_html] new_htm:', new_htm);
@@ -289,10 +308,16 @@ function process_html () {
             // If any labeled diagrams in this content div, do prep: targets
             // no longer draggable, targets, size image wrappers.
             if (qwizzled_b) {
-               init_qwizzled ($ (this));
+               init_qwizzled ($ (this), local_n_qwizzes);
             }
          }
+
+         // If wrapper divs, unwrap.
+         if (qwiz_divs_obj.length) {
+            $ (this).contents ().unwrap ();
+         }
       }
+      n_qwizzes = i_qwiz;
    });
 
    // Set flag to display page (qwizscripts.js).
@@ -301,7 +326,7 @@ function process_html () {
 
 
 // -----------------------------------------------------------------------------
-function init_qwizzled (content_obj) {
+function init_qwizzled (content_obj, local_n_qwizzes) {
 
    // Targets no longer draggable (from qwizzled create/edit step).
    // Also reset borders.
@@ -344,7 +369,7 @@ function init_qwizzled (content_obj) {
 
    // Save deep copy of each qwizzled question -- in case restart quiz.
    // Set up object.
-   for (var i_qwiz=0; i_qwiz<n_qwizzes; i_qwiz++) {
+   for (var i_qwiz=n_qwizzes; i_qwiz<n_qwizzes+local_n_qwizzes; i_qwiz++) {
       if (qwizdata[i_qwiz].qwizzled_b) {
          qwizdata[i_qwiz].qwizzled = {};
 
@@ -949,7 +974,7 @@ function add_style () {
 
 
 // -----------------------------------------------------------------------------
-function process_qwiz_pair (htm) {
+function process_qwiz_pair (htm, i_qwiz) {
 
    // Data object for this qwiz.
    qwizdata.push ({});
@@ -1190,9 +1215,14 @@ function create_qwiz_divs (i_qwiz, qwiz_tag, htm, exit_html) {
    }
 
    // Undisplayed version of qwiz div, so can measure default width if need to.
+   // Keep out of flow.  (Don't let margins, padding take up room.)
    var top_html = '';
    if (non_default_width_b) {
-      top_html = '<div id="xqwiz' + i_qwiz + '" class="xqwiz" ' + attributes + '></div>\n';
+      var xattributes = attributes.replace (/(style\s*=\s*"[^"]*)/, '$1; position: absolute;');
+
+      // Correct double ";;" if we done that.
+      xattributes.replace (/;\s*;/, ';');
+      top_html = '<div id="xqwiz' + i_qwiz + '" class="xqwiz" ' + xattributes + '></div>\n';
    }
 
    // This qwiz opening div.
@@ -1468,7 +1498,6 @@ this.next_question = function (i_qwiz) {
    if (! qwizdata[i_qwiz].repeat_incorrect_b) {
       n_done += qwizdata[i_qwiz].n_incorrect;
    }
-   //if (qwizdata[i_qwiz].repeat_incorrect_b) {
    if (n_done == n_questions) {
       display_summary_and_exit (i_qwiz);
    } else {

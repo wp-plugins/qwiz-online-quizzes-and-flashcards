@@ -40,6 +40,9 @@
       'Congratulations, you answered all questions correctly' => __ ('Congratulations, you answered all questions correctly', $q),
       'Flip' => __ ('Flip', $q),
 
+      /* Translators: as in "Flip back to the front side" */
+      'Flip back' => __ ('Flip back', $q),
+
       /* Translators: as in "For topic Biology..." */
       'For topic' => __ ('For topic', $q),
 
