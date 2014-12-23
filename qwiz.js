@@ -1,5 +1,5 @@
 /*
- * Version 2.26 2014-12-??
+ * Version 2.26 2014-12-21
  * Look for WP content filter-created divs, rewrite only that HTML.
  * Take xqwiz sizing div out of flow.
  *
@@ -1066,11 +1066,6 @@ function process_qwiz_pair (htm, i_qwiz) {
       if (debug[4]) {
          console.log ('[process_qwiz_pair] question_tags: ', question_tags);
       }
-      n_questions = question_tags.length;
-      if (debug[0]) {
-         console.log ('[process_qwiz_pair] n_questions: ', n_questions);
-      }
-
       process_topics (i_qwiz, question_tags);
 
       // Capture any opening tags before each "[q...] tag.
@@ -1118,8 +1113,10 @@ function process_qwiz_pair (htm, i_qwiz) {
       // Split into individual items.  Include search for qwizzled_question
       // divs.
       var questions_html = question_html.split (/\[q [^\]]*\]|\[q\]|<div class="qwizzled_question">/);
+      n_questions = questions_html.length;
       if (debug[0]) {
-         console.log ('[process_qwiz_pair] questions_html:', questions_html.join ('//\n\n'));
+         console.log ('[process_qwiz_pair] n_questions: ', n_questions);
+         console.log ('                    questions_html:', questions_html.join ('\n================================================\n'));
       }
 
       // Create a div for each.

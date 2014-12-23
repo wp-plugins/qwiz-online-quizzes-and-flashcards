@@ -22,7 +22,7 @@ Activate the plugin through the 'Plugins' menu in WordPress
 == Changelog ==
 
 = 2.26 =
-2014-12-??
+2014-12-21
 Avoid clobbering other plugins' events - WP content filter creates divs for each qwiz/qdeck - rewrite only those divs.
 On back side of card, "Flip"/"Check answer" -> "Flip back".
 Gray-out/disable "Need more practice" and "Got it!" until user clicks "Check answer".

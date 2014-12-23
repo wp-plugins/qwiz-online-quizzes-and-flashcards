@@ -1,5 +1,5 @@
 /*
- * Version 2.26 2014-12-??
+ * Version 2.26 2014-12-21
  * Look for WP content filter-created divs, rewrite only that HTML.
  * On back side of card, "Flip"/"Check answer" -> "Flip back".
  * Gray-out/disable "Need more practice" and "Got it!" until user clicks "Check answer".
