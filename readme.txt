@@ -2,7 +2,7 @@
 Contributors: dan_kirshner
 Tags: interactive quiz, quiz, flashcards, labeled diagrams
 Tested up to: 4.1
-Stable tag: 2.26
+Stable tag: beta for 2.27
 License: GPL2
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
@@ -21,11 +21,18 @@ Activate the plugin through the 'Plugins' menu in WordPress
 
 == Changelog ==
 
-= 2.26 =
+= 2.27 =
 2014-12-??
+Make sure labeled-diagram questions contain matching opening/closing divs.
+Just count targets, not labels.
+Toolbar option - keep "next" button active.
+
+= 2.26 =
+2014-12-21
 Avoid clobbering other plugins' events - WP content filter creates divs for each qwiz/qdeck - rewrite only those divs.
 On back side of card, "Flip"/"Check answer" -> "Flip back".
-Gray-out/disable "Got it!" until user clicks "Check answer".
+Gray-out/disable "Need more practice" and "Got it!" until user clicks "Check answer".
+Take xqwiz sizing div out of flow.
 
 
 = 2.25 =

@@ -1,8 +1,12 @@
 /*
- * Version 2.26 2014-12-??
+ * Version 2.27 2014-12-??
+ * Reset header width to match card width for summary report.
+ * Toolbar option - keep "next" button active.
+ *
+ * Version 2.26 2014-12-21
  * Look for WP content filter-created divs, rewrite only that HTML.
  * On back side of card, "Flip"/"Check answer" -> "Flip back".
- * Gray-out/disable "Got it!" until user clicks "Check answer".
+ * Gray-out/disable "Need more practice" and "Got it!" until user clicks "Check answer".
  *
  * Version 2.25 2014-12-16
  * Fix search for any [qdeck] shortcode.
@@ -136,6 +140,7 @@ var topic_descriptions = new Object;
 // Statistics by topic.
 var topic_statistics = new Object;
 
+var next_button_active_b  = false;
 
 // -----------------------------------------------------------------------------
 $(document).ready (function () {
@@ -1365,13 +1370,17 @@ this.set_next_buttons = function (i_deck) {
    // "Flip" / "Check answer".
    htm += '<button class="qbutton flip-qdeck' + i_deck + '" onclick="' + qname + '.flip (' + i_deck + ')" title="' + T ('Show the other side') + '">' + T ('Flip') + '</button> &nbsp; ';
 
-   // "Need more practice".
+   // "Need more practice".  Starts out disabled, gray.
    if (deckdata[i_deck].n_to_go > 1) {
-      htm += '<button class="qbutton next_card-qdeck' + i_deck + '" onclick="' + qname + '.next_card (' + i_deck + ')" title="' + T ('Put this card at the bottom of stack, show the next card') + '">' + T ('Need more practice') + '</button> &nbsp; ';
+      htm += '<button class="qbutton_disabled next_card-qdeck' + i_deck + '" disabled="true" onclick="' + qname + '.next_card (' + i_deck + ')" title="' + T ('Put this card at the bottom of stack, show the next card') + '">' + T ('Need more practice') + '</button> &nbsp; ';
    }
 
    // "Got it".  Starts out disabled, gray.
-   htm += '<button class="qbutton_disabled got_it-qdeck' + i_deck + '" onclick="' + qname + '.got_it (' + i_deck + ')" disabled="true" title="' + T ('Remove this card from the stack') + '">' + T ('Got it!') + '</button> &nbsp; ';
+   if (next_button_active_b) {
+      htm += '<button class="qbutton got_it got_it-qdeck' + i_deck + '" onclick="' + qname + '.got_it (' + i_deck + ')" title="' + T ('Remove this card from the stack') + '">' + T ('Got it!') + '</button> &nbsp; ';
+   } else {
+      htm += '<button class="qbutton_disabled got_it got_it-qdeck' + i_deck + '" disabled="true" onclick="' + qname + '.got_it (' + i_deck + ')" title="' + T ('Remove this card from the stack') + '">' + T ('Got it!') + '</button> &nbsp; ';
+   }
 
    // "Shuffle".
    if (deckdata[i_deck].n_to_go > 1) {
@@ -1402,18 +1411,16 @@ this.process_card = function (i_deck) {
          var ii_card = deckdata[i_deck].card_order[i_card];
          if (! deckdata[i_deck].cards[ii_card].got_it) {
 
-            // Display card.  "Got it!" button starts out disabled, gray.
-            $ ('button.got_it-qdeck' + i_deck).attr ('disabled', true);
-            $ ('button.got_it-qdeck' + i_deck).removeClass ('qbutton').addClass ('qbutton_disabled');
+            // Display card.  "Need more practice" and "Got it!" buttons start
+            // out disabled, gray.
+            if (! next_button_active_b) {
+               $ ('button.got_it-qdeck' + i_deck + ', button.next_card-qdeck' + i_deck).attr ('disabled', true).removeClass ('qbutton').addClass ('qbutton_disabled');
+            }
 
             // If only one to go, disable and gray out
             // more practice/next card and shuffle buttons.
             if (deckdata[i_deck].n_to_go == 1) {
-               $ ('button.next_card-qdeck' + i_deck).attr ('disabled', true);
-               $ ('button.next_card-qdeck' + i_deck).removeClass ('qbutton').addClass ('qbutton_disabled');
-
-               $ ('button.shuffle-qdeck' + i_deck).attr ('disabled', true);
-               $ ('button.shuffle-qdeck' + i_deck).removeClass ('qbutton').addClass ('qbutton_disabled');
+               $ ('button.next_card-qdeck' + i_deck + ', button.shuffle-qdeck' + i_deck).attr ('disabled', true).removeClass ('qbutton').addClass ('qbutton_disabled');
             }
             deckdata[i_deck].i_card = i_card;
             deckdata[i_deck].n_reviewed++;
@@ -1459,6 +1466,12 @@ function done (i_deck) {
    report_html.push (deckdata[i_deck].exit_html);
 
    deckdata[i_deck].el_qcard_card_front.html (report_html.join ('\n'));
+
+   // Set the widths of the progress, header, and next-button divs to match
+   // card front.
+   var qcard_width = set_header (i_deck, 'front');
+   set_container_width_height (i_deck, qcard_width);
+
 }
 
 
@@ -1495,9 +1508,8 @@ this.flip = function (i_deck) {
       // "Flip"/"Check answer" button - for back, change to "Flip back";
       $ ('button.flip-qdeck' + i_deck).html (T ('Flip back'));
 
-      // Enable "Got it!" button, un-gray.
-      $ ('button.got_it-qdeck' + i_deck).attr ('disabled', false);
-      $ ('button.got_it-qdeck' + i_deck).removeClass ('qbutton_disabled').addClass ('qbutton');
+      // Enable "Need more practice" and "Got it!" buttons, un-gray.
+      $ ('button.got_it-qdeck' + i_deck + ', button.next_card-qdeck' + i_deck).attr ('disabled', false).removeClass ('qbutton_disabled').addClass ('qbutton');
 
       // If there's a text entry box...
       if (el_textentry.length) {
@@ -1753,6 +1765,14 @@ function shuffle (array) {
   }
 
   return array;
+}
+
+
+// -----------------------------------------------------------------------------
+this.keep_next_button_active = function () {
+   next_button_active_b = true;
+   $ ('button.got_it').attr ('disabled', false).removeClass ('qbutton_disabled').addClass ('qbutton');
+
 }
 
 

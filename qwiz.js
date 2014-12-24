@@ -1,6 +1,11 @@
 /*
- * Version 2.26 2014-12-??
+ * Version 2.27 2014-12-??
+ * Toolbar option - keep "next" button active.
+ * Just count targets, not labels.
+ *
+ * Version 2.26 2014-12-21
  * Look for WP content filter-created divs, rewrite only that HTML.
+ * Take xqwiz sizing div out of flow.
  *
  * Version 2.25 2014-12-16
  * Fix search for any [qwiz] shortcode.
@@ -160,6 +165,7 @@ var header_html;
 
 var drag_and_drop_initialized_b = false;
 var try_again_obj = '';
+var next_button_active_b = false;
 
 
 // -----------------------------------------------------------------------------
@@ -1065,11 +1071,6 @@ function process_qwiz_pair (htm, i_qwiz) {
       if (debug[4]) {
          console.log ('[process_qwiz_pair] question_tags: ', question_tags);
       }
-      n_questions = question_tags.length;
-      if (debug[0]) {
-         console.log ('[process_qwiz_pair] n_questions: ', n_questions);
-      }
-
       process_topics (i_qwiz, question_tags);
 
       // Capture any opening tags before each "[q...] tag.
@@ -1117,8 +1118,10 @@ function process_qwiz_pair (htm, i_qwiz) {
       // Split into individual items.  Include search for qwizzled_question
       // divs.
       var questions_html = question_html.split (/\[q [^\]]*\]|\[q\]|<div class="qwizzled_question">/);
+      n_questions = questions_html.length;
       if (debug[0]) {
-         console.log ('[process_qwiz_pair] questions_html:', questions_html.join ('//\n\n'));
+         console.log ('[process_qwiz_pair] n_questions: ', n_questions);
+         console.log ('                    questions_html:', questions_html.join ('\n================================================\n'));
       }
 
       // Create a div for each.
@@ -1214,9 +1217,14 @@ function create_qwiz_divs (i_qwiz, qwiz_tag, htm, exit_html) {
    }
 
    // Undisplayed version of qwiz div, so can measure default width if need to.
+   // Keep out of flow.  (Don't let margins, padding take up room.)
    var top_html = '';
    if (non_default_width_b) {
-      top_html = '<div id="xqwiz' + i_qwiz + '" class="xqwiz" ' + attributes + '></div>\n';
+      var xattributes = attributes.replace (/(style\s*=\s*"[^"]*)/, '$1; position: absolute;');
+
+      // Correct double ";;" if we done that.
+      xattributes.replace (/;\s*;/, ';');
+      top_html = '<div id="xqwiz' + i_qwiz + '" class="xqwiz" ' + xattributes + '></div>\n';
    }
 
    // This qwiz opening div.
@@ -1484,7 +1492,9 @@ this.next_question = function (i_qwiz) {
    }
 
    // Hide "next" button until user makes a choice.
-   $ ('#next_button-' + qwiz_id).hide ();
+   if (! next_button_active_b) {
+      $ ('#next_button-' + qwiz_id).hide ();
+   }
 
    // Next question -- if repeating incorrect, keep running through questions
    // until all answered correctly.  If done, show summary/exit text.
@@ -1540,26 +1550,22 @@ function display_question (i_qwiz, i_question) {
       // Also, reset progress bar.
       qwizdata[i_qwiz].n_labels_correct = 0;
       qwizdata[i_qwiz].n_label_attempts = 0;
-      if (qwizq_obj.find ('[class*="qwizzled_n_targets"]').length) {
 
-         // This collects multiple spans if they're spread across a text target.
-         // If don't have qtarget_sib... just count, but de-dup sibs.
-         var n_label_targets = 0;
-         var target_count = new Object ();
-         qwizq_obj.find ('div.qwizzled_target, span.qwizzled_target').each (function () {
-            var classes = $ (this).attr ('class');
-            var m = classes.match (/qtarget_sib-[0-9]*/);
-            if (m) {
-               var qwizzled_target_assoc_id = m[0];
-               target_count[qwizzled_target_assoc_id] = 1;
-            } else {
-               n_label_targets++;
-            }
-         });
-         qwizdata[i_qwiz].n_label_targets = n_label_targets + Object.keys (target_count).length;
-      } else {
-         qwizdata[i_qwiz].n_label_targets = qwizq_obj.find ('div.qwizzled_label').length;
-      }
+      // This collects multiple spans if they're spread across a text target.
+      // If don't have qtarget_sib... just count, but de-dup sibs.
+      var n_label_targets = 0;
+      var target_count = new Object ();
+      qwizq_obj.find ('div.qwizzled_target, span.qwizzled_target').each (function () {
+         var classes = $ (this).attr ('class');
+         var m = classes.match (/qtarget_sib-[0-9]*/);
+         if (m) {
+            var qwizzled_target_assoc_id = m[0];
+            target_count[qwizzled_target_assoc_id] = 1;
+         } else {
+            n_label_targets++;
+         }
+      });
+      qwizdata[i_qwiz].n_label_targets = n_label_targets + Object.keys (target_count).length;
       display_qwizzled_progress (i_qwiz);
    }
 
@@ -2580,6 +2586,13 @@ function create_feedback_div_html (i_qwiz, i_question, i_item, item, c_x) {
    }
 
    return htm;
+}
+
+
+// -----------------------------------------------------------------------------
+this.keep_next_button_active = function () {
+   next_button_active_b = true;
+   $ ('.next_button').show ();
 }
 
 
