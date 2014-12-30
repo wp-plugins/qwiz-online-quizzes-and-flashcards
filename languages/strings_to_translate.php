@@ -40,6 +40,9 @@
       'Congratulations, you answered all questions correctly' => __ ('Congratulations, you answered all questions correctly', $q),
       'Flip' => __ ('Flip', $q),
 
+      /* Translators: as in "Flip back to the front side" */
+      'Flip back' => __ ('Flip back', $q),
+
       /* Translators: as in "For topic Biology..." */
       'For topic' => __ ('For topic', $q),
 
@@ -118,7 +121,7 @@
         The following strings are the second set.
         These are part of the labeled diagram editing function
         that is only seen by quiz creators.  */
-      '' => __ ('', $q),
+      'A new question shortcode [q] has been placed inside an existing question.  Please move it outside and try again.' => __ ('A new question shortcode [q] has been placed inside an existing question.  Please move it outside and try again.', $q),
       'Create a target "drop zone" for a label - click here, then click label' => __ ('Create a target "drop zone" for a label - click here, then click label', $q),
       'Could not find editing window.  You need to be editing a page or post in Visual mode.' => __ ('Could not find editing window.  You need to be editing a page or post in Visual mode.', $q),
       'Did not find [qwiz]...[/qwiz] shortcodes' => __ ('Did not find [qwiz]...[/qwiz] shortcodes', $q),
