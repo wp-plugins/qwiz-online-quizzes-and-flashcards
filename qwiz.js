@@ -135,9 +135,9 @@ var qname = 'qwiz_';
 
 // Debug settings.
 var debug = [];
-debug.push (true );    // 0 - general.
-debug.push (true );    // 1 - radio/choices html.
-debug.push (true );    // 2 - feedback html.
+debug.push (false);    // 0 - general.
+debug.push (false);    // 1 - radio/choices html.
+debug.push (false);    // 2 - feedback html.
 debug.push (false);    // 3 - old/new html dump.
 debug.push (false);    // 4 - question tags/topics.
 
