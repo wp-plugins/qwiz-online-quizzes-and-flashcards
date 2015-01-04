@@ -3,7 +3,7 @@
  * Plugin Name: Qwiz - online quizzes and flashcards
  * Plugin URI: http://dkprojects.net/qwiz
  * Description: Easy online quizzes and flashcards for WordPress
- * Version: beta for 2.27
+ * Version: beta2 for 2.27
  * Author: Dan Kirshner
  * Author URI: http://dkprojects.net/qwiz
  * License: GPL2
@@ -31,14 +31,14 @@ define ('BETA_SUBDIR', 'beta/' . PLUGIN_DIR);
 
 $debug = false;
 
-function language_init () {
+function qwiz_language_init () {
 
    // Try to load "qwiz-{locale}.mo" from 
    //
    //    qwiz-online-quizzes-and-flashcards/languages 
    //
    // where {locale} defaults (right now) to en_US (e.g., qwiz-en_US.mo).
-   $loaded = load_plugin_textdomain ('qwiz', false, dirname (plugin_basename (__FILE__)) . '/' . beta_subdir () . 'languages/');
+   $loaded = load_plugin_textdomain ('qwiz', false, dirname (plugin_basename (__FILE__)) . '/' . qwiz_beta_subdir () . 'languages/');
 }
 
 
@@ -69,7 +69,7 @@ function add_qwiz_js_and_style () {
 
    // Set qwiz_T as array of strings.
    $qwiz_T = array ();
-   include beta_subdir () . "languages/strings_to_translate.php";
+   include qwiz_beta_subdir () . "languages/strings_to_translate.php";
 
    // If string substitutions given (from Settings/Admin page), make them now.
    if ($translate_strings) {
@@ -139,7 +139,7 @@ function qwiz_plugin_url ($path) {
    // This is like .../qwiz-online-quizzes-and-flashcards/qwiz.js?ver=2.15.
    $plugin_url = plugins_url ($path, __FILE__);
 
-   $bsub = beta_subdir ();
+   $bsub = qwiz_beta_subdir ();
    if ($bsub) {
 
       // Insert beta version subdir after final '/'.
@@ -151,7 +151,7 @@ function qwiz_plugin_url ($path) {
    return $plugin_url;
 }
 
-function beta_subdir () {
+function qwiz_beta_subdir () {
 
    $bsub = '';
    $options = get_option ('qwiz_options');
@@ -166,7 +166,7 @@ function beta_subdir () {
 }
 
 // =============================================================================
-add_action ('plugins_loaded', 'language_init');
+add_action ('plugins_loaded', 'qwiz_language_init');
 
 add_action ('wp_enqueue_scripts', 'add_qwiz_js_and_style');
 
@@ -176,7 +176,7 @@ add_action ('admin_init', 'qwizzled_button');
 add_action ('admin_head', 'qwizzled_plugin_url');
 
 function qwizzled_add_locale ($locales) {
-    $locales ['qwizzled_langs'] = plugin_dir_path (__FILE__) . beta_subdir () . 'languages/qwizzled_langs.php';
+    $locales ['qwizzled_langs'] = plugin_dir_path (__FILE__) . qwiz_beta_subdir () . 'languages/qwizzled_langs.php';
     //error_log ("[qwizzled_add_locale] locales: " . print_r ($locales, TRUE));
     return $locales;
 }
@@ -197,7 +197,8 @@ function qwiz_admin_bar_item ($wp_admin_bar) {
       'parent' => 'qwiz_menu',
       'title'  => 'Keep "next" button active',
       'href'   => '#',
-      'meta'   => array ('onclick' => 'qwiz_.keep_next_button_active (); qcard_.keep_next_button_active (); return false;')
+      'meta'   => array ('onclick' => 'qwiz_.keep_next_button_active (); qcard_.keep_next_button_active (); return false;',
+                         'title'   => 'Allows you to skip questions/cards')
    );
    $wp_admin_bar->add_node ($args);
 }
@@ -224,23 +225,23 @@ function qwiz_process_shortcodes_initially ($content) {
 
       // [qwizdemo] and [qcarddemo] contents -- save, replace with placeholder
       // (restore when done).
-      list ($content, $qwizdemos)  = cut_demos ($content, 'qwiz');
-      list ($content, $qdeckdemos) = cut_demos ($content, 'qdeck');
+      list ($content, $qwizdemos)  = qwiz_cut_demos ($content, 'qwiz');
+      list ($content, $qdeckdemos) = qwiz_cut_demos ($content, 'qdeck');
 
       // Check that have valid [qwiz] and [qdeck] open/close pairs.
-      if (check_shortcode_pairs_ok ($content, 'qwiz')
-                             && check_shortcode_pairs_ok ($content, 'qdeck')) {
+      if (qwiz_check_shortcode_pairs_ok ($content, 'qwiz')
+                         && qwiz_check_shortcode_pairs_ok ($content, 'qdeck')) {
 
          // Yes, valid pairs.  Wrap each such pair, but make sure balanced
          // <div> ... </div> tag pairs inside (move unmatched tags outside).
-         $content = wrap_shortcode_pairs ($content, 'qwiz');
-         $content = wrap_shortcode_pairs ($content, 'qdeck');
+         $content = qwiz_wrap_shortcode_pairs ($content, 'qwiz');
+         $content = qwiz_wrap_shortcode_pairs ($content, 'qdeck');
       }
    }
 
    // Restore demo contents, without the opening/closing shortcodes.
-   $content = unwrap_and_paste_demos ($content, $qwizdemos, 'qwiz');
-   $content = unwrap_and_paste_demos ($content, $qdeckdemos, 'qdeck');
+   $content = qwiz_unwrap_and_paste_demos ($content, $qwizdemos, 'qwiz');
+   $content = qwiz_unwrap_and_paste_demos ($content, $qdeckdemos, 'qdeck');
    if ($debug) {
       error_log ("[qwiz_process_shortcodes_initially] content:\n" . $content);
    }
@@ -251,7 +252,7 @@ function qwiz_process_shortcodes_initially ($content) {
 
 // Find qwizdemo or qdeckdemo pairs, replace with placeholder, return for
 // save.
-function cut_demos ($content, $qwiz_qdeck) {
+function qwiz_cut_demos ($content, $qwiz_qdeck) {
 
    // Grab content of demo pair with subexpression.
    $match_pat = "/\[${qwiz_qdeck}demo\]([\s\S]*?)\[\/${qwiz_qdeck}demo\]/";
@@ -264,7 +265,7 @@ function cut_demos ($content, $qwiz_qdeck) {
 }
 
 
-function unwrap_and_paste_demos ($content, $demos, $qwiz_qdeck) {
+function qwiz_unwrap_and_paste_demos ($content, $demos, $qwiz_qdeck) {
    $n_demos = count ($demos);
    $match_pat = "/${qwiz_qdeck}_PLACEHOLDER/";
    for ($i=0; $i<$n_demos; $i++) {
@@ -280,7 +281,7 @@ function unwrap_and_paste_demos ($content, $demos, $qwiz_qdeck) {
 }
 
 
-function wrap_shortcode_pairs ($content, $qwiz_qdeck) {
+function qwiz_wrap_shortcode_pairs ($content, $qwiz_qdeck) {
 
    // Find [qwiz] ... [/qwiz] pairs and content.  Include opening/closing
    // <p>, <h*>, and <span> tags.
@@ -295,14 +296,14 @@ function wrap_shortcode_pairs ($content, $qwiz_qdeck) {
    $new_content = array ($pieces[0]);
    for ($i=0; $i<$n_qwiz_qdecks; $i++) {
       $qcontent = $matches[$i][0];
-      array_push ($new_content, check_fix_wrap_matched_divs ($qcontent, $qwiz_qdeck));
+      array_push ($new_content, qwiz_check_fix_wrap_matched_divs ($qcontent, $qwiz_qdeck));
       array_push ($new_content, $pieces[$i+1]);
    }
 
    return implode ('', $new_content);
 }
 
-function check_fix_wrap_matched_divs ($qcontent, $qwiz_qdeck) {
+function qwiz_check_fix_wrap_matched_divs ($qcontent, $qwiz_qdeck) {
 
    // Find all opening/closing divs.
    $div_match_pat = "/<div[^>]*>|<\/div>/";
@@ -359,13 +360,13 @@ function check_fix_wrap_matched_divs ($qcontent, $qwiz_qdeck) {
 }
 
 
-function check_shortcode_pairs_ok ($content, $qwiz_qdeck) {
+function qwiz_check_shortcode_pairs_ok ($content, $qwiz_qdeck) {
    global $debug;
 
    $error_b = false;
    $n_qwiz_qdecks = preg_match_all ("/\[$qwiz_qdeck|\[\/$qwiz_qdeck\]/", $content, $matches, PREG_SET_ORDER);
    if ($debug) {
-      error_log ("[check_shortcode_pairs_ok] n_qwiz_qdecks: $n_qwiz_qdecks");
+      error_log ("[qwiz_check_shortcode_pairs_ok] n_qwiz_qdecks: $n_qwiz_qdecks");
    }
    if ($n_qwiz_qdecks) {
       if ($n_qwiz_qdecks % 2 != 0) {
@@ -392,7 +393,7 @@ function check_shortcode_pairs_ok ($content, $qwiz_qdeck) {
 
    $ok_b = ! $error_b;
    if ($debug) {
-      error_log ("[check_shortcode_pairs_ok] ok_b: $ok_b");
+      error_log ("[qwiz_check_shortcode_pairs_ok] ok_b: $ok_b");
    }
 
    return $ok_b;

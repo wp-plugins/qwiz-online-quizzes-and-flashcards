@@ -1,5 +1,5 @@
 /*
- * Version 2.27 2014-12-??
+ * Version 2.27 2015-01-??
  * Make sure labeled-diagram questions contain matching opening/closing divs.
  *
  * Version 2.24 2014-12-15
@@ -1667,8 +1667,8 @@ function process_labels (question_html, label_start_tags, doing_wrapped_b) {
 }
 
 
-var correct = ['Good!', 'Correct!', 'Excellent!', 'Great!'];
-var incorrect = ['No.', 'No, that&rsquo;s not correct.'];
+var correct = [T ('Good!'), T ('Correct!'), T ('Excellent!'), T ('Great!')];
+var incorrect = [T ('No.'), T ('No, that\'s not correct.')];
 // -----------------------------------------------------------------------------
 function canned_feedback (correct_b) {
 
@@ -1678,7 +1678,7 @@ function canned_feedback (correct_b) {
       response = '[f*] ' + correct[i];
    } else {
       var i = Math.floor (Math.random () * incorrect.length);
-      response = '[fx] ' + incorrect[i] + '&nbsp; Please try again.';
+      response = '[fx] ' + incorrect[i] + ' ' + T ('Please try again') + '.';
    }
    response = '<p><strong>' + response + '</strong></p>';
 

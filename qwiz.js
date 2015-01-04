@@ -1,7 +1,8 @@
 /*
- * Version 2.27 2014-12-??
+ * Version 2.27 2015-01-??
  * Toolbar option - keep "next" button active.
  * Just count targets, not labels.
+ * Feedback interleaved with choices, optional.
  *
  * Version 2.26 2014-12-21
  * Look for WP content filter-created divs, rewrite only that HTML.
@@ -134,9 +135,9 @@ var qname = 'qwiz_';
 
 // Debug settings.
 var debug = [];
-debug.push (false);    // 0 - general.
-debug.push (false);    // 1 - radio/choices html.
-debug.push (false);    // 2 - feedback html.
+debug.push (true );    // 0 - general.
+debug.push (true );    // 1 - radio/choices html.
+debug.push (true );    // 2 - feedback html.
 debug.push (false);    // 3 - old/new html dump.
 debug.push (false);    // 4 - question tags/topics.
 
@@ -559,7 +560,7 @@ this.label_dropped = function (target_obj, label_obj) {
       var qwizq_id = '#qwiz' + i_qwiz + '-q' + i_question;
       if (qwizdata[i_qwiz].n_labels_correct == qwizdata[i_qwiz].n_label_targets) {
 
-         // Done with labeled diagram.  Show summary, final feedback DKTMP.
+         // Done with labeled diagram.  Show summary.
          var n_tries = qwizdata[i_qwiz].n_label_attempts;
          var n_label_targets = qwizdata[i_qwiz].n_label_targets;
          var correct_b = n_tries == n_label_targets;
@@ -1644,21 +1645,97 @@ function process_question (i_qwiz, i_question, htm, opening_tags) {
       console.log ('[process_question] n_choices: ', n_choices);
    }
 
-   var qtags = ['[c]', '[c*]'];
-   var qnext_tags = ['[c]', '[c*]', '[f]'];
    var n_correct = 0;
+
+   var choice_start_tags = ['[c]', '[c*]'];
+   var choice_next_tags  = ['[c]', '[c*]', '[x]'];
+
+   var got_feedback_b = false;
+   var feedback_divs = [];
+   var i_choice_correct = 0;
    for (var i_choice=0; i_choice<n_choices; i_choice++) {
 
       // Find choice text -- from opening tags through [c] or [c*] up to
       // opening tags for next tag.  Delete it from remaining_htm.
-      var choice_html = parse_html_block (remaining_htm, qtags, qnext_tags);
+      var choice_html = parse_html_block (remaining_htm, choice_start_tags,
+                                          choice_next_tags);
       remaining_htm = remaining_htm.substr (choice_html.length);
+
+      // See if there's feedback within the choice html.
+      var r = process_feedback_item (choice_html, i_qwiz, i_question, i_choice);
+      choice_html  = r.choice_html;
+
+      if (r.feedback_div) {
+
+         // If this is the last choice, and didn't previously get feedback
+         // with choices, then may have all feedback items together following
+         // choice items (backwards compatibility).
+         if (i_choice == n_choices-1 && ! got_feedback_b && n_choices != 1) {
+            
+            // Assume just got feedback for the first choice.  Create an empty
+            // div for the last choice.
+            feedback_divs[0] = r.feedback_div;
+            feedback_divs.push ('');
+
+            // Look for rest.
+            var n_feedback_items = 1;
+            for (var i_feedback=1; i_feedback<n_choices; i_feedback++) {
+               var r = process_feedback_item (choice_html, i_qwiz, i_question,
+                                              i_feedback);
+               choice_html  = r.choice_html;
+               if (! r.feedback_div) {
+                  break;
+               }
+               feedback_divs[i_feedback] = r.feedback_div;
+               n_feedback_items++;
+            }
+
+            // Either got just one feedback item (for last choice),
+            // or should get one item for each choice.
+            if (n_feedback_items == 1) {
+
+               // Move that item to the last choice.
+               feedback_divs[n_choices-1] = feedback_divs[0];
+               feedback_divs[0] = '';
+            } else {
+
+               // Check got them all.
+               if (n_feedback_items != n_choices) {
+                  errmsgs.push (T ('Number of feedback items does not match number of choices') + ': qwiz ' + (1 + i_qwiz) + ', ' + T('question') + ' ' + (1 + i_question));
+               } else {
+
+                  // First feedback item needs to have ID updated to indicate
+                  // really belongs to first choice.
+                  feedback_divs[0] = feedback_divs[0].replace (/(qwiz[0-9]+-q[0-9]+-a)[0-9]+/, '\$10');
+               }
+            }
+         } else {
+
+            // Create a div for the feedback we just processed.
+            got_feedback_b = true;
+            feedback_divs.push (r.feedback_div);
+
+            // Check that there's not more than one feedback item accompanying
+            // this (not-last) choice.
+            var r = process_feedback_item (choice_html, i_qwiz, i_question,
+                                           i_feedback);
+            if (r.feedback_div) {
+               errmsgs.push (T ('More than one feedback shortcode [f] given with choice') + ': qwiz ' + (1 + i_qwiz) + ', ' + T ('question') + ' ' + (1 + i_question) + ', ' + T ('choice') + ' ' + (1 + i_choice));
+            }
+         }
+      } else {
+         // No feedback given for this choice.  Record with empty "div".
+         feedback_divs.push ('');
+      }
 
       if (n_choices > 1) {
 
          // Replace [c] or [c*] with radio button.
          var radio_button_html = create_radio_button_html (i_qwiz, i_question, i_choice, choice_tags[i_choice]);
-         n_correct += radio_button_html[0];
+         if (radio_button_html[0]) {
+            n_correct++;
+            i_choice_correct = i_choice;
+         }
          choice_html = choice_html.replace (/\[c\*{0,1}\]/m, radio_button_html[1]);
 
          // Assemble with span to make choice clickable and highlight on
@@ -1687,7 +1764,12 @@ function process_question (i_qwiz, i_question, htm, opening_tags) {
          // margin to clear Qwiz icon on first page.
          choice_html = choice_html.replace (/\[c\*{0,1}\]/m, '');
          n_correct = 1;
-         new_htm += '<button class="qbutton" style="margin-left: 20px;" onclick="' + qname + '.process_choice (\'qwiz' + i_qwiz + '-q' + i_question + '-a' + i_choice + '\')">' + choice_html + '</button>\n'
+         new_htm += '<button class="qbutton" style="margin-left: 20px;" onclick="' + qname + '.process_choice (\'qwiz' + i_qwiz + '-q' + i_question + '-a' + i_choice + '\')">' + choice_html + '</button>\n';
+
+         // Require feedback for "Show-the-answer" type question.
+         if (! feedback_divs[0]) {
+            errmsgs.push (T ('Feedback [f] is required for a one-choice question') + ': qwiz ' + (1 + i_qwiz) + ', ' + T ('question') + ' ' + (1 + i_question));
+         }
       }
    }
 
@@ -1704,80 +1786,62 @@ function process_question (i_qwiz, i_question, htm, opening_tags) {
 
    // Check that one and only one choice is marked correct.
    if (n_correct == 0) {
-      errmsgs.push (T ('No choice was marked correct') + ': qwiz ' + (1 + i_qwiz) + ', question ' + (1 + i_question));
+      errmsgs.push (T ('No choice was marked correct') + ': qwiz ' + (1 + i_qwiz) + ', ' + T ('question') + ' ' + (1 + i_question));
    } else if (n_correct > 1) {
-      errmsgs.push (T ('More than one choice was marked correct') + ': qwiz ' + (1 + i_qwiz) + ', question ' + (1 + i_question));
+      errmsgs.push (T ('More than one choice was marked correct') + ': qwiz ' + (1 + i_qwiz) + ', ' + T ('question') + ' ' + (1 + i_question));
    }
 
-   // . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
-   // Find feedback alternatives for this question, make into alternative divs.
-   // Feedback html -- from opening tags before first [f] through end.
-   var m = remaining_htm.match (/(<[^\/][^>]*>\s*)*?\[f\][\s\S]*/m);
-   var feedback_html = '';
-   if (m) {
-      feedback_html = m[0];
+   // ..........................................................................
+   // Create canned feedback for any empty feedback items
+   for (var i_choice=0; i_choice<n_choices; i_choice++) {
+      if (! feedback_divs[i_choice]) {
+         var response = canned_feedback (i_choice == i_choice_correct);
+         feedback_divs[i_choice] = create_feedback_div_html (i_qwiz, i_question,
+                                                             i_choice, response);
+      }
    }
+
+   // Add feedback divs to html string.
+   new_htm += feedback_divs.join ('\n');
    if (debug[2]) {
-      console.log ('[process_question] feedback_html: ', feedback_html);
-   }
-
-   if (! feedback_html) {
-      errmsgs.push (T ('Did not find feedback ("[f]") for') + ' qwiz ' + (i_qwiz + 1) + ', question ' + (i_question + 1));
-      feedback_html = '';
-   } else {
-
-      // Parse into individual items.
-      var feedback_divs = [];
-      var feedback_start_tags = ['[f]'];
-      var feedback_next_tags = ['[f]', '[x]'];
-      var i_item = 0;
-      while (true) {
-         var feedback_item_html 
-                          = parse_html_block (feedback_html, feedback_start_tags,
-                                              feedback_next_tags);
-         if (feedback_item_html == 'NA') {
-            break;
-         }
-
-         // Take item out of remaining html.
-         feedback_html = feedback_html.replace (feedback_item_html, '');
-
-         // Delete [f].
-         feedback_item_html = feedback_item_html.replace (/\[f\]/, '');
-
-         if (debug[2]) {
-            console.log ('[process_question] feedback_item_html: ', feedback_item_html);
-         }
-
-         // Create a div for each.
-         feedback_divs.push (
-               create_feedback_div_html (i_qwiz, i_question, i_item,
-                                         feedback_item_html)
-         );
-         i_item++;
-      }
-
-      var n_feedback_items = feedback_divs.length;
-
-      if (debug[2]) {
-         console.log ('[process_question] n_feedback_items: ', n_feedback_items);
-      }
-
-      // Check that number of feedback items matches number of choices.
-      if (n_choices != n_feedback_items) {
-         errmsgs.push (T ('Number of feedback items does not match number of choices') + ': qwiz ' + (1 + i_qwiz) + ', question ' + (1 + i_question));
-      }
-
-      new_htm += feedback_divs.join ('\n');
-      if (debug[2]) {
-         console.log ('[process_question] new_htm: ', new_htm)
-      }
+      console.log ('[process_question] new_htm: ', new_htm)
    }
 
    // Close question div.
    new_htm += '</div>\n';
 
    return new_htm;
+}
+
+
+// -----------------------------------------------------------------------------
+function process_feedback_item (choice_html, i_qwiz, i_question, i_choice) {
+
+   var feedback_start_tags = ['[f]'];
+   var feedback_next_tags  = ['[f]', '[x]'];
+
+   var feedback_item_html = parse_html_block (choice_html, feedback_start_tags,
+                                              feedback_next_tags);
+   var feedback_div = '';
+   if (feedback_item_html != 'NA') {
+
+      // Yes.  Take out of the choice html.
+      choice_html = choice_html.replace (feedback_item_html, '');
+
+      // Delete [f].
+      feedback_item_html = feedback_item_html.replace (/\[f\]/, '');
+      if (debug[2]) {
+         console.log ('[process_feedback_item] feedback_item_html: ', feedback_item_html);
+      }
+      feedback_div = create_feedback_div_html (i_qwiz, i_question, i_choice,
+                                               feedback_item_html)
+   }
+   if (debug[2]) {
+      console.log ('[process_feedback_item] feedback_div:', feedback_div);
+      console.log ('[process_feedback_item] choice_html:', choice_html);
+   }
+
+   return {'feedback_div': feedback_div, 'choice_html': choice_html};
 }
 
 
@@ -2526,9 +2590,9 @@ function display_progress (i_qwiz) {
    var n_to_go = qwizdata[i_qwiz].n_questions - n_done;
 
    if (n_attempts == 0) {
-      progress_html = 'Questions in this quiz: ' + n_to_go;
+      progress_html = T ('Questions in this quiz:') + ' ' + n_to_go;
    } else {
-      progress_html = qwizdata[i_qwiz].n_questions + ' questions, ' + n_attempts + ' ' + plural ('response', 'responses', n_attempts) + ', ' + qwizdata[i_qwiz].n_correct + ' correct, ' + qwizdata[i_qwiz].n_incorrect + ' incorrect, ' + n_to_go + ' to go';
+      progress_html = qwizdata[i_qwiz].n_questions + ' ' + T ('questions') + ', ' + n_attempts + ' ' + plural ('response', 'responses', n_attempts) + ', ' + qwizdata[i_qwiz].n_correct + ' ' + T ('correct') + ', ' + qwizdata[i_qwiz].n_incorrect + ' ' + T ('incorrect') + ', ' + n_to_go + ' ' + T ('to go');
    }
    $ ('#progress-qwiz' + i_qwiz).html (progress_html);
 }
@@ -2586,6 +2650,28 @@ function create_feedback_div_html (i_qwiz, i_question, i_item, item, c_x) {
    }
 
    return htm;
+}
+
+
+var correct = [T ('Good!'), T ('Correct!'), T ('Excellent!'), T ('Great!')];
+var incorrect = [T ('No.'), T ('No, that\'s not correct.')];
+// -----------------------------------------------------------------------------
+function canned_feedback (correct_b) {
+
+   var response;
+   if (correct_b) {
+      var i = Math.floor (Math.random () * correct.length);
+      response = correct[i];
+   } else {
+      var i = Math.floor (Math.random () * incorrect.length);
+      response = incorrect[i] + ' ' + T ('Please try again') + '.';
+   }
+   response = '<p><strong>' + response + '</strong></p>';
+
+   if (debug[0]) {
+      console.log ('[canned_feedback] response:', response);
+   }
+   return response;
 }
 
 

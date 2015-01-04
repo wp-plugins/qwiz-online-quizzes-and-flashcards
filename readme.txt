@@ -22,10 +22,13 @@ Activate the plugin through the 'Plugins' menu in WordPress
 == Changelog ==
 
 = 2.27 =
-2014-12-??
+2015-01-??
 Make sure labeled-diagram questions contain matching opening/closing divs.
 Just count targets, not labels.
 Toolbar option - keep "next" button active.
+Check for allow_url_fopen, check version number.
+Don't increment number of cards reviewed until "Check answer"/flip.
+Feedback interleaved with choices, optional.
 
 = 2.26 =
 2014-12-21
