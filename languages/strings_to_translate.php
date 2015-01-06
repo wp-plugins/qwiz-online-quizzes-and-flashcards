@@ -38,6 +38,9 @@
       'cards total' => __ ('cards total', $q),
 
       'Congratulations, you answered all questions correctly' => __ ('Congratulations, you answered all questions correctly', $q),
+      'correct' => __ ('correct', $q),
+      'Correct!' => __ ('Correct!', $q),
+      'Excellent!' => __ ('Excellent!', $q),
       'Flip' => __ ('Flip', $q),
 
       /* Translators: as in "Flip back to the front side" */
@@ -46,11 +49,16 @@
       /* Translators: as in "For topic Biology..." */
       'For topic' => __ ('For topic', $q),
 
+      'Good!' => __ ('Good!', $q),
       'Got it!' => __ ('Got it!', $q),
+      'Great!' => __ ('Great!', $q),
 
       /*'Translators: as in In this %s-flashcard stack, you clicked "Got it!" on the first try for every card. */
       'In this %s-flashcard stack, you clicked' => __ ('In this %s-flashcard stack, you clicked', $q),
       'on the first try for every card' => __ ('on the first try for every card', $q),
+
+      /* Translators: as in "Five answers were incorrect" */
+      'incorrect' => __ ('incorrect', $q),
 
       'It took you one try' => __ ('It took you one try', $q),
       'It took you one try' => __ ('It took you one try', $q),
@@ -67,14 +75,18 @@
       /* Translators: as in "Click here to go to the next question" */
       'Next question' => __ ('Next question', $q),
 
+      'No.' => __ ('No.', $q),
+      'No, that\'s not correct.' => __ ('No, that\'s not correct.', $q),
       'on the first try' => __ ('on the first try', $q),
 
       /* Translators: as in "three out of four" */
       'out of' => __ ('out of', $q),
 
+      'Please try again' => __ ('Please try again', $q),
       'Put this card at the bottom of stack, show the next card' => __ ('Put this card at the bottom of stack, show the next card', $q),
       'question' => __ ('question', $q),
       'questions' => __ ('questions', $q),
+      'Questions in this quiz:' => __ ('Questions in this quiz:', $q),
       'Randomly shuffle the remaining cards' => __ ('Randomly shuffle the remaining cards', $q),
       'Remove this card from the stack' => __ ('Remove this card from the stack', $q),
 
@@ -88,6 +100,8 @@
 
       /* Translators: as in "Shuffle the deck of cards" */
       'Shuffle' => __ ('Shuffle', $q),
+
+      'Sorry, that\'s not correct.' => __ ('Sorry, that\'s not correct.', $q),
 
       /* Translators: as in "Click here to start quiz" */
       'Start quiz' => __ ('Start quiz', $q),
@@ -135,6 +149,10 @@
 
       /* Translators: The remaining strings are error messages - not normally
          seen by the user -- only by the quiz/flashcard creator.  */
+
+      /* Translators: as in "choice number one" */
+      'choice' => __ ('choice', $q),
+
       'Did not find answer ("[a]") -- card back -- for' => __ ('Did not find answer ("[a]") -- card back -- for', $q),
       'Did not find any labels [l] within [qwiz]...[/qwiz] shortcode pairs' => __ ('Did not find any labels [l] within [qwiz]...[/qwiz] shortcode pairs', $q),
       'Did not find any questions [q] within [qwiz]...[/qwiz] shortcode pairs' => __ ('Did not find any questions [q] within [qwiz]...[/qwiz] shortcode pairs', $q),
@@ -148,8 +166,10 @@
       'Error found' => __ ('Error found', $q),
       'Errors found' => __ ('Errors found', $q),
       '(exit text) must be last' => __ ('(exit text) must be last', $q),
+      'Feedback [f] is required for a one-choice question' => __ ('Feedback [f] is required for a one-choice question', $q),
       'Got more than one answer ("[a]") -- card back -- for' => __ ('Got more than one answer ("[a]") -- card back -- for', $q),
       'More than one choice was marked correct' => __ ('More than one choice was marked correct', $q),
+      'More than one feedback shortcode [f] given with choice' => __ ('More than one feedback shortcode [f] given with choice', $q),
       'No choice was marked correct' => __ ('No choice was marked correct', $q),
       'Number of feedback items does not match number of choices' => __ ('Number of feedback items does not match number of choices', $q),
       'Number of feedback items' => __ ('Number of feedback items', $q),

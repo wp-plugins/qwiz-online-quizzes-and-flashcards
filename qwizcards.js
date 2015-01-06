@@ -1,4 +1,9 @@
 /*
+ * Version 2.27 2015-01-05
+ * Reset header width to match card width for summary report.
+ * Toolbar option - keep "next" button active.
+ * Don't increment number of cards reviewed until "Check answer"/flip.
+ *
  * Version 2.26 2014-12-21
  * Look for WP content filter-created divs, rewrite only that HTML.
  * On back side of card, "Flip"/"Check answer" -> "Flip back".
@@ -136,6 +141,8 @@ var topic_descriptions = new Object;
 // Statistics by topic.
 var topic_statistics = new Object;
 
+var card_reviewed_b = false;
+var next_button_active_b  = false;
 
 // -----------------------------------------------------------------------------
 $(document).ready (function () {
@@ -406,7 +413,6 @@ function add_style () {
    s.push ('.qcard_next_buttons {');
    s.push ('   position:            relative;');
    s.push ('   margin-top:          5px;');
-   s.push ('   margin-left:         20px;');
    s.push ('   text-align:          center;');
    s.push ('}');
    s.push ('.qbutton {');
@@ -1371,7 +1377,11 @@ this.set_next_buttons = function (i_deck) {
    }
 
    // "Got it".  Starts out disabled, gray.
-   htm += '<button class="qbutton_disabled got_it-qdeck' + i_deck + '" disabled="true" onclick="' + qname + '.got_it (' + i_deck + ')" title="' + T ('Remove this card from the stack') + '">' + T ('Got it!') + '</button> &nbsp; ';
+   if (next_button_active_b) {
+      htm += '<button class="qbutton got_it got_it-qdeck' + i_deck + '" onclick="' + qname + '.got_it (' + i_deck + ')" title="' + T ('Remove this card from the stack') + '">' + T ('Got it!') + '</button> &nbsp; ';
+   } else {
+      htm += '<button class="qbutton_disabled got_it got_it-qdeck' + i_deck + '" disabled="true" onclick="' + qname + '.got_it (' + i_deck + ')" title="' + T ('Remove this card from the stack') + '">' + T ('Got it!') + '</button> &nbsp; ';
+   }
 
    // "Shuffle".
    if (deckdata[i_deck].n_to_go > 1) {
@@ -1402,21 +1412,19 @@ this.process_card = function (i_deck) {
          var ii_card = deckdata[i_deck].card_order[i_card];
          if (! deckdata[i_deck].cards[ii_card].got_it) {
 
-            // Display card.  "Need more practice" and "Got it!" buttons start
-            // out disabled, gray.
-            $ ('button.got_it-qdeck' + i_deck + ', button.next_card-qdeck' + i_deck).attr ('disabled', true).removeClass ('qbutton').addClass ('qbutton_disabled');
+            // Display card - not "reviewed" until "Check answer"/flip.  "Need
+            // more practice" and "Got it!" buttons start out disabled, gray.
+            card_reviewed_b = false;
+            if (! next_button_active_b) {
+               $ ('button.got_it-qdeck' + i_deck + ', button.next_card-qdeck' + i_deck).attr ('disabled', true).removeClass ('qbutton').addClass ('qbutton_disabled');
+            }
 
             // If only one to go, disable and gray out
             // more practice/next card and shuffle buttons.
             if (deckdata[i_deck].n_to_go == 1) {
-               $ ('button.next_card-qdeck' + i_deck).attr ('disabled', true);
-               $ ('button.next_card-qdeck' + i_deck).removeClass ('qbutton').addClass ('qbutton_disabled');
-
-               $ ('button.shuffle-qdeck' + i_deck).attr ('disabled', true);
-               $ ('button.shuffle-qdeck' + i_deck).removeClass ('qbutton').addClass ('qbutton_disabled');
+               $ ('button.next_card-qdeck' + i_deck + ', button.shuffle-qdeck' + i_deck).attr ('disabled', true).removeClass ('qbutton').addClass ('qbutton_disabled');
             }
             deckdata[i_deck].i_card = i_card;
-            deckdata[i_deck].n_reviewed++;
             q.set_card_front_and_back (i_deck, i_card);
             break;
          } else {
@@ -1459,6 +1467,12 @@ function done (i_deck) {
    report_html.push (deckdata[i_deck].exit_html);
 
    deckdata[i_deck].el_qcard_card_front.html (report_html.join ('\n'));
+
+   // Set the widths of the progress, header, and next-button divs to match
+   // card front.
+   var qcard_width = set_header (i_deck, 'front');
+   set_container_width_height (i_deck, qcard_width);
+
 }
 
 
@@ -1497,6 +1511,13 @@ this.flip = function (i_deck) {
 
       // Enable "Need more practice" and "Got it!" buttons, un-gray.
       $ ('button.got_it-qdeck' + i_deck + ', button.next_card-qdeck' + i_deck).attr ('disabled', false).removeClass ('qbutton_disabled').addClass ('qbutton');
+
+      // Increment n_reviewed on first flip for this card and redisplay progress.
+      if (! card_reviewed_b) {
+         card_reviewed_b = true;
+         deckdata[i_deck].n_reviewed++;
+         display_progress (i_deck);
+      }
 
       // If there's a text entry box...
       if (el_textentry.length) {
@@ -1725,8 +1746,6 @@ this.shuffle_order = function (i_deck) {
       q.flip (i_deck);
    }
 
-   // Do not increment number reviewed -- "undo" increment in process_card ().
-   deckdata[i_deck].n_reviewed--;
    q.process_card (i_deck);
 };
 
@@ -1752,6 +1771,14 @@ function shuffle (array) {
   }
 
   return array;
+}
+
+
+// -----------------------------------------------------------------------------
+this.keep_next_button_active = function () {
+   next_button_active_b = true;
+   $ ('button.got_it').attr ('disabled', false).removeClass ('qbutton_disabled').addClass ('qbutton');
+
 }
 
 

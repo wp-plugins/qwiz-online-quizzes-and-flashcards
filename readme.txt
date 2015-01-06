@@ -2,7 +2,7 @@
 Contributors: dan_kirshner
 Tags: interactive quiz, quiz, flashcards, labeled diagrams
 Tested up to: 4.1
-Stable tag: 2.26
+Stable tag: 2.27
 License: GPL2
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
@@ -20,6 +20,15 @@ Activate the plugin through the 'Plugins' menu in WordPress
 == Screenshots ==
 
 == Changelog ==
+
+= 2.27 =
+2015-01-05
+Make sure labeled-diagram questions contain matching opening/closing divs.
+Just count targets, not labels.
+Toolbar option - keep "next" button active.
+Check for allow_url_fopen, check version number.
+Don't increment number of cards reviewed until "Check answer"/flip.
+Feedback interleaved with choices, optional.
 
 = 2.26 =
 2014-12-21

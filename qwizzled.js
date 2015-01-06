@@ -1,4 +1,7 @@
 /*
+ * Version 2.27 2015-01-05
+ * Make sure labeled-diagram questions contain matching opening/closing divs.
+ *
  * Version 2.24 2014-12-15
  * Make $ (= jQuery) private.
  * Alternate edit-area iframe id: wpb_tinymce_content_ifr.
@@ -63,7 +66,9 @@ var qwizzledf = function () {
 var qname = 'qwizzled';
 
 // Debug settings.
-var debug = [false];
+var debug = [];
+debug.push (false);    // 0 - general.
+debug.push (false);    // 1 - htm detail in parse_html_block ().
 
 var $ = jQuery;
 
@@ -528,7 +533,7 @@ this.create_target1 = function (multiple_targets_f) {
 // -----------------------------------------------------------------------------
 this.create_target2 = function (multiple_targets_f) {
 
-   // Preliminary check: Look for already-wrapped labels -- label divs --  and
+   // Preliminary check 1: Look for already-wrapped labels -- label divs --  and
    // make sure no new [l] shortcodes have been added inside.  If so, move out.
    edit_area.find ('.qwizzled_label').each (function () {
       var label_html = $ (this).html ();
@@ -564,7 +569,8 @@ this.create_target2 = function (multiple_targets_f) {
       console.log ('[create_target2] htm: ', htm);
    }
 
-   // Take out and save <xmp>...</xmp> code and comments.
+   // Take out and save <qwizdemo>...</qwizdemo> code and comments.
+   // DKTMP
    // ...
 
    // Want labels to be within [qwiz]...[/qwiz] pairs.  Make sure there is such
@@ -577,9 +583,47 @@ this.create_target2 = function (multiple_targets_f) {
       return;
    }
 
+   // Preliminary check 2: If any wrapped question divs (div.qwizzled_question),
+   // make sure balanced divs between each question -- wrapped or not.
+   var any_new_html_b = false;
+   var new_html = htm;
+   if (htm.search ('qwizzled_question') != -1) {
+      if (debug[0]) {
+         console.log ('[create_target2] preliminary check 2...');
+      }
+
+      // Yes, some have been wrapped.
+      var question_start_tags = ['[q]', '[q ', '<div class="qwizzled_question">'];
+      var question_next_tags = question_start_tags.concat (['[x]', '[/qwiz]']);
+      var ipos = 0;
+      while (true) {
+
+         // Get html up to next question.
+         var rqwiz = parse_html_block (htm.substr (ipos), question_start_tags,
+                                       question_next_tags);
+         var question_html = rqwiz.htm_block;
+         if (question_html == 'NA') {
+            break;
+         }
+
+         // Check and fix matching divs.
+         var new_question_html = check_fix_matching_divs (question_html);
+         if (new_question_html) {
+            any_new_html_b = true;
+            new_html = new_html.replace (question_html, new_question_html);
+            if (debug[0]) {
+               console.log ('[create_target2] new_html:', new_html);
+            }
+         }
+
+         // Skip visited.
+         ipos += rqwiz.htm_index + question_html.length;
+      }
+   }
+
    // We'll get all labels in unwrapped questions (wrapped questions done above)
    // [qwiz]...[/qwiz] pairs.  Check that there are such pairs.
-   var qwiz_matches = htm.match (/\[qwiz[\s\S]*?\[\/qwiz\]/gm);
+   var qwiz_matches = new_html.match (/\[qwiz[\s\S]*?\[\/qwiz\]/gm);
    if (! qwiz_matches) {
       report_errors ();
       return;
@@ -592,17 +636,16 @@ this.create_target2 = function (multiple_targets_f) {
    // For not-yet-wrapped questions, loop over qwiz-tag pairs, and then over
    // [q] questions within each pair.
    // If any labels not yet wrapped in an inline-block span element, do so.
-   var any_new_html_b = false;
    for (i_qwiz=0; i_qwiz<n_qwizzes; i_qwiz++) {
 
       // See if labels [l] inside, along with associated feedback ([f*] and
       // [fx]).  Wrap labels.  If no feedback given, create with canned
       // response.  html returned only if labels inside.  
       question_start_tags = ['[q]', '[q '];
-      new_html = process_notwrapped_questions (qwiz_matches[i_qwiz], question_start_tags, false);
-      if (new_html) {
+      var question_html = process_notwrapped_questions (qwiz_matches[i_qwiz], question_start_tags, false);
+      if (question_html) {
          any_new_html_b = true;
-         htm = htm.replace (qwiz_matches[i_qwiz], new_html);
+         new_html = new_html.replace (qwiz_matches[i_qwiz], question_html);
       }
    }
 
@@ -622,7 +665,7 @@ this.create_target2 = function (multiple_targets_f) {
    if (any_new_html_b) {
 
       // Update displayed content.
-      edit_area.html (htm);
+      edit_area.html (new_html);
    }
 
    if (any_new_html_b || any_new_question_div_b) {
@@ -1289,7 +1332,7 @@ function process_wrapped_questions () {
    var any_new_question_div_b = false;
    edit_area.find ('div.qwizzled_question').each (function () {
       var htm = $ (this).html ();
-      if (debug[0]) {
+      if (debug[1]) {
          console.log ('[process_wrapped_questions] htm:', htm);
       }
 
@@ -1331,7 +1374,7 @@ function process_wrapped_questions () {
 // true if question start tag is "<div ...".
 function process_notwrapped_questions (qwiz_html, question_start_tags, doing_wrapped_b) {
 
-   var question_next_tags  = ['[q]', '[q ', '<div class="qwizzled_question">', '[x]', '[/qwiz]'];
+   var question_next_tags = ['[q]', '[q ', '<div class="qwizzled_question">', '[x]', '[/qwiz]'];
 
    var any_new_html_b = false;
    var any_labels_b   = false;
@@ -1405,6 +1448,8 @@ function process_question (question_html, doing_wrapped_b) {
 
    if (debug[0]) {
       console.log ('[process_question] doing_wrapped_b:', doing_wrapped_b);
+   }
+   if (debug[1]) {
       console.log ('[process_question] question_html:', question_html);
    }
    var any_new_html_b = false;
@@ -1432,7 +1477,7 @@ function process_question (question_html, doing_wrapped_b) {
    // This regex assumes no left square bracket in comment -- couldn't get non-
    // greedy match to work.  After comment, also look for opening/closing tags
    // around whitespace/non-breaking space.
-   var comment_pos = question_html.search (/(<[^\/][^>]*>\s*)*\[!+\][^\[]*\[\/!+\]\s*(<\/[^>]+>s*)*(<[^>]+>|&nbsp;|\s)*$/m);
+   var comment_pos = question_html.search (/(<[^\/][^>]*>\s*)*\[!+\][^\[]*\[\/!+\]\s*(<\/[^>]+>\s*)*(<[^>]+>|&nbsp;|\s)*$/);
    if (comment_pos != -1) {
       comment_html = question_html.substr (comment_pos);
       question_html = question_html.substr (0, comment_pos);
@@ -1622,8 +1667,8 @@ function process_labels (question_html, label_start_tags, doing_wrapped_b) {
 }
 
 
-var correct = ['Good!', 'Correct!', 'Excellent!', 'Great!'];
-var incorrect = ['No.', 'No, that&rsquo;s not correct.'];
+var correct = [T ('Good!'), T ('Correct!'), T ('Excellent!'), T ('Great!')];
+var incorrect = [T ('No.'), T ('No, that\'s not correct.')];
 // -----------------------------------------------------------------------------
 function canned_feedback (correct_b) {
 
@@ -1633,7 +1678,7 @@ function canned_feedback (correct_b) {
       response = '[f*] ' + correct[i];
    } else {
       var i = Math.floor (Math.random () * incorrect.length);
-      response = '[fx] ' + incorrect[i] + '&nbsp; Please try again.';
+      response = '[fx] ' + incorrect[i] + ' ' + T ('Please try again') + '.';
    }
    response = '<p><strong>' + response + '</strong></p>';
 
@@ -1693,6 +1738,105 @@ function check_qwiz_tag_pairs_ok (htm) {
 
 
 // -----------------------------------------------------------------------------
+function check_fix_matching_divs (htm) {
+
+   var new_htm = [];
+
+   // Find all opening/closing divs.
+   var div_re = RegExp ('<div[^>]*>|<\/div>', 'gm');
+   var div_matches = htm.match (div_re);
+   if (div_matches) {
+
+      // Loop over tags.  Mark matches.
+      var matched_pair_b = [];
+      var n_tags = div_matches.length;
+      for (var i=0; i<n_tags; i++) {
+         matched_pair_b.push (false);
+         if (div_matches[i].substr(0, 2) == '</') {
+
+            // Closing </div>.  Look for previous unmatched opening <div>.  If
+            // found, mark pair as matched.
+            for (var jj=i-1; jj>=0; jj--) {
+               if (div_matches[jj].substr (0, 2) == '<d' && ! matched_pair_b[jj]) {
+                  matched_pair_b[jj] = true;
+                  matched_pair_b[i]  = true;
+                  break;
+               }
+            }
+         }
+      }
+
+      // If unmatched opening divs, add a closing div for each.  If unmatched
+      // closing divs, delete.
+      if (matched_pair_b.indexOf (false) != -1) {
+
+         // If there's a comment at the end -- that is, just opening tags, 
+         // comment, closing tags, and whitespace before (optionally) the
+         // bottom-border div and a closing div -- delete it temporarily, add
+         // back to end when done.
+         var comment_html = '';
+
+         // This regex assumes no left square bracket in comment -- couldn't get
+         // non-greedy match to work.  After comment, also look for
+         // opening/closing tags around whitespace/non-breaking space.
+         //                               2 opening tags                           3 closing     4 tags around nbsp            5                                                             6
+         var comment_match = htm.match (/((<[^\/][^>]*>\s*)*\[!+\][^\[]*\[\/!+\]\s*(<\/[^>]+>\s*)*(<[^>]+>&nbsp;<\/[^>]+>\s*)*)(<div class="qwizzled_question_bottom_border_title"[^>]*>\s*)*(<\/div>\s*)*$/);
+         //                              1 comment, open/close tags, whitespace & nbsp ---------------------------------------|
+         if (comment_match) {
+            comment_html = comment_match[1];
+            htm = htm.replace (comment_html, '');
+
+            if (debug[0]) {
+               console.log ('[check_fix_matching_divs] comment_html:', comment_html);
+            }
+         }
+
+         // Split contents on div tags.
+         var pieces = htm.split (div_re);
+
+         new_htm.push (pieces[0]);
+         var n_new_closing_divs = 0;
+         for (var i=0; i<n_tags; i++) {
+
+            // Save pieces and divs, except unmatched closing divs.
+            if (matched_pair_b[i]) {
+               new_htm.push (div_matches[i]);
+            } else {
+               if (div_matches[i].substr(0, 2) == '<d') {
+
+                  // Unmatched opening div.  Save, and count how many closing
+                  // divs needed.
+                  new_htm.push (div_matches[i]);
+                  n_new_closing_divs++;
+                  console.log ('[check_fix_matching_divs] unmatched opening div:', div_matches[i]);
+               } else {
+                  console.log ('[check_fix_matching_divs] unmatched closing div', i);
+               }
+            }
+            new_htm.push (pieces[i+1]);
+         }
+
+         // Add on needed closing divs.
+         for (var i=0; i<n_new_closing_divs; i++) {
+            new_htm.push ('</div>');
+         }
+
+         // Add back comment.
+         if (comment_html) {
+            new_htm.push (comment_html);
+         }
+      }
+   }
+   new_htm = new_htm.join ('');
+   if (debug[0]) {
+      console.log ('[check_fix_matching_divs] new_htm:', new_htm);
+   }
+
+   return new_htm;
+}
+
+
+// -----------------------------------------------------------------------------
 function report_errors () {
 
    // Error messages, if any.
@@ -1727,7 +1871,10 @@ function tags_to_pat (tags) {
 // "shortcodes" up to any opening tags of next qwiz/qcard tags.
 function parse_html_block (htm, qtags, qnext_tags, is_all_whitespace_b) {
    if (debug[0]) {
-      console.log ('[parse_html_block] qtags: ', qtags, ', htm: ', htm);
+      console.log ('[parse_html_block] qtags: ', qtags);
+   }
+   if (debug[1]) {
+      console.log ('[parse_html_block] htm: ', htm);
    }
    var all_whitespace_b = false;
 
