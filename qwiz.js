@@ -1,5 +1,8 @@
 /*
- * Version 2.27 2015-01-??
+ * Version 2.28 2015-01-??
+ * random="true" option for quizzes.
+ *
+ * Version 2.27 2015-01-05
  * Toolbar option - keep "next" button active.
  * Just count targets, not labels.
  * Feedback interleaved with choices, optional.
@@ -1217,6 +1220,14 @@ function create_qwiz_divs (i_qwiz, qwiz_tag, htm, exit_html) {
       console.log ('[create_qwiz_divs] repeat_incorrect_value:', repeat_incorrect_value, ', repeat_incorrect_b:', qwizdata[i_qwiz].repeat_incorrect_b);
    }
 
+
+   // If "random=..." present, parse out true/false.
+   var random = get_attr (attributes, 'random');
+   qwizdata[i_qwiz].random_b = random == 'true';
+   if (debug[0]) {
+      console.log ('[create_qwiz_divs] random:', random, ', random_b:', qwizdata[i_deck].random_b);
+   }
+
    // Undisplayed version of qwiz div, so can measure default width if need to.
    // Keep out of flow.  (Don't let margins, padding take up room.)
    var top_html = '';
@@ -1506,6 +1517,12 @@ this.next_question = function (i_qwiz) {
    if (n_done == n_questions) {
       display_summary_and_exit (i_qwiz);
    } else {
+
+      // If random order, start at random place to look for next not-yet-
+      // answered-correctly question.
+      if (qwizdata[i_qwiz].random_b) {
+         i_question = Math.floor (Math.random () * n_questions);
+      }
       while (true) {
          i_question++;
          if (i_question >= n_questions) {
@@ -2654,7 +2671,7 @@ function create_feedback_div_html (i_qwiz, i_question, i_item, item, c_x) {
 
 
 var correct = [T ('Good!'), T ('Correct!'), T ('Excellent!'), T ('Great!')];
-var incorrect = [T ('No.'), T ('No, that\'s not correct.')];
+var incorrect = [T ('No.'), T ('No, that\'s not correct.'), T ('Sorry, that\'s not correct.')];
 // -----------------------------------------------------------------------------
 function canned_feedback (correct_b) {
 
@@ -2664,7 +2681,7 @@ function canned_feedback (correct_b) {
       response = correct[i];
    } else {
       var i = Math.floor (Math.random () * incorrect.length);
-      response = incorrect[i] + ' ' + T ('Please try again') + '.';
+      response = incorrect[i];
    }
    response = '<p><strong>' + response + '</strong></p>';
 
