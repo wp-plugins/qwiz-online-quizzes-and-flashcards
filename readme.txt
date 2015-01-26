@@ -2,7 +2,7 @@
 Contributors: dan_kirshner
 Tags: interactive quiz, quiz, flashcards, labeled diagrams
 Tested up to: 4.1
-Stable tag: beta for 2.27
+Stable tag: 2.27
 License: GPL2
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
@@ -21,8 +21,13 @@ Activate the plugin through the 'Plugins' menu in WordPress
 
 == Changelog ==
 
-= 2.27 =
+= 2.28 =
 2015-01-??
+Free-form input ([textentry]) for quizzes.
+random="true" option for quizzes.
+
+= 2.27 =
+2015-01-05
 Make sure labeled-diagram questions contain matching opening/closing divs.
 Just count targets, not labels.
 Toolbar option - keep "next" button active.

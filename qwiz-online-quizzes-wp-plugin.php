@@ -3,7 +3,7 @@
  * Plugin Name: Qwiz - online quizzes and flashcards
  * Plugin URI: http://dkprojects.net/qwiz
  * Description: Easy online quizzes and flashcards for WordPress
- * Version: beta1 for 2.28
+ * Version: beta2 for 2.28
  * Author: Dan Kirshner
  * Author URI: http://dkprojects.net/qwiz
  * License: GPL2
@@ -47,11 +47,12 @@ function add_qwiz_js_and_style () {
    // JavaScript.
    $qwiz                 = qwiz_plugin_url ('qwiz.js');
    $qwizcards            = qwiz_plugin_url ('qwizcards.js');
-   //$qwizscripts          = qwiz_plugin_url ('qwizscripts.js');
+   $qwiz_qcards_common   = qwiz_plugin_url ('qwiz_qcards_common.js');
    $jquery_ui            = qwiz_plugin_url ('jquery-ui.min.js');
    $jquery_ui_touchpunch = qwiz_plugin_url ('jquery.ui.touch-punch.min.js');
    wp_enqueue_script ('qwiz_handle',                 $qwiz,                 array (), '2.28', true);
    wp_enqueue_script ('qwizcards_handle',            $qwizcards,            array (), '2.28', true);
+   wp_enqueue_script ('qwiz_qcards_common_handle',   $qwiz_qcards_common,   array (), '2.28', true);
    wp_enqueue_script ('jquery_ui_handle',            $jquery_ui,            array (), '2.28', true);
    wp_enqueue_script ('jquery_ui_touchpunch_handle', $jquery_ui_touchpunch, array (), '2.28', true);
 
@@ -102,7 +103,10 @@ function add_qwiz_js_and_style () {
 
    // Stylesheets.
    wp_register_style ('qwiz_styles_handle', qwiz_plugin_url ('qwiz_styles.css'));
+   wp_register_style ('jquery_ui_styles_handle', qwiz_plugin_url ('jquery-ui.css'));
+
    wp_enqueue_style ('qwiz_styles_handle');
+   wp_enqueue_style ('jquery_ui_styles_handle');
 }
 
 

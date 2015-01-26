@@ -1,6 +1,7 @@
 /*
  * Version 2.28 2015-01-??
  * random="true" option for quizzes.
+ * Free-form input ([textentry]) with suggestions/hints.
  *
  * Version 2.27 2015-01-05
  * Toolbar option - keep "next" button active.
@@ -143,20 +144,18 @@ debug.push (false);    // 1 - radio/choices html.
 debug.push (false);    // 2 - feedback html.
 debug.push (false);    // 3 - old/new html dump.
 debug.push (false);    // 4 - question tags/topics.
+debug.push (true );    // 5 - [textentry] / autocomplete.
 
 var $ = jQuery;
 
 // Private data, but global to this qwiz instance.
 var q = this;
+var qqc;
 q.processing_complete_b = false;
 
-// The identifier -- including qualifiers like "#" -- of the page content (that
-// perhaps contains inline quizzes) on WordPress.  Multiple-entries default
-// set in qwiz-online-quizzes-wp-plugin.php: div.entry-content, div.post-entry,
-// div.container.  Apparently themes can change this; these have come up so far.
-// Body default for stand-alone use.
-var content = get_qwiz_param ('content', 'body');
-
+var content;
+var correct;
+var incorrect;
 var errmsgs = [];
 
 var n_qwizzes = 0;
@@ -171,9 +170,41 @@ var drag_and_drop_initialized_b = false;
 var try_again_obj = '';
 var next_button_active_b = false;
 
+var textentry_b = false;
+var loaded_metaphone_js_b = false;
+
+// Object (singular and plural) of arrays of term-metaphone pairs.
+// Constant across quizzes.  
+var default_textentry_terms_metaphones;
+
+// (qwizdata[i_qwiz].textentry_terms_metaphones are quiz-specific terms given
+// with [terms]...[/terms].)
+
+// These vary with quiz, and are set up anew for each [textentry] question.
+var current_question_textentry_terms_metaphones = {};
+
+var textentry_answers = {};
+var textentry_answer_metaphones = {};
+
+var textentry_matches = {};
+var lc_textentry_matches = {};
+var textentry_i_qwiz;
+
 
 // -----------------------------------------------------------------------------
 $ (document).ready (function () {
+
+   qqc = qwiz_qcards_common;
+
+   correct = [T ('Good!'), T ('Correct!'), T ('Excellent!'), T ('Great!')];
+   incorrect = [T ('No.'), T ('No, that\'s not correct.'), T ('Sorry, that\'s not correct.')];
+
+   // The identifier -- including qualifiers like "#" -- of the page content (that
+   // perhaps contains inline quizzes) on WordPress.  Multiple-entries default
+   // set in qwiz-online-quizzes-wp-plugin.php: div.entry-content, div.post-entry,
+   // div.container.  Apparently themes can change this; these have come up so far.
+   // Body default for stand-alone use.
+   content = qqc.get_qwiz_param ('content', 'body');
 
    // Add default styles for qwiz divs to page.
    add_style ();
@@ -182,7 +213,7 @@ $ (document).ready (function () {
 
    // Error messages, if any.
    if (errmsgs.length) {
-      alert (plural ('Error found', 'Errors found', errmsgs.length) + ':\n\n' + errmsgs.join ('\n'));
+      alert (Tplural ('Error found', 'Errors found', errmsgs.length) + ':\n\n' + errmsgs.join ('\n'));
    }
 
    if (n_qwizzes) {
@@ -329,6 +360,11 @@ function process_html () {
       n_qwizzes = i_qwiz;
    });
 
+   // If any [textentry] free-form input, set up autocomplete.
+   if (textentry_b) {
+      init_textentry_autocomplete ();
+   }
+
    // Set flag to display page (qwizscripts.js).
    q.processing_complete_b = true;
 }
@@ -409,6 +445,22 @@ function init_qwizzled (content_obj, local_n_qwizzes) {
       qwizdata[i_qwiz].qwizzled[id] = $ (this).clone (true);
    });
 }
+
+
+// -----------------------------------------------------------------------------
+function init_textentry_autocomplete () {
+
+   $ ('.qwiz_textentry').autocomplete ({
+      minLength:     3,
+      source:        find_matching_terms,
+      close:         menu_closed,
+      open:          menu_shown,
+      select:        item_selected
+   });
+
+   $ ('.qwiz_textentry').keyup (menu_closed);
+}
+
 
 
 // -----------------------------------------------------------------------------
@@ -571,8 +623,8 @@ this.label_dropped = function (target_obj, label_obj) {
          if (correct_b) {
             qwizzled_summary = 'You placed all of the items correctly on the first try!';
          } else {
-            qwizzled_summary = plural ('It took you one try', 'It took you %s tries', n_tries) + ' ' + plural ('to place this label correctly', 'to place these labels correctly', n_label_targets) + '.';
-            qwizzled_summary = qwizzled_summary.replace ('%s', number_to_word (n_tries));
+            qwizzled_summary = Tplural ('It took you one try', 'It took you %s tries', n_tries) + ' ' + Tplural ('to place this label correctly', 'to place these labels correctly', n_label_targets) + '.';
+            qwizzled_summary = qwizzled_summary.replace ('%s', qqc.number_to_word (n_tries));
          }
          $ (qwizq_id + '-ff').html (qwizzled_summary).show ();
 
@@ -741,6 +793,30 @@ function add_style () {
    s.push ('   display:         none;');
    s.push ('   position:        relative;');
    s.push ('}');
+
+   s.push ('.qwiz_textentry {');
+   s.push ('   font-size:           12pt;');
+   s.push ('   font-weight:         bold;');
+   s.push ('   color:               blue;');
+   s.push ('}');
+
+   s.push (' .ui-autocomplete {');
+   s.push ('    font-size:        10pt;');
+   s.push ('    max-height:       200px;');
+   s.push ('    overflow-y:       auto;');
+
+   // Prevent horizontal scrollbar.
+   s.push ('    overflow-x:       hidden;');
+   s.push (' }');
+
+   s.push (' .ui-state-hover,');
+   s.push (' .ui-widget-content .ui-state-hover,');
+   s.push (' .ui-widget-header .ui-state-hover,');
+   s.push (' .ui-state-focus,');
+   s.push (' .ui-widget-content .ui-state-focus,');
+   s.push (' .ui-widget-header .ui-state-focus {');
+   s.push ('    color:            #0000ff;');
+   s.push (' }');
 
    s.push ('.qwiz-choice:hover {');
    s.push ('   cursor:          pointer;');
@@ -939,6 +1015,11 @@ function add_style () {
    s.push ('   text-align:      center;');
    s.push ('}');
 
+   // Starts out hidden.
+   s.push ('.textentry_check_answer_div {');
+   s.push ('   display:         none;');
+   s.push ('}');
+
    s.push ('.qbutton {');
    s.push ('   margin-bottom: 2px;');
    s.push ('   border-top: 1px solid #96d1f8;');
@@ -957,6 +1038,25 @@ function add_style () {
    s.push ('   box-shadow: rgba(0,0,0,1) 0 1px 0;');
    s.push ('   text-shadow: rgba(0,0,0,.4) 0 1px 0;');
    s.push ('   color: white;');
+   s.push ('   font-size: 14px;');
+   s.push ('   font-weight: bold;');
+   s.push ('   font-family: arial, verdana, sans-serif;');
+   s.push ('   text-decoration: none;');
+   s.push ('   vertical-align: middle;');
+   s.push ('}');
+   s.push ('.qbutton_disabled {');
+   s.push ('   margin-bottom: 2px;');
+   s.push ('   border-top: 1px solid #cccccc;');
+   s.push ('   background: #cccccc;');
+   s.push ('   padding: 3px 3px;');
+   s.push ('   -webkit-border-radius: 8px;');
+   s.push ('   -moz-border-radius: 8px;');
+   s.push ('   border-radius: 8px;');
+   s.push ('   -webkit-box-shadow: none;');
+   s.push ('   -moz-box-shadow: none;');
+   s.push ('   box-shadow: none;');
+   s.push ('   text-shadow: none;');
+   s.push ('   color: #e6e6e6;');
    s.push ('   font-size: 14px;');
    s.push ('   font-weight: bold;');
    s.push ('   font-family: arial, verdana, sans-serif;');
@@ -1002,7 +1102,7 @@ function process_qwiz_pair (htm, i_qwiz) {
    var no_intro_i_b = false;
 
    // Is qwiz encoded?  Decode if necessary.  Turns tag into plain '[qwiz]'.
-   htm = decode_qwiz (htm, qwiz_tag);
+   //htm = decode_qwiz (htm, qwiz_tag);
 
    // Capture any initial closing tags after [qwiz ...] -- will put them in
    // front of <div> that replaces [qwiz ...].
@@ -1019,12 +1119,18 @@ function process_qwiz_pair (htm, i_qwiz) {
    htm = htm.replace (/\[qwiz[^\]]*\]((<\/[^>]+>\s*)*)/m, '');
 
    // Delete any initial whitespace.
-   htm = trim (htm);
+   htm = qqc.trim (htm);
 
    // Make sure there's at least one question.
    if (htm.search (/\[(q|<code><\/code>q)([^\]]*)\]/m) == -1) {
       errmsgs.push (T ('Did not find question tags ("[q]") for') + ' qwiz ' + (i_qwiz + 1));
    } else {
+
+      // Look for [terms]...[/terms] and/or [add_terms]...[/add_terms] pairs.
+      // Parse, and delete.  Include opening tags in front and closing tags
+      // after.
+      htm = qqc.process_inline_textentry_terms (htm, 'terms', qwizdata, i_qwiz);
+      htm = qqc.process_inline_textentry_terms (htm, 'add_terms', qwizdata, i_qwiz);
 
       // See if html up to first shortcode is just whitespace, including empty
       // paragraphs.  Limit to first 2000 characters.
@@ -1132,15 +1238,26 @@ function process_qwiz_pair (htm, i_qwiz) {
       var question_divs = [];
       for (var i_question=0; i_question<n_questions; i_question++) {
 
-         // See if multiple-choice question.
+         // See if multiple-choice question or free-form entry.
          var question_div;
          if (questions_html[i_question].search (/\[c\]|\[c\*\]/m) != -1) {
 
-            question_div = process_question (i_qwiz, i_question,
-                                             questions_html[i_question],
-                                             q_opening_tags[i_question]);
-         // See if labels.
+            // See if free-form entry.
+            if (questions_html[i_question].search (/\[textentry/m) != -1) {
+
+               question_div = process_textentry (i_qwiz, i_question,
+                                                questions_html[i_question],
+                                                q_opening_tags[i_question]);
+            } else {
+
+               // Regular multiple-choice question.
+               question_div = process_question (i_qwiz, i_question,
+                                                questions_html[i_question],
+                                                q_opening_tags[i_question]);
+            }
          } else if (questions_html[i_question].search (/\[l\]|<div class="qwizzled_label/m) != -1) {
+
+            // Labels.
             qwizzled_b = true;
             qwizdata[i_qwiz].qwizzled_b = true;
             question_div = process_qwizzled (i_qwiz, i_question,
@@ -1150,7 +1267,7 @@ function process_qwiz_pair (htm, i_qwiz) {
          } else {
 
             // Error: didn't find choices or labels.
-            errmsgs.push (T ('Did not find choices ("[c]") or labels ("[l]") for') + ' qwiz ' + (i_qwiz + 1) + ', question ' + (i_question + 1));
+            errmsgs.push (T ('Did not find choices ("[c]") or labels ("[l]") for') + ' qwiz ' + (i_qwiz + 1) + ', ' + T ('question') + ' ' + (i_question + 1));
          }
          question_divs.push (question_div);
       }
@@ -1176,6 +1293,7 @@ function process_qwiz_pair (htm, i_qwiz) {
 
 
 // -----------------------------------------------------------------------------
+/*
 function decode_qwiz (htm, qwiz_tag) {
 
    // Get html after [qwiz] tag and before [/qwiz] tag.
@@ -1196,6 +1314,7 @@ function decode_qwiz (htm, qwiz_tag) {
 
    return htm;
 }
+*/
 
 
 // -----------------------------------------------------------------------------
@@ -1210,11 +1329,11 @@ function create_qwiz_divs (i_qwiz, qwiz_tag, htm, exit_html) {
    }
    
    // If non-default width set, set flag.
-   attributes = replace_smart_quotes (attributes);
+   attributes = qqc.replace_smart_quotes (attributes);
    var non_default_width_b = attributes.search (/[\s;"]width/m) != -1;
 
    // If "repeat_incorrect=..." present, parse out true/false.
-   var repeat_incorrect_value = get_attr (attributes, 'repeat_incorrect');
+   var repeat_incorrect_value = qqc.get_attr (attributes, 'repeat_incorrect');
    qwizdata[i_qwiz].repeat_incorrect_b = repeat_incorrect_value != 'false';
    if (debug[0]) {
       console.log ('[create_qwiz_divs] repeat_incorrect_value:', repeat_incorrect_value, ', repeat_incorrect_b:', qwizdata[i_qwiz].repeat_incorrect_b);
@@ -1222,10 +1341,10 @@ function create_qwiz_divs (i_qwiz, qwiz_tag, htm, exit_html) {
 
 
    // If "random=..." present, parse out true/false.
-   var random = get_attr (attributes, 'random');
+   var random = qqc.get_attr (attributes, 'random');
    qwizdata[i_qwiz].random_b = random == 'true';
    if (debug[0]) {
-      console.log ('[create_qwiz_divs] random:', random, ', random_b:', qwizdata[i_deck].random_b);
+      console.log ('[create_qwiz_divs] random:', random, ', random_b:', qwizdata[i_qwiz].random_b);
    }
 
    // Undisplayed version of qwiz div, so can measure default width if need to.
@@ -1306,12 +1425,25 @@ function create_qwiz_divs (i_qwiz, qwiz_tag, htm, exit_html) {
                  +    '</button>\n'
                  + '</div>\n';
 
+   // "Check answer" and "Hint" buttons for [textentry] questions.  Check
+   // answer starts out disabled; hint hidden.
+   bottom_html +=  '<div class="textentry_check_answer_div" id="textentry_check_answer_div-qwiz' + i_qwiz + '">\n'
+                 + '   <button class="qbutton_disabled textentry_check_answer" onclick="' + qname + '.textentry_check_answer (' + i_qwiz + ')" disabled>'
+                 +        T ('Check answer')
+                 +    '</button>\n'
+                 +    '&emsp;\n'
+                 +    '<button class="qbutton textentry_hint" style="display: none; font-size: 11px; padding: 2px 2px; border-radius: 5px;" onclick="' + qname + '.textentry_hint (' + i_qwiz + ')" disabled>'
+                 +        T ('Hint')
+                 +    '</button>\n'
+                 + '</div>\n';
+
+
    style = '';
-   if (get_qwiz_param ('beta')) {
+   if (qqc.get_qwiz_param ('beta')) {
       style = 'style = "background: red;"';
    }
    bottom_html += '<div class="icon_qwiz" id="icon_qwiz' + i_qwiz + '" ' + style + '>';
-   var icon_qwiz = get_qwiz_param ('icon_qwiz');
+   var icon_qwiz = qqc.get_qwiz_param ('icon_qwiz');
    if (icon_qwiz != 'Not displayed') {
       var title = 'Qwiz - online quizzes and flashcards';
       if (icon_qwiz != 'Icon only') {
@@ -1371,8 +1503,8 @@ function process_topics (i_qwiz, question_tags) {
       if (attributes) {
 
          // Look for "topic=" attribute.
-         attributes = replace_smart_quotes (attributes);
-         var question_topics = get_attr (attributes, 'topic');
+         attributes = qqc.replace_smart_quotes (attributes);
+         var question_topics = qqc.get_attr (attributes, 'topic');
          if (question_topics) {
             if (debug[4]) {
                console.log ('[process_topics] question_topics: ', question_topics);
@@ -1572,7 +1704,7 @@ function display_question (i_qwiz, i_question) {
       // This collects multiple spans if they're spread across a text target.
       // If don't have qtarget_sib... just count, but de-dup sibs.
       var n_label_targets = 0;
-      var target_count = new Object ();
+      var target_count = {};
       qwizq_obj.find ('div.qwizzled_target, span.qwizzled_target').each (function () {
          var classes = $ (this).attr ('class');
          var m = classes.match (/qtarget_sib-[0-9]*/);
@@ -1602,16 +1734,127 @@ function display_question (i_qwiz, i_question) {
       }
    } else {
 
-      // Enable radio clicks in case previously disabled for this question.
-      // Also, show radios unclicked.
-      $ ('input[name=' + qwizq_id + ']').removeAttr ('disabled').removeAttr ('checked');
+      // See if this is a [textentry] question.
+      if (qwizdata[i_qwiz].textentry[i_question]) {
 
-      // Re-enable highlight choices on mouseover, cursor to indicate clickable.
-      $ ('.choices-' + qwizq_id).on ('mouseover', function () {
-         $ (this).css ({'cursor': 'pointer', 'color': '#045FB4'})
-      }).on ('mouseout', function () {;
-         $ (this).css ({'cursor': 'text', 'color': 'black'})
-      });
+         // ....................................................................
+         // [textentry] question.
+         // If haven't loaded metaphone.js, do so now.
+         if (! loaded_metaphone_js_b) {
+            loaded_metaphone_js_b = true;
+            var plugin_url = qqc.get_qwiz_param ('url');
+            qqc.add_script (plugin_url + 'metaphone.js');
+         }
+
+         // Use terms given with [terms]...[/terms] for this quiz; otherwise
+         // load default terms if haven't done so already.
+         if (qwizdata[i_qwiz].terms) {
+
+            // Only do this once per quiz.
+            if (! qwizdata[i_qwiz].textentry_terms_metaphones) {
+               qwizdata[i_qwiz].textentry_terms_metaphones = qqc.process_textentry_terms (qwizdata[i_qwiz].terms);
+            }
+         } else {
+            if (! default_textentry_terms_metaphones) {
+               var terms_data = qqc.get_textentry_terms (plugin_url + 'terms.txt');
+               default_textentry_terms_metaphones = qqc.process_textentry_terms (terms_data);
+            }
+         }
+
+         // Also need to process additional terms for this quiz, if any.
+         // Only do once per quiz.
+         if (qwizdata[i_qwiz].add_terms) {
+            if (! qwizdata[i_qwiz].add_textentry_terms_metaphones) {
+               qwizdata[i_qwiz].add_textentry_terms_metaphones = qqc.process_textentry_terms (qwizdata[i_qwiz].add_terms);
+            }
+         }
+
+         // Show "Check answer" and "Hint" buttons.  "Check answer" starts out
+         // disabled, hint not visible.
+         var check_answer_obj = $ ('#textentry_check_answer_div-qwiz' + i_qwiz);
+         check_answer_obj.find ('button.textentry_check_answer').attr ('disabled', true).removeClass ('qbutton').addClass ('qbutton_disabled');
+         check_answer_obj.find ('button.textentry_hint').html ('Hint').hide ();
+         check_answer_obj.show ();
+
+         // Set focus to textentry box, if there is one.  Don't do if first
+         // question and no intro (avoid scrolling page to this quiz).
+         if (i_question != 0 || ! no_intro_b[i_qwiz]) {
+            $ ('#textentry-qwiz' + i_qwiz + '-q' + i_question).val ('').focus ();
+         }
+
+         qwizdata[i_qwiz].check_answer_disabled_b = true;
+         qwizdata[i_qwiz].textentry_n_hints = 0;
+
+         // Calculate metaphones of answers -- both correct and incorrect  --
+         // up to first blank following a non-blank.
+         textentry_answers[i_qwiz] = qwizdata[i_qwiz].textentry[i_question].answers;
+         textentry_answer_metaphones[i_qwiz]
+            = textentry_answers[i_qwiz].map (function (answer) {
+                                                answer = answer.replace (/\s*(\S+)\s.*/, '\$1');
+                                                return metaphone (answer);
+                                             })
+
+         // List of terms (term, metaphone pairs) for this question: (1) default
+         // or specific to this qwiz; plus (2) additional terms for this quiz,
+         // if any; and (3) answers (correct and incorrect) for this question.
+         // Singular or plural in each case.
+         var singular_plural;
+         if (qwizdata[i_qwiz].textentry[i_question].textentry_plural_b) {
+            singular_plural = 'plural';
+         } else {
+            singular_plural = 'singular';
+         }
+
+         // (1) Quiz-specific or default.
+         if (qwizdata[i_qwiz].terms) {
+            current_question_textentry_terms_metaphones[i_qwiz] = qwizdata[i_qwiz].textentry_terms_metaphones[singular_plural];
+         } else {
+            current_question_textentry_terms_metaphones[i_qwiz] = default_textentry_terms_metaphones[singular_plural];
+         }
+
+         // (2) Additional.
+         if (qwizdata[i_qwiz].add_terms) {
+            current_question_textentry_terms_metaphones[i_qwiz] = current_question_textentry_terms_metaphones[i_qwiz].concat (qwizdata[i_qwiz].add_textentry_terms_metaphones[singular_plural]);
+         }
+         // (3) Answers.
+         var textentry_answers_metaphones
+            = textentry_answers[i_qwiz].map (function (answer) {
+                                        return [answer, metaphone (answer)];
+                                     });
+         if (debug[5]) {
+            console.log ('[display_question] textentry_answers_metaphones: ', textentry_answers_metaphones);
+         }
+         current_question_textentry_terms_metaphones[i_qwiz] = current_question_textentry_terms_metaphones[i_qwiz].concat (textentry_answers_metaphones);
+
+         // Sort and de-dupe.
+         current_question_textentry_terms_metaphones[i_qwiz]
+            = qqc.sort_dedupe_terms_metaphones (current_question_textentry_terms_metaphones[i_qwiz]);
+
+         if (debug[5]) {
+            console.log ('[display_question] current_question_textentry_terms_metaphones[i_qwiz].length: ', current_question_textentry_terms_metaphones[i_qwiz].length);
+            console.log ('[display_question] current_question_textentry_terms_metaphones[i_qwiz].slice (0, 10): ', current_question_textentry_terms_metaphones[i_qwiz].slice (0, 10));
+            var i_start = current_question_textentry_terms_metaphones[i_qwiz].length - 10;
+            if (i_start > 0) {
+               console.log ('[display_question] current_question_textentry_terms_metaphones[i_qwiz].slice (' + i_start + '): ', current_question_textentry_terms_metaphones[i_qwiz].slice (i_start));
+            }
+         }
+
+      } else {
+
+         // ....................................................................
+         // Multiple-choice question.
+         // Enable radio clicks in case previously disabled for this question.
+         // Also, show radios unclicked.
+         $ ('input[name=' + qwizq_id + ']').removeAttr ('disabled').removeAttr ('checked');
+
+         // Re-enable highlight choices on mouseover, cursor to indicate
+         // clickable.
+         $ ('.choices-' + qwizq_id).on ('mouseover', function () {
+            $ (this).css ({'cursor': 'pointer', 'color': '#045FB4'})
+         }).on ('mouseout', function () {;
+            $ (this).css ({'cursor': 'text', 'color': 'black'})
+         });
+      }
    }
 }
 
@@ -1619,11 +1862,14 @@ function display_question (i_qwiz, i_question) {
 // -----------------------------------------------------------------------------
 function process_question (i_qwiz, i_question, htm, opening_tags) {
 
+   var new_htm;
+   var remaining_htm;
+
    // Span for default indented paragraph style for choices.  Want this ahead of
    // any opening tags user put in before first "[c]".
    var span_pos = htm.search (/(<[^\/][^>]*>\s*)*?\[c\*{0,1}\]/m);
    if (span_pos == -1) {
-      errmsgs.push (T ('Did not find choices ("[c]") for') + ' qwiz ' + (i_qwiz + 1) + ', question ' + (i_question + 1));
+      errmsgs.push (T ('Did not find choices ("[c]") for') + ' qwiz ' + (i_qwiz + 1) + ', ' + T ('question') + ' ' + (i_question + 1));
       new_htm = '';
       remaining_htm = '';
    } else {
@@ -1634,14 +1880,14 @@ function process_question (i_qwiz, i_question, htm, opening_tags) {
       }
 
       // Wrap in div for this qwiz and question.
-      var new_htm =   '<div id="qwiz' + i_qwiz + '-q' + i_question + '" class="qwizq">\n'
-                     +    opening_tags + question_htm;
+      new_htm =   '<div id="qwiz' + i_qwiz + '-q' + i_question + '" class="qwizq">\n'
+                 +    opening_tags + question_htm;
 
       if (debug[1]) {
          console.log ('[process_question] new_htm: ', new_htm);
       }
 
-      var remaining_htm = htm.substr (span_pos);
+      remaining_htm = htm.substr (span_pos);
 
       // Include paragraph-close -- without this, if there's a paragraph-close
       // within the choices that corresponds to a previous unclosed paragraph,
@@ -1688,7 +1934,7 @@ function process_question (i_qwiz, i_question, htm, opening_tags) {
          // with choices, then may have all feedback items together following
          // choice items (backwards compatibility).
          if (i_choice == n_choices-1 && ! got_feedback_b && n_choices != 1) {
-            
+
             // Assume just got feedback for the first choice.  Create an empty
             // div for the last choice.
             feedback_divs[0] = r.feedback_div;
@@ -1741,6 +1987,7 @@ function process_question (i_qwiz, i_question, htm, opening_tags) {
             }
          }
       } else {
+
          // No feedback given for this choice.  Record with empty "div".
          feedback_divs.push ('');
       }
@@ -1821,7 +2068,203 @@ function process_question (i_qwiz, i_question, htm, opening_tags) {
    // Add feedback divs to html string.
    new_htm += feedback_divs.join ('\n');
    if (debug[2]) {
-      console.log ('[process_question] new_htm: ', new_htm)
+      console.log ('[process_question] new_htm: ', new_htm);
+   }
+
+   // Close question div.
+   new_htm += '</div>\n';
+
+   return new_htm;
+}
+
+
+// -----------------------------------------------------------------------------
+function process_textentry (i_qwiz, i_question, htm, opening_tags) {
+
+   // If this is first textentry question for this quiz, create data object.
+   // Also set flag that there is [textentry] on this page.
+   if (! qwizdata[i_qwiz].textentry) {
+      qwizdata[i_qwiz].textentry = {};
+      textentry_b = true;
+   }
+
+   // Wrap in div for this qwiz and question.
+   var new_htm =   '<div id="qwiz' + i_qwiz + '-q' + i_question + '" class="qwizq">\n'
+                 +    opening_tags + htm;
+
+   // See if plurals specified.  Any attributes?
+   var textentry_plural_b = false;
+   var m = new_htm.match (/\[textentry([^\]]*)\]/m);
+   if (m) {
+      var attributes = m[1];
+      if (attributes) {
+
+         // Look for "plural=" attribute.  Match regular double-quote, or
+         // left- or right-double-quote.
+         attributes = qqc.replace_smart_quotes (attributes);
+         textentry_plural_b = qqc.get_attr (attributes, 'plural') == 'true';
+      }
+   }
+
+   // Replace [textentry] with input textbox.
+   new_htm = new_htm.replace (/\[textentry([^\]]*)\]/, '<input type="text" id="textentry-qwiz' + i_qwiz + '-q' + i_question + '" class="qwiz_textentry" onfocus="' + qname + '.set_textentry_i_qwiz (this)" />');
+
+   // Look for choices and feedback (interleaved only, feedback optional).
+   // Save as data, delete here.
+   var n_correct = 0;
+
+   var choice_start_tags = ['[c]', '[c*]'];
+   var choice_next_tags  = ['[c]', '[c*]', '[x]'];
+
+   var got_feedback_b = false;
+   var feedback_divs = [];
+
+   // Look for first [c], including any opening tags.
+   var c_pos = new_htm.search (/\s*(<[^\/][^>]*\s*)*?\[c\*{0,1}\]/m); 
+
+   // Start with [c]s.
+   var remaining_htm = new_htm.substr (c_pos);
+
+   // Up to first [c].
+   new_htm = new_htm.substr (0, c_pos);
+   var i_choice = 0;
+   var default_choice_given_b = false;
+
+   // Object for this question set to array of choices.
+   qwizdata[i_qwiz].textentry[i_question] = {};
+   qwizdata[i_qwiz].textentry[i_question].choices = [];
+   qwizdata[i_qwiz].textentry[i_question].textentry_plural_b = textentry_plural_b;
+   qwizdata[i_qwiz].textentry[i_question].choices_correct = [];
+   qwizdata[i_qwiz].textentry[i_question].answers = [];
+   qwizdata[i_qwiz].textentry[i_question].first_correct_answer = '';
+   qwizdata[i_qwiz].check_answer_disabled_b = true;
+
+   // Loop over [c]s.
+   while (true) {
+      var choice_html = parse_html_block (remaining_htm, choice_start_tags,
+                                          choice_next_tags);
+      if (choice_html == 'NA') {
+         break;
+      }
+      remaining_htm = remaining_htm.substr (choice_html.length);
+
+      // See if there's feedback within the choice html.
+      var r = process_feedback_item (choice_html, i_qwiz, i_question, i_choice);
+      choice_html  = r.choice_html;
+
+      if (r.feedback_div) {
+         got_feedback_b = true;
+
+         feedback_divs.push (r.feedback_div);
+
+         // Check that there's not more than one feedback item accompanying
+         // this choice.
+         var r = process_feedback_item (choice_html, i_qwiz, i_question,
+                                        i_choice);
+         if (r.feedback_div) {
+            errmsgs.push (T ('More than one feedback shortcode [f] given with choice') + ': qwiz ' + (1 + i_qwiz) + ', ' + T ('question') + ' ' + (1 + i_question) + ', ' + T ('choice') + ' ' + (1 + i_choice));
+         }
+      } else {
+
+         // No feedback given for this choice.  Record with empty "div".
+         feedback_divs.push ('');
+      }
+
+      // Parse choice data.  [c] or [c*] followed by semicolon-separated list
+      // of potential answers.
+      var correct_b = choice_html.search (/\[c\*\]/) != -1;
+      if (correct_b) {
+         n_correct++;
+      }
+
+      // Delete up through [c] or [c*].
+      choice_html = choice_html.replace (/.*\[c\*{0,1}\]/m, '');
+
+      // Delete any tags and EOLs and non-breaking spaces.
+      choice_html = choice_html.replace (/<[^>]+>|\n|&nbsp;/g, '');
+
+      // Error if just blanks and semicolons.
+      if (choice_html.replace (';', '').search (/\S/) == -1) {
+         errmsgs.push (T ('No text given for [textentry] choice') + ' - qwiz ' + (i_qwiz + 1) + ', ' + T ('question') + ' ' + (1 + i_question) + ', ' + T ('choice') + ' ' + (1 + i_choice));
+      }
+
+      // Split on semicolons.
+      var alts = choice_html.split (/\s*;\s*/);
+
+      // Eliminate any blank entries.
+      var nonblank_alts = [];
+      for (var i=0; i<alts.length; i++) {
+         if (alts[i].search (/\S/) != -1) {
+            nonblank_alts.push (qqc.trim (alts[i]));
+         }
+      }
+
+      // If default choice/feedback ("*" entered), set indicator.
+      if (nonblank_alts[0] == '*') {
+         default_choice_given_b = true;
+         if (correct_b) {
+            errmsgs.push (T ('For [textentry] question, wildcard choice ("*", for any other user entry) cannot be marked correct "[c*]"'));
+         }
+         if (feedback_divs[i_choice] == '') {
+            errmsgs.push (T ('For [textentry] question, wildcard choice ("*", for any other user entry) must be accompanied by feedback "[f]"'));
+         }
+      }
+
+      // Save these, associated with this choice.
+      qwizdata[i_qwiz].textentry[i_question].choices.push (nonblank_alts);
+      qwizdata[i_qwiz].textentry[i_question].choices_correct.push (correct_b);
+
+      // Save first correct answer -- for hint.
+      if (correct_b) {
+         if (qwizdata[i_qwiz].textentry[i_question].first_correct_answer == '') {
+            qwizdata[i_qwiz].textentry[i_question].first_correct_answer = nonblank_alts[0];
+         }
+      }
+
+      // Also save as simple array for this question.  Make sure no duplicates
+      // (wouldn't want same answer to be both correct and incorrect!).
+      var n_alts = nonblank_alts.length;
+      for (var i=0; i<n_alts; i++) {
+         if (qwizdata[i_qwiz].textentry[i_question].answers.indexOf (nonblank_alts[i]) != -1) {
+            errmsgs.push (T ('Answer given in more than one choice') + ': ' + nonblank_alts[i] + ' - qwiz ' + (i_qwiz + 1) + ', ' + T ('question') + ' ' + (1 + i_question) + ', ' + T ('choice') + ' ' + (1 + i_choice));
+         }
+      }
+      qwizdata[i_qwiz].textentry[i_question].answers
+                 = qwizdata[i_qwiz].textentry[i_question].answers.concat (nonblank_alts);
+      i_choice++;
+   }
+
+   // If default choice not given, add it.
+   if (! default_choice_given_b) {
+      qwizdata[i_qwiz].textentry[i_question].choices.push (['*']);
+      qwizdata[i_qwiz].textentry[i_question].choices_correct.push (false);
+      i_choice++;
+   }
+   var n_choices = i_choice;
+
+   // Include clearing div in case image floating left or right (needed to
+   // expand parent div and its border).
+   new_htm += '<div style="clear: both;"></div>\n';
+
+   // Check that got at least one correct choice.
+   if (n_correct == 0) {
+      errmsgs.push (T ('No choice was marked correct') + ': qwiz ' + (1 + i_qwiz) + ', ' + T ('question') + ' ' + (1 + i_question));
+   }
+
+   // ..........................................................................
+   // Create canned feedback for any empty feedback items
+   for (var i_choice=0; i_choice<n_choices; i_choice++) {
+      if (! feedback_divs[i_choice]) {
+         var response = canned_feedback (qwizdata[i_qwiz].textentry[i_question].choices_correct[i_choice]);
+         feedback_divs[i_choice] = create_feedback_div_html (i_qwiz, i_question,
+                                                             i_choice, response);
+      }
+   }
+
+   // Add feedback divs to html string.
+   new_htm += feedback_divs.join ('\n');
+   if (debug[2]) {
+      console.log ('[process_textentry] new_htm: ', new_htm);
    }
 
    // Close question div.
@@ -1886,8 +2329,8 @@ function process_qwizzled (i_qwiz, i_question, question_htm, opening_tags,
 
          // Look for "labels=" attribute.  Match regular double-quote, or
          // left- or right-double-quote.
-         attributes = replace_smart_quotes (attributes);
-         labels_position = get_attr (attributes, 'labels');
+         attributes = qqc.replace_smart_quotes (attributes);
+         labels_position = qqc.get_attr (attributes, 'labels');
          labels_position = labels_position.toLowerCase ();
          if (debug[0]) {
             console.log ('[process_qwizzled] labels_position:', labels_position);
@@ -2019,7 +2462,7 @@ function process_qwizzled (i_qwiz, i_question, question_htm, opening_tags,
    var feedback_html = remaining_htm;
    var feedback_divs = [];
    var feedback_start_tags = ['[f*]', '[fx]'];
-   var feedback_next_tags = ['[f*]', '[fx]', '[hint]', '[x]'];
+   var feedback_next_tags = ['[f*]', '[fx]', '[x]'];
    var i_item = 0;
    while (true) {
       var feedback_item_html 
@@ -2335,15 +2778,15 @@ function display_summary_and_exit (i_qwiz) {
    if (qwizdata[i_qwiz].repeat_incorrect_b) {
       report_html.push ('<p><b>Congratulations, you\'re done!</b></p>');
       if (n_incorrect == 0) {
-         report_html.push ('<p>In this ' + number_to_word (n_questions) + '-question quiz, you answered every question correctly on the first try!</p>');
+         report_html.push ('<p>In this ' + qqc.number_to_word (n_questions) + '-question quiz, you answered every question correctly on the first try!</p>');
       } else {
-         report_html.push ('<p>In finishing this ' + number_to_word (n_questions) + '-question quiz, you entered ' + number_to_word (n_incorrect) + ' incorrect ' + plural ('answer', 'answers', n_incorrect) + '.</p>');
+         report_html.push ('<p>In finishing this ' + qqc.number_to_word (n_questions) + '-question quiz, you entered ' + qqc.number_to_word (n_incorrect) + ' incorrect ' + Tplural ('answer', 'answers', n_incorrect) + '.</p>');
       }
    } else {
       if (n_incorrect == 0) {
          report_html.push ('<p>' + T ('Congratulations, you answered all questions correctly') + '.</p>');
       } else {
-         report_html.push ('<p>' + T ('Your score is') + ' ' + number_to_word (n_correct) + ' ' + T ('out of') + ' ' + number_to_word (n_questions) + ' ' + T ('questions') + '.</p>');
+         report_html.push ('<p>' + T ('Your score is') + ' ' + qqc.number_to_word (n_correct) + ' ' + T ('out of') + ' ' + qqc.number_to_word (n_questions) + ' ' + T ('questions') + '.</p>');
       }
    }
 
@@ -2354,9 +2797,9 @@ function display_summary_and_exit (i_qwiz) {
       if (n_questions == 2) {
          all_both_n = T ('Both');
       } else {
-         all_both_n = T ('All') + ' '+ number_to_word (n_questions);
+         all_both_n = T ('All') + ' '+ qqc.number_to_word (n_questions);
       }
-      report_html.push ('<p>' + all_both_n + ' ' + plural ('question', 'questions', n_questions) + ' were about topic &ldquo;' + topic + '.&rdquo;</p>');
+      report_html.push ('<p>' + all_both_n + ' ' + Tplural ('question', 'questions', n_questions) + ' were about topic &ldquo;' + topic + '.&rdquo;</p>');
    } else if (n_topics > 1) {
 
       // By topic.
@@ -2368,7 +2811,7 @@ function display_summary_and_exit (i_qwiz) {
          var n_topic_items = n_topic_correct + n_topic_incorrect;
          if (n_topic_items > 0) {
             var topic_html = '<li>';
-            topic_html += T ('For topic') + ' &ldquo;' + topic + '&rdquo; ' + plural ('there was', 'there were', n_topic_items) + ' ' + number_to_word (n_topic_items) + ' ' + plural ('question', 'questions', n_topic_items) + '.&nbsp;';
+            topic_html += T ('For topic') + ' &ldquo;' + topic + '&rdquo; ' + Tplural ('there was', 'there were', n_topic_items) + ' ' + qqc.number_to_word (n_topic_items) + ' ' + Tplural ('question', 'questions', n_topic_items) + '.&nbsp;';
             if (n_topic_incorrect == 0) {
                if (n_topic_items > 2) {
                   topic_html += T ('You answered all of these questions correctly');
@@ -2385,12 +2828,12 @@ function display_summary_and_exit (i_qwiz) {
             } else {
                if (qwizdata[i_qwiz].repeat_incorrect_b) {
                   var n_tries = n_topic_items + n_topic_incorrect;
-                  topic_html += plural ('It took you one try', 'It took you %s tries', n_tries) + ' ' + plural ('to answer this question correctly', 'to answer these questions correctly', n_topic_items) + '.';
-                  topic_html = topic_html.replace ('%s', number_to_word (n_tries));
+                  topic_html += Tplural ('It took you one try', 'It took you %s tries', n_tries) + ' ' + Tplural ('to answer this question correctly', 'to answer these questions correctly', n_topic_items) + '.';
+                  topic_html = topic_html.replace ('%s', qqc.number_to_word (n_tries));
                } else {
                   topic_html += T ('Your score is %s correct out of %s') + '.';
-                  topic_html = topic_html.replace ('%s', number_to_word (n_topic_correct));
-                  topic_html = topic_html.replace ('%s', number_to_word (n_topic_items));
+                  topic_html = topic_html.replace ('%s', qqc.number_to_word (n_topic_correct));
+                  topic_html = topic_html.replace ('%s', qqc.number_to_word (n_topic_items));
                }
             }
             topic_html += '</li>';
@@ -2609,7 +3052,7 @@ function display_progress (i_qwiz) {
    if (n_attempts == 0) {
       progress_html = T ('Questions in this quiz:') + ' ' + n_to_go;
    } else {
-      progress_html = qwizdata[i_qwiz].n_questions + ' ' + T ('questions') + ', ' + n_attempts + ' ' + plural ('response', 'responses', n_attempts) + ', ' + qwizdata[i_qwiz].n_correct + ' ' + T ('correct') + ', ' + qwizdata[i_qwiz].n_incorrect + ' ' + T ('incorrect') + ', ' + n_to_go + ' ' + T ('to go');
+      progress_html = qwizdata[i_qwiz].n_questions + ' ' + T ('questions') + ', ' + n_attempts + ' ' + Tplural ('response', 'responses', n_attempts) + ', ' + qwizdata[i_qwiz].n_correct + ' ' + T ('correct') + ', ' + qwizdata[i_qwiz].n_incorrect + ' ' + T ('incorrect') + ', ' + n_to_go + ' ' + T ('to go');
    }
    $ ('#progress-qwiz' + i_qwiz).html (progress_html);
 }
@@ -2670,8 +3113,6 @@ function create_feedback_div_html (i_qwiz, i_question, i_item, item, c_x) {
 }
 
 
-var correct = [T ('Good!'), T ('Correct!'), T ('Excellent!'), T ('Great!')];
-var incorrect = [T ('No.'), T ('No, that\'s not correct.'), T ('Sorry, that\'s not correct.')];
 // -----------------------------------------------------------------------------
 function canned_feedback (correct_b) {
 
@@ -2693,6 +3134,226 @@ function canned_feedback (correct_b) {
 
 
 // -----------------------------------------------------------------------------
+var find_matching_terms = function (request, response) {
+
+   var entry = request.term.toLowerCase ();
+   var entry_metaphone = metaphone (entry);
+   if (debug[5]) {
+      console.log ('[find_matching_terms] entry_metaphone; ', entry_metaphone);
+   }
+
+   // See if first character of entry metaphone matches first
+   // character of any answer metaphone.  If so, determine shortest
+   // answer metaphone that matches.
+   var required_entry_length = 100;
+   var required_metaphone_length = 100;
+   for (var i=0; i<textentry_answer_metaphones[textentry_i_qwiz].length; i++) {
+      if (entry[0] == textentry_answers[textentry_i_qwiz][i][0].toLowerCase ()) {
+         required_entry_length = Math.min (required_entry_length, textentry_answers[textentry_i_qwiz][i].length);
+         if (debug[5]) {
+            console.log ('[find_matching_terms] entry[0]:', entry[0], ', textentry_answers[textentry_i_qwiz][i][0]:', textentry_answers[textentry_i_qwiz][i][0]);
+         }
+      }
+      if (entry_metaphone[0] == textentry_answer_metaphones[textentry_i_qwiz][i][0]) {
+         required_metaphone_length = Math.min (required_metaphone_length, textentry_answer_metaphones[textentry_i_qwiz][i].length);
+         if (debug[5]) {
+            console.log ('[find_matching_terms] textentry_answer_metaphones[textentry_i_qwiz][i]:', textentry_answer_metaphones[textentry_i_qwiz][i], ', required_metaphone_length:', required_metaphone_length);
+         }
+      }
+   }
+   if (required_entry_length != 100) {
+      required_entry_length -= 2;
+      required_entry_length = Math.min (5, required_entry_length);
+   }
+
+   if (required_metaphone_length != 100) {
+      required_metaphone_length--;
+      if (required_metaphone_length < 2) {
+         required_metaphone_length = 2;
+      } else if (required_metaphone_length > 4) {
+         required_metaphone_length = 4;
+      }
+   }
+   if (debug[5]) {
+      console.log ('[find_matching_terms] required_entry_length:', required_entry_length, ', required_metaphone_length:', required_metaphone_length);
+   }
+
+   // Entry consisting of repeated single character doesn't count as "long".
+   // Replace any three or more of same character in a row with just one.
+   var deduped_entry = entry.replace (/(.)\1{2,}/gi, '\$1');
+   if (deduped_entry.length < required_entry_length && entry_metaphone.length < required_metaphone_length) {
+      textentry_matches[textentry_i_qwiz] = [];
+
+   } else {
+      if (debug[5]) {
+         console.log ('[find_matching_terms] request.term:', request.term, entry_metaphone, entry_metaphone.length);
+      }
+      textentry_matches[textentry_i_qwiz] = $.map (current_question_textentry_terms_metaphones[textentry_i_qwiz], function (term_i) {
+         if (term_i[1].indexOf (entry_metaphone) === 0 || term_i[0].toLowerCase ().indexOf (entry) === 0) {
+            if (debug[5]) {
+               console.log ('[find_matching_terms] term_i:', term_i);
+            }
+            return term_i[0];
+         }
+      });
+      lc_textentry_matches[textentry_i_qwiz] 
+         = textentry_matches[textentry_i_qwiz].map (function (item) {
+                                                       return item.toLowerCase ();
+                                                    });
+      if (debug[5]) {
+         console.log ('[find_matching_terms] textentry_matches[textentry_i_qwiz]:', textentry_matches[textentry_i_qwiz]);
+      }
+   }
+
+   // If entry length five or more, and matches list does not include first
+   // correct answer, and haven't used up hints, enable hint.
+   if (debug[5]) {
+      console.log ('[find_matching_terms] deduped_entry.length: ', deduped_entry.length, ', textentry_matches[textentry_i_qwiz].length: ', textentry_matches[textentry_i_qwiz].length, ', qwizdata[textentry_i_qwiz].textentry_n_hints: ', qwizdata[textentry_i_qwiz].textentry_n_hints);
+   }
+   if (deduped_entry.length >= 5 && qwizdata[textentry_i_qwiz].textentry_n_hints < 5) {
+      var i_question = qwizdata[textentry_i_qwiz].i_question;
+      var lc_first_correct_answer = qwizdata[textentry_i_qwiz].textentry[i_question].first_correct_answer.toLowerCase ();
+      if (lc_textentry_matches[textentry_i_qwiz].indexOf (lc_first_correct_answer) == -1) {
+         $ ('#textentry_check_answer_div-qwiz' + textentry_i_qwiz + ' button.textentry_hint').removeAttr ('disabled').removeClass ('qbutton_disabled').addClass ('qbutton').show ();
+      }
+   }
+   response (textentry_matches[textentry_i_qwiz]);
+}
+
+
+// -----------------------------------------------------------------------------
+// When menu closed: if current entry doesn't fully match anything on the last
+// set of matches, disable "Check answer".
+function menu_closed (e) {
+
+   // Do only if "Check answer" not already disabled.
+   if (! qwizdata[textentry_i_qwiz].check_answer_disabled_b) {
+      var lc_entry = e.target.value.toLowerCase ();
+      if (debug[5]) {
+         console.log ('[menu_closed] textentry_matches[textentry_i_qwiz]: ', textentry_matches[textentry_i_qwiz]);
+      }
+      if (lc_textentry_matches[textentry_i_qwiz].indexOf (lc_entry) == -1) {
+         $ ('#textentry_check_answer_div-qwiz' + textentry_i_qwiz + ' button.textentry_check_answer').attr ('disabled', true).removeClass ('qbutton').addClass ('qbutton_disabled');
+         qwizdata[textentry_i_qwiz].check_answer_disabled_b = true;
+      }
+   }
+}
+
+
+// -----------------------------------------------------------------------------
+// When suggestion menu shown: (1) if the matches list shown includes the first
+// correct answer, then set flag that hint not needed; (2) if current entry
+// _fully_ matches anything on the matches list shown, then enable "Check
+// answer"; otherwise disable "Check answer".
+function menu_shown (e) {
+
+   // Lowercase entry and matches list.
+   var lc_entry = e.target.value.toLowerCase ();
+
+   // Does matches list include first correct answer?
+   var i_question = qwizdata[textentry_i_qwiz].i_question;
+   var lc_first_correct_answer = qwizdata[textentry_i_qwiz].textentry[i_question].first_correct_answer.toLowerCase ();
+   if (lc_textentry_matches[textentry_i_qwiz].indexOf (lc_first_correct_answer) != -1) {
+      $ ('#textentry_check_answer_div-qwiz' + textentry_i_qwiz + ' button.textentry_hint').attr ('disabled', true).removeClass ('qbutton').addClass ('qbutton_disabled');
+   }
+   if (lc_textentry_matches[textentry_i_qwiz].indexOf (lc_entry) != -1) {
+      $ ('#textentry_check_answer_div-qwiz' + textentry_i_qwiz + ' button.textentry_check_answer').removeAttr ('disabled').removeClass ('qbutton_disabled').addClass ('qbutton');
+      qwizdata[textentry_i_qwiz].check_answer_disabled_b = false;
+   } else {
+      $ ('#textentry_check_answer_div-qwiz' + textentry_i_qwiz + ' button.textentry_check_answer').attr ('disabled', true).removeClass ('qbutton').addClass ('qbutton_disabled');
+      qwizdata[textentry_i_qwiz].check_answer_disabled_b = true;
+   }
+}
+
+
+// -----------------------------------------------------------------------------
+this.textentry_check_answer = function (i_qwiz) {
+
+   // Hide "Check answer" button div.
+   $ ('#textentry_check_answer_div-qwiz' + i_qwiz).hide ();
+
+   var i_question = qwizdata[i_qwiz].i_question;
+   var entry = $ ('#textentry-qwiz' + i_qwiz + '-q' + i_question).val ().toLowerCase ();
+
+   // See if entry among choices; identify default choice ("*").
+   var i_choice = -1;
+   var correct_b = false;
+   var n_choices = qwizdata[i_qwiz].textentry[i_question].choices.length;
+   var i_default_choice;
+   for (var i=0; i<n_choices; i++) {
+      var alts = qwizdata[i_qwiz].textentry[i_question].choices[i];
+      if (alts[0] == '*') {
+         i_default_choice = i;
+      } else {
+         var lc_alts = alts.map (function (item) {
+                                    return item.toLowerCase ();
+                                 });
+         if (lc_alts.indexOf (entry) != -1) {
+
+            // Yes, this one.  Correct?
+            correct_b = qwizdata[i_qwiz].textentry[i_question].choices_correct[i];
+            i_choice = i;
+            break;
+         }
+      }
+   }
+   if (i_choice == -1) {
+      i_choice = i_default_choice;
+   }
+   $ ('#qwiz' + i_qwiz + '-q' + i_question + '-a' + i_choice).show ();
+
+   // Update statistics.
+   if (correct_b) {
+      qwizdata[i_qwiz].n_correct++;
+      $ ('#qwiz' + i_qwiz + '-q' + i_question).data ('answered_correctly', 1);
+   } else {
+
+      // Record number of incorrect responses.
+      qwizdata[i_qwiz].n_incorrect++;
+      $ ('#qwiz' + i_qwiz + '-q' + i_question).data ('answered_correctly', 0);
+   }
+   update_topic_statistics (i_qwiz, i_question, correct_b);
+
+   // Update progress and show next button -- only if more than one question.
+   update_progress_show_next (i_qwiz);
+}
+
+
+// -----------------------------------------------------------------------------
+// Provide first letters of first correct answer as hint, up to five letters.
+this.textentry_hint = function (i_qwiz) {
+   qwizdata[i_qwiz].textentry_n_hints++;
+
+   var i_question = qwizdata[i_qwiz].i_question;
+   var textentry_hint = qwizdata[i_qwiz].textentry[i_question].first_correct_answer.substr (0, qwizdata[i_qwiz].textentry_n_hints);
+   $ ('#textentry-qwiz' + i_qwiz + '-q' + i_question).val (textentry_hint).focus ();
+
+   // Disable hint button, reset label.
+   $ ('#textentry_check_answer_div-qwiz' + i_qwiz + ' button.textentry_hint').attr ('disabled', true).removeClass ('qbutton').addClass ('qbutton_disabled').html ('Add. hint');
+}
+
+
+// -----------------------------------------------------------------------------
+this.set_textentry_i_qwiz = function (input_el) {
+
+   // See which quiz this is.  Save in global (private) variable.
+   // id looks like textentry-qwiz0-q0
+   var id = input_el.id;
+   textentry_i_qwiz = id.match (/[0-9]+/)[0];
+   if (debug[5]) {
+      console.log ('[set_textentry_i_qwiz] textentry_i_qwiz: ', textentry_i_qwiz);
+   }
+}
+
+
+// -----------------------------------------------------------------------------
+// When item selected, enable check answer.
+function item_selected () {
+   $ ('#textentry_check_answer_div-qwiz' + textentry_i_qwiz + ' button.textentry_check_answer').removeAttr ('disabled').removeClass ('qbutton_disabled').addClass ('qbutton');
+}
+
+
+// -----------------------------------------------------------------------------
 this.keep_next_button_active = function () {
    next_button_active_b = true;
    $ ('.next_button').show ();
@@ -2700,111 +3361,27 @@ this.keep_next_button_active = function () {
 
 
 // -----------------------------------------------------------------------------
-function get_attr (htm, attr_name) {
-
-   var attr_value = '';
-
-   var attr_re = new RegExp (attr_name + '\\s*?=\\s*?["\\u201C\\u201D]([^"\u201C\u201D]+)["\\u201C\\u201D]', 'm');
-   var attr_match = htm.match (attr_re);
-   if (attr_match) {
-      attr_value = trim (attr_match[1]);
-   }
-
-   return attr_value;
-}
-
-
-// -----------------------------------------------------------------------------
-function replace_smart_quotes (string) {
-   var new_string = string.replace (/[\u201C\u201D]/gm, '"');
-
-   return new_string;
-}
-
-
-// -----------------------------------------------------------------------------
-var number_word = [T ('zero'), T ('one'), T ('two'), T ('three'), T ('four'), T ('five'), T ('six'), T ('seven'), T ('eight'), T ('nine'), T ('ten')];
-
-function number_to_word (number) {
-   var word;
-   if (number > 9) {
-      word = number;
-   } else {
-      word = number_word[number];
-   }
-
-   return word;
-}
-
-
-// -----------------------------------------------------------------------------
-function plural (word, plural_word, n) {
-   var new_word;
-   if (n == 1) {
-      new_word = word;
-   } else {
-      new_word = plural_word;
-   }
-
-   return T (new_word);
-}
-
-
-// -----------------------------------------------------------------------------
 function T (string) {
-
-   var t_string = '';
-
-   // Translation, if available.
-   if (typeof (qwiz_params) != 'undefined') {
-      if (typeof (qwiz_params.T) != 'undefined') {
-         if (typeof (qwiz_params.T[string]) != 'undefined') {
-            t_string = qwiz_params.T[string];
-         }
-      }
-   }
-   if (t_string == '') {
-
-      // Translation not available.  Just use default string.
-      t_string = string;
-   }
-
-   return t_string;
+   return qqc.T (string);
 }
 
 
 // -----------------------------------------------------------------------------
-function get_qwiz_param (key, default_value) {
-
-   var value = '';
-   if (typeof (qwiz_params) != 'undefined') {
-      if (typeof (qwiz_params[key]) != 'undefined') {
-         value = qwiz_params[key];
-      }
-   }
-   if (value == '') {
-
-      // qwiz_params object or key not present.  Return default value, if 
-      // given, or ''.
-      if (default_value != undefined) {
-         value = default_value;
-      }
-   }
-
-   return value;
+function Tplural (word, plural_word, n) {
+   return qqc.Tplural (word, plural_word, n);
 }
 
 
 // -----------------------------------------------------------------------------
-// IE 8 does not have trim () method for strings.
-function trim (s) {
-   if ('a'.trim) {
-      s = s.trim ();
-   } else {
-      s = s.replace (/^\s+|\s+$/g, '');
+function inarray0 (array_of_arrays, query) {
+   var len = array_of_arrays.length;
+   for (var i=0; i<len; i++) {
+      if (array_of_arrays[i][0] == query) {
+         return true;
+      }
    }
 
-   return s;
+   return false;
 }
 
 
