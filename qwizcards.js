@@ -2116,7 +2116,7 @@ function textentry_set_card_back (i_deck, card) {
    if (i_choice == -1) {
       i_choice = i_default_choice;
    }
-   var feedback_html = '<p class="back_textentry_p">You entered &ldquo;<span class="qcard_textentry">' + entry + '</span>&rdquo;</p>';
+   var feedback_html = '<p class="back_textentry_p">You entered &ldquo;<span class="back_qcard_textentry">' + entry + '</span>&rdquo;</p>';
    feedback_html += card.feedback_htmls[i_choice];
 
    // Set back.
