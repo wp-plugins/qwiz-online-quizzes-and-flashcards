@@ -2354,7 +2354,7 @@ function menu_closed (e) {
          console.log ('[menu_closed] textentry_matches[textentry_i_deck]: ', textentry_matches[textentry_i_deck]);
       }
       if (lc_textentry_matches[textentry_i_deck].indexOf (lc_entry) == -1) {
-         $ ('button.flip-qdeck' + textentry_i_deck).attr ('disabled', true).removeClass ('qbutton').addClass ('qbutton_disabled');
+         $ ('button.flip-qdeck' + textentry_i_deck).removeClass ('qbutton').addClass ('qbutton_disabled');
          deckdata[textentry_i_deck].check_answer_disabled_b = true;
       }
    }
@@ -2382,7 +2382,7 @@ function menu_shown (e) {
       $ ('button.flip-qdeck' + textentry_i_deck).removeAttr ('disabled').removeClass ('qbutton_disabled').addClass ('qbutton');
       deckdata[textentry_i_deck].check_answer_disabled_b = false;
    } else {
-      $ ('button.flip-qdeck' + textentry_i_deck).attr ('disabled', true).removeClass ('qbutton').addClass ('qbutton_disabled');
+      $ ('button.flip-qdeck' + textentry_i_deck).removeClass ('qbutton').addClass ('qbutton_disabled');
       deckdata[textentry_i_deck].check_answer_disabled_b = true;
    }
 }
@@ -2391,7 +2391,7 @@ function menu_shown (e) {
 // -----------------------------------------------------------------------------
 // When item selected, enable check answer.
 function item_selected () {
-   $ ('button.flip-qdeck' + textentry_i_deck).removeClass ('qbutton_disabled').addClass ('qbutton');
+   $ ('button.flip-qdeck' + textentry_i_deck).removeAttr ('disabled').removeClass ('qbutton_disabled').addClass ('qbutton');
    deckdata[textentry_i_deck].check_answer_disabled_b = false;
 }
 
