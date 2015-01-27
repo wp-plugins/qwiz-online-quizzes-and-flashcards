@@ -1,6 +1,7 @@
 /*
  * Version 2.28 2015-01-??
  * Textentry with required input and suggestions/hints.
+ * Box-sizing: content-box for table front and back.
  *
  * Version 2.27 2015-01-05
  * Reset header width to match card width for summary report.
@@ -490,9 +491,33 @@ function add_style () {
    s.push ('   display:             inline-block;');
    s.push ('   position:            relative;');
    s.push ('   width:               240px;');
-   //s.push ('   font-size:           13pt;');
    s.push ('   font-weight:         bold;');
    s.push ('   color:               blue;');
+   s.push ('}');
+
+   s.push ('input.qcard_textentry::-webkit-input-placeholder {');
+   s.push ('   font-size:           83%;');
+   s.push ('   font-weight:         normal;');
+   s.push ('   color:               gray;');
+   s.push ('}');
+
+   s.push ('input.qcard_textentry::-moz-placeholder {');
+   s.push ('   font-size:           83%;');
+   s.push ('   font-weight:         normal;');
+   s.push ('   color:               gray;');
+   s.push ('}');
+
+   /* Older versions of Firefox */
+   s.push ('input.qcard_textentry:-moz-placeholder {');
+   s.push ('   font-size:           83%;');
+   s.push ('   font-weight:         normal;');
+   s.push ('   color:               gray;');
+   s.push ('}');
+
+   s.push ('input.qcard_textentry:-ms-input-placeholder {');
+   s.push ('   font-size:           83%;');
+   s.push ('   font-weight:         normal;');
+   s.push ('   color:               gray;');
    s.push ('}');
 
    s.push ('button.textentry_hint {');
@@ -501,7 +526,7 @@ function add_style () {
    s.push ('   top:                 50%;');
    s.push ('   transform:           translateY(-50%);');
    s.push ('   font-size:           11px;');
-   s.push ('   line-spacing:        100%;');
+   s.push ('   line-spacing:        90%;');
                                  /* top right bot left */
    s.push ('   padding:             2px 2px 1px 2px;');
    s.push ('   border-radius:       5px;');
@@ -1066,7 +1091,7 @@ function process_textentry (i_deck, i_card, htm, opening_tags) {
 
    // Replace [textentry] with input textbox and (hidden, initially) hint button.
    var input_and_button_htm =   '<div class="qcard_textentry">\n'
-                              +    '<input type="text" id="textentry-qdeck' + i_deck + '" class="qcard_textentry qdeck_textentry_autocomplete" placeholder="Enter text, select suggestion" onfocus="' + qname + '.set_textentry_i_deck (this)" />\n'
+                              +    '<input type="text" id="textentry-qdeck' + i_deck + '" class="qcard_textentry qdeck_textentry_autocomplete" placeholder="' + T ('Type chars, then select from list') + '" onfocus="' + qname + '.set_textentry_i_deck (this)" />\n'
                               +    '<button id="textentry_hint-qdeck' + i_deck + '" class="qbutton textentry_hint" onclick="' + qname + '.textentry_hint (' + i_deck + ')" disabled>'
                               +        T ('Hint')
                               +    '</button>\n'
@@ -1422,7 +1447,7 @@ function create_qdeck_divs (i_deck, qdeck_tag) {
    // override WordPress class for <table>).
    var m = qdeck_tag.match (/\[qdeck([^\]]*)\]/m);
    var attributes = m[1];
-   var default_style = ' style="width: 500px; height: 300px; border: 2px solid black;"';
+   var default_style = ' style="box-sizing: content-box; -moz-box-sizing: content-box; width: 500px; height: 300px; border: 2px solid black;"';
    if (! attributes) {
       attributes = default_style;
    } else {

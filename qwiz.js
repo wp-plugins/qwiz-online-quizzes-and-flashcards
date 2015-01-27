@@ -190,6 +190,8 @@ var textentry_matches = {};
 var lc_textentry_matches = {};
 var textentry_i_qwiz;
 
+var Tcheck_answer_message;
+
 
 // -----------------------------------------------------------------------------
 $ (document).ready (function () {
@@ -205,6 +207,7 @@ $ (document).ready (function () {
    // div.container.  Apparently themes can change this; these have come up so far.
    // Body default for stand-alone use.
    content = qqc.get_qwiz_param ('content', 'body');
+   Tcheck_answer_message = T ('Enter your best guess - eventually we\'ll provide suggestions or offer a hint');
 
    // Add default styles for qwiz divs to page.
    add_style ();
@@ -795,9 +798,33 @@ function add_style () {
    s.push ('}');
 
    s.push ('.qwiz_textentry {');
-   s.push ('   font-size:           12pt;');
    s.push ('   font-weight:         bold;');
    s.push ('   color:               blue;');
+   s.push ('}');
+
+   s.push ('input.qwiz_textentry::-webkit-input-placeholder {');
+   s.push ('   font-size:           83%;');
+   s.push ('   font-weight:         normal;');
+   s.push ('   color:               gray;');
+   s.push ('}');
+
+   s.push ('input.qwiz_textentry::-moz-placeholder {');
+   s.push ('   font-size:           83%;');
+   s.push ('   font-weight:         normal;');
+   s.push ('   color:               gray;');
+   s.push ('}');
+
+   /* Older versions of Firefox */
+   s.push ('input.qwiz_textentry:-moz-placeholder {');
+   s.push ('   font-size:           83%;');
+   s.push ('   font-weight:         normal;');
+   s.push ('   color:               gray;');
+   s.push ('}');
+
+   s.push ('input.qwiz_textentry:-ms-input-placeholder {');
+   s.push ('   font-size:           83%;');
+   s.push ('   font-weight:         normal;');
+   s.push ('   color:               gray;');
    s.push ('}');
 
    s.push (' .ui-autocomplete {');
@@ -1426,13 +1453,14 @@ function create_qwiz_divs (i_qwiz, qwiz_tag, htm, exit_html) {
                  + '</div>\n';
 
    // "Check answer" and "Hint" buttons for [textentry] questions.  Check
-   // answer starts out disabled; hint hidden.
+   // answer starts out gray (but not actually disabled, so can provide alert
+   // message).  Hint starts out hidden.
    bottom_html +=  '<div class="textentry_check_answer_div" id="textentry_check_answer_div-qwiz' + i_qwiz + '">\n'
-                 + '   <button class="qbutton_disabled textentry_check_answer" onclick="' + qname + '.textentry_check_answer (' + i_qwiz + ')" disabled>'
+                 + '   <button class="qbutton_disabled textentry_check_answer" title="' + Tcheck_answer_message + '" onclick="' + qname + '.textentry_check_answer (' + i_qwiz + ')">'
                  +        T ('Check answer')
                  +    '</button>\n'
                  +    '&emsp;\n'
-                 +    '<button class="qbutton textentry_hint" style="display: none; font-size: 11px; padding: 2px 2px; border-radius: 5px;" onclick="' + qname + '.textentry_hint (' + i_qwiz + ')" disabled>'
+                 +    '<button class="qbutton qwiz_textentry_hint" style="display: none; font-size: 11px; padding: 2px 2px; border-radius: 5px;" onclick="' + qname + '.textentry_hint (' + i_qwiz + ')" disabled>'
                  +        T ('Hint')
                  +    '</button>\n'
                  + '</div>\n';
@@ -1770,10 +1798,12 @@ function display_question (i_qwiz, i_question) {
          }
 
          // Show "Check answer" and "Hint" buttons.  "Check answer" starts out
-         // disabled, hint not visible.
+         // gray (but not actually disabled, so click provides alert message).
+         // Hint starts out not visible.
          var check_answer_obj = $ ('#textentry_check_answer_div-qwiz' + i_qwiz);
-         check_answer_obj.find ('button.textentry_check_answer').attr ('disabled', true).removeClass ('qbutton').addClass ('qbutton_disabled');
-         check_answer_obj.find ('button.textentry_hint').html ('Hint').hide ();
+         check_answer_obj.find ('button.textentry_check_answer').removeClass ('qbutton').addClass ('qbutton_disabled');
+         qwizdata[i_qwiz].check_answer_disabled_b = true;
+         check_answer_obj.find ('button.qwiz_textentry_hint').html ('Hint').hide ();
          check_answer_obj.show ();
 
          // Set focus to textentry box, if there is one.  Don't do if first
@@ -2107,7 +2137,7 @@ function process_textentry (i_qwiz, i_question, htm, opening_tags) {
    }
 
    // Replace [textentry] with input textbox.
-   new_htm = new_htm.replace (/\[textentry([^\]]*)\]/, '<input type="text" id="textentry-qwiz' + i_qwiz + '-q' + i_question + '" class="qwiz_textentry" onfocus="' + qname + '.set_textentry_i_qwiz (this)" />');
+   new_htm = new_htm.replace (/\[textentry([^\]]*)\]/, '<input type="text" id="textentry-qwiz' + i_qwiz + '-q' + i_question + '" class="qwiz_textentry" placeholder="' + T ('Type chars, then select from list') + '" onfocus="' + qname + '.set_textentry_i_qwiz (this)" />');
 
    // Look for choices and feedback (interleaved only, feedback optional).
    // Save as data, delete here.
@@ -3214,7 +3244,8 @@ var find_matching_terms = function (request, response) {
       var i_question = qwizdata[textentry_i_qwiz].i_question;
       var lc_first_correct_answer = qwizdata[textentry_i_qwiz].textentry[i_question].first_correct_answer.toLowerCase ();
       if (lc_textentry_matches[textentry_i_qwiz].indexOf (lc_first_correct_answer) == -1) {
-         $ ('#textentry_check_answer_div-qwiz' + textentry_i_qwiz + ' button.textentry_hint').removeAttr ('disabled').removeClass ('qbutton_disabled').addClass ('qbutton').show ();
+         $ ('#textentry_check_answer_div-qwiz' + textentry_i_qwiz + ' button.qwiz_textentry_hint').removeAttr ('disabled').removeClass ('qbutton_disabled').addClass ('qbutton').show ();
+         qwizdata[textentry_i_qwiz].check_answer_disabled_b = false;
       }
    }
    response (textentry_matches[textentry_i_qwiz]);
@@ -3233,7 +3264,7 @@ function menu_closed (e) {
          console.log ('[menu_closed] textentry_matches[textentry_i_qwiz]: ', textentry_matches[textentry_i_qwiz]);
       }
       if (lc_textentry_matches[textentry_i_qwiz].indexOf (lc_entry) == -1) {
-         $ ('#textentry_check_answer_div-qwiz' + textentry_i_qwiz + ' button.textentry_check_answer').attr ('disabled', true).removeClass ('qbutton').addClass ('qbutton_disabled');
+         $ ('#textentry_check_answer_div-qwiz' + textentry_i_qwiz + ' button.textentry_check_answer').removeClass ('qbutton').addClass ('qbutton_disabled');
          qwizdata[textentry_i_qwiz].check_answer_disabled_b = true;
       }
    }
@@ -3254,13 +3285,13 @@ function menu_shown (e) {
    var i_question = qwizdata[textentry_i_qwiz].i_question;
    var lc_first_correct_answer = qwizdata[textentry_i_qwiz].textentry[i_question].first_correct_answer.toLowerCase ();
    if (lc_textentry_matches[textentry_i_qwiz].indexOf (lc_first_correct_answer) != -1) {
-      $ ('#textentry_check_answer_div-qwiz' + textentry_i_qwiz + ' button.textentry_hint').attr ('disabled', true).removeClass ('qbutton').addClass ('qbutton_disabled');
+      $ ('#textentry_check_answer_div-qwiz' + textentry_i_qwiz + ' button.qwiz_textentry_hint').attr ('disabled', true).removeClass ('qbutton').addClass ('qbutton_disabled');
    }
    if (lc_textentry_matches[textentry_i_qwiz].indexOf (lc_entry) != -1) {
-      $ ('#textentry_check_answer_div-qwiz' + textentry_i_qwiz + ' button.textentry_check_answer').removeAttr ('disabled').removeClass ('qbutton_disabled').addClass ('qbutton');
+      $ ('#textentry_check_answer_div-qwiz' + textentry_i_qwiz + ' button.textentry_check_answer').removeClass ('qbutton_disabled').addClass ('qbutton');
       qwizdata[textentry_i_qwiz].check_answer_disabled_b = false;
    } else {
-      $ ('#textentry_check_answer_div-qwiz' + textentry_i_qwiz + ' button.textentry_check_answer').attr ('disabled', true).removeClass ('qbutton').addClass ('qbutton_disabled');
+      $ ('#textentry_check_answer_div-qwiz' + textentry_i_qwiz + ' button.textentry_check_answer').removeClass ('qbutton').addClass ('qbutton_disabled');
       qwizdata[textentry_i_qwiz].check_answer_disabled_b = true;
    }
 }
@@ -3268,6 +3299,11 @@ function menu_shown (e) {
 
 // -----------------------------------------------------------------------------
 this.textentry_check_answer = function (i_qwiz) {
+
+   if (qwizdata[i_qwiz].check_answer_disabled_b) {
+      alert (Tcheck_answer_message);
+      return;
+   }
 
    // Hide "Check answer" button div.
    $ ('#textentry_check_answer_div-qwiz' + i_qwiz).hide ();
@@ -3325,11 +3361,11 @@ this.textentry_hint = function (i_qwiz) {
    qwizdata[i_qwiz].textentry_n_hints++;
 
    var i_question = qwizdata[i_qwiz].i_question;
-   var textentry_hint = qwizdata[i_qwiz].textentry[i_question].first_correct_answer.substr (0, qwizdata[i_qwiz].textentry_n_hints);
-   $ ('#textentry-qwiz' + i_qwiz + '-q' + i_question).val (textentry_hint).focus ();
+   var textentry_hint_val = qwizdata[i_qwiz].textentry[i_question].first_correct_answer.substr (0, qwizdata[i_qwiz].textentry_n_hints);
+   $ ('#textentry-qwiz' + i_qwiz + '-q' + i_question).val (textentry_hint_val).focus ();
 
    // Disable hint button, reset label.
-   $ ('#textentry_check_answer_div-qwiz' + i_qwiz + ' button.textentry_hint').attr ('disabled', true).removeClass ('qbutton').addClass ('qbutton_disabled').html ('Add. hint');
+   $ ('#textentry_check_answer_div-qwiz' + i_qwiz + ' button.qwiz_textentry_hint').attr ('disabled', true).removeClass ('qbutton').addClass ('qbutton_disabled').html ('Add. hint');
 }
 
 
@@ -3349,7 +3385,7 @@ this.set_textentry_i_qwiz = function (input_el) {
 // -----------------------------------------------------------------------------
 // When item selected, enable check answer.
 function item_selected () {
-   $ ('#textentry_check_answer_div-qwiz' + textentry_i_qwiz + ' button.textentry_check_answer').removeAttr ('disabled').removeClass ('qbutton_disabled').addClass ('qbutton');
+   $ ('#textentry_check_answer_div-qwiz' + textentry_i_qwiz + ' button.textentry_check_answer').removeClass ('qbutton_disabled').addClass ('qbutton');
 }
 
 

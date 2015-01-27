@@ -23,7 +23,10 @@ Activate the plugin through the 'Plugins' menu in WordPress
 
 = 2.28 =
 2015-01-??
-Free-form input ([textentry]) for quizzes.
+Box-sizing: content-box for flashcard table.
+Textentry with required input and suggestions/hints for flashcards.
+Free-form input ([textentry]) with suggestions/hints for quizzes.
+Create qwiz_qcards_common.js to hold common code.
 random="true" option for quizzes.
 
 = 2.27 =
