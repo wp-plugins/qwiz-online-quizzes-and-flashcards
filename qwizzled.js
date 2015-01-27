@@ -1,5 +1,5 @@
 /*
- * Version 2.27 2015-01-??
+ * Version 2.27 2015-01-05
  * Make sure labeled-diagram questions contain matching opening/closing divs.
  *
  * Version 2.24 2014-12-15
@@ -308,7 +308,7 @@ this.exit_main_menu = function () {
 
 
 // -----------------------------------------------------------------------------
-// Add style to editing page header (in iframe).
+// Add style to editing-page header.
 function add_style () {
 
    var s = [];

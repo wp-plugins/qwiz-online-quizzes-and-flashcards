@@ -495,6 +495,11 @@ function add_style () {
    s.push ('   color:               blue;');
    s.push ('}');
 
+   s.push ('.back_qcard_textentry {');
+   s.push ('   font-weight:         bold;');
+   s.push ('   color:               blue;');
+   s.push ('}');
+
    s.push ('input.qcard_textentry::-webkit-input-placeholder {');
    s.push ('   font-size:           83%;');
    s.push ('   font-weight:         normal;');
@@ -1302,7 +1307,7 @@ function create_card_back_html (i_deck, i_card, htm, opening_tags, front_textent
 
       // No.  If there was textentry on front, create default echo.
       if (front_textentry_b) {
-         var prepend_html = '<p id="back_textentry_p-qdeck' + i_deck + '" class="back_textentry_p">You wrote &ldquo;<span id="back_textentry-qdeck' + i_deck + '" class="qcard_textentry"></span>&rdquo;</p>';
+         var prepend_html = '<p id="back_textentry_p-qdeck' + i_deck + '" class="back_textentry_p">You wrote &ldquo;<span id="back_textentry-qdeck' + i_deck + '" class="back_qcard_textentry"></span>&rdquo;</p>';
          new_html = prepend_html + new_html;
       }
    }
@@ -1684,7 +1689,7 @@ function card_back_textentry_html (htm, i_deck) {
    if (htm.indexOf ('id="back_textentry"') != -1) {
       htm = htm.replace ('back_textentry', 'back_textentry-qdeck' + i_deck);
    } else {
-      htm = htm.replace ('textentry', '<span id="back_textentry-qdeck' + i_deck + '" class="qdeck_textentry"></span>');
+      htm = htm.replace ('textentry', '<span id="back_textentry-qdeck' + i_deck + '" class="back_qdeck_textentry"></span>');
    }
 
    // Convert "[" and "]" to paragraph.
