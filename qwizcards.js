@@ -2073,7 +2073,7 @@ this.set_card_front_and_back = function (i_deck, i_card) {
    } else {
 
       // In case previous card was textentry with required input, set button
-      // title back to default.
+      // title back to default, make sure flag set.
       $ ('button.flip-qdeck' + i_deck).attr ('title', T ('Show the other side'));
    }
 
@@ -2391,7 +2391,8 @@ function menu_shown (e) {
 // -----------------------------------------------------------------------------
 // When item selected, enable check answer.
 function item_selected () {
-   $ ('button.flip-qdeck' + textentry_i_deck).removeAttr ('disabled').removeClass ('qbutton_disabled').addClass ('qbutton');
+   $ ('button.flip-qdeck' + textentry_i_deck).removeClass ('qbutton_disabled').addClass ('qbutton');
+   deckdata[textentry_i_deck].check_answer_disabled_b = false;
 }
 
 

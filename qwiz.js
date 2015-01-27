@@ -3245,7 +3245,6 @@ var find_matching_terms = function (request, response) {
       var lc_first_correct_answer = qwizdata[textentry_i_qwiz].textentry[i_question].first_correct_answer.toLowerCase ();
       if (lc_textentry_matches[textentry_i_qwiz].indexOf (lc_first_correct_answer) == -1) {
          $ ('#textentry_check_answer_div-qwiz' + textentry_i_qwiz + ' button.qwiz_textentry_hint').removeAttr ('disabled').removeClass ('qbutton_disabled').addClass ('qbutton').show ();
-         qwizdata[textentry_i_qwiz].check_answer_disabled_b = false;
       }
    }
    response (textentry_matches[textentry_i_qwiz]);
@@ -3386,6 +3385,7 @@ this.set_textentry_i_qwiz = function (input_el) {
 // When item selected, enable check answer.
 function item_selected () {
    $ ('#textentry_check_answer_div-qwiz' + textentry_i_qwiz + ' button.textentry_check_answer').removeClass ('qbutton_disabled').addClass ('qbutton');
+   qwizdata[textentry_i_qwiz].check_answer_disabled_b = false;
 }
 
 
