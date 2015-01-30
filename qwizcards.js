@@ -1,7 +1,7 @@
 /*
  * Version 2.28 2015-01-??
+ * Resize card front/back to larger of two (including alternate textentry backs).
  * Textentry with required input and suggestions/hints.
- * Box-sizing: content-box for table front and back.
  *
  * Version 2.27 2015-01-05
  * Reset header width to match card width for summary report.
@@ -152,8 +152,6 @@ var lc_textentry_matches = {};
 var Tcheck_answer_message;
 
 // ----------------------
-// DKTMP: needs to be by deck
-
 // Array of topics (will check that individual card entries are in this list).
 // Short names.
 var topics = [];
@@ -197,6 +195,7 @@ $(document).ready (function () {
          // If no intro for a deck or single-card deck, move immediately to
          // first card.  Otherwise, set header and show introductory html along
          // with button to start deck.
+
          // Set header so there's something in it (measure height).
          set_header (i_deck, 'front', true);
          if (no_intro_b[i_deck] || deckdata[i_deck].n_cards == 1) {
@@ -206,9 +205,9 @@ $(document).ready (function () {
             deckdata[i_deck].el_qcard_card_front.html (deckdata[i_deck].intro_html);
          }
 
-         // Do it again to set proper width.
-         var qcard_width = set_header (i_deck, 'front', true);
-         set_container_width_height (i_deck, qcard_width);
+         // Set to match larger of front and back.
+         set_container_width_height (i_deck);
+         set_header (i_deck, 'front', true);
       }
    }
 
@@ -483,7 +482,7 @@ function add_style () {
    s.push ('}');
 
             /* Card */
-   s.push ('.qcard_card {');
+   s.push ('div.qcard_card {');
    s.push ('   position:            relative;');
    s.push ('}');
 
@@ -493,6 +492,13 @@ function add_style () {
    s.push ('   width:               240px;');
    s.push ('   font-weight:         bold;');
    s.push ('   color:               blue;');
+   s.push ('}');
+
+   s.push ('div.card_back_textentry {');
+   s.push ('   position:            absolute;');
+   s.push ('   top:                 0px;');
+   s.push ('   left:                0px;');
+   s.push ('   visibility:          hidden;');
    s.push ('}');
 
    s.push ('.back_qcard_textentry {');
@@ -542,15 +548,15 @@ function add_style () {
    s.push ('   margin-top:          0px;');
    s.push ('}');
 
-   s.push ('.qcard_table {');
+   s.push ('table.qcard_table {');
    s.push ('   border-collapse:     separate;');
    s.push ('}');
 
-   s.push ('.qcard_card .front {');
+   s.push ('div.qcard_card .front {');
    s.push ('   min-height:          280px;');
    s.push ('}');
 
-   s.push ('.qcard_card td.center {');
+   s.push ('div.qcard_card td.center {');
    s.push ('   position:            relative;');
    s.push ('   padding:             5px;');
    s.push ('   text-align:          center;');
@@ -559,7 +565,7 @@ function add_style () {
    s.push ('   font-weight:         bold;');
    s.push ('}');
 
-   s.push ('.qcard_card img {');
+   s.push ('div.qcard_card img {');
    s.push ('   border:              0px;');
    s.push ('   box-shadow:          none;');
    s.push ('}');
@@ -581,7 +587,7 @@ function add_style () {
    s.push ('   opacity:         1.0;');
    s.push ('}');
 
-   s.push ('.qcard_card .back .center {');
+   s.push ('div.qcard_card .back .center {');
    s.push ('   background-image: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAf4AAAE2CAIAAAAPtmerAAAACXBIWXMAAA7EAAAOxAGVKw4bAAAEnklEQVR4nO3YMW1AMRQEwTgyf3ix9Mm8sLCLnUFw1Ra3ZuYHgJLf1wMAuE36AXKkHyBH+gFypB8gR/oBcqQfIEf6AXKkHyBH+gFypB8gR/oBcqQfIEf6AXKkHyBH+gFypB8gR/oBcqQfIEf6AXKkHyBH+gFypB8gR/oBcqQfIEf6AXKkHyBH+gFypB8gR/oBcqQfIEf6AXKkHyBH+gFypB8gR/oBcqQfIEf6AXKkHyBH+gFypB8gR/oBcqQfIEf6AXKkHyBH+gFypB8gR/oBcqQfIGf//P293gDAVWtmXm8A4CqHD0CO9APkSD9AjvQD5Eg/QI70A+RIP0CO9APkSD9AjvQD5Eg/QI70A+RIP0CO9APkSD9AjvQD5Eg/QI70A+RIP0CO9APkSD9AjvQD5Eg/QI70A+Ts883rDQBctWakH6DF4QOQI/0AOdIPkCP9ADnSD5Aj/QA50g+QI/0AOdIPkCP9ADnSD5Aj/QA50g+QI/0AOdIPkCP9ADnSD5Aj/QA50g+QI/0AOdIPkCP9ADnSD5Aj/QA5+3zzegMAV60Z6QdocfgA5Eg/QI70A+RIP0CO9APkSD9AjvQD5Eg/QI70A+RIP0CO9APkSD9AjvQD5Eg/QI70A+RIP0CO9APkSD9AjvQD5Eg/QI70A+RIP0CO9APkSD9Azj7fvN4AwFVrRvoBWhw+ADnSD5Aj/QA50g+QI/0AOdIPkCP9ADnSD5Aj/QA50g+QI/0AOdIPkCP9ADnSD5Aj/QA50g+QI/0AOdIPkCP9ADnSD5Aj/QA50g+QI/0AOdIPkLPPN683AHDVmpF+gBaHD0CO9APkSD9AjvQD5Eg/QI70A+RIP0CO9APkSD9AjvQD5Eg/QI70A+RIP0CO9APkSD9AjvQD5Eg/QI70A+RIP0CO9APkSD9AjvQD5Eg/QI70A+Ts883rDQBctWakH6DF4QOQI/0AOdIPkCP9ADnSD5Aj/QA50g+QI/0AOdIPkCP9ADnSD5Aj/QA50g+QI/0AOdIPkCP9ADnSD5Aj/QA50g+QI/0AOdIPkCP9ADnSD5Aj/QA5+3zzegMAV60Z6QdocfgA5Eg/QI70A+RIP0CO9APkSD9AjvQD5Eg/QI70A+RIP0CO9APkSD9AjvQD5Eg/QI70A+RIP0CO9APkSD9AjvQD5Eg/QI70A+RIP0CO9APkSD9Azj7fvN4AwFVrRvoBWhw+ADnSD5Aj/QA50g+QI/0AOdIPkCP9ADnSD5Aj/QA50g+QI/0AOdIPkCP9ADnSD5Aj/QA50g+QI/0AOdIPkCP9ADnSD5Aj/QA50g+QI/0AOdIPkLPPN683AHDVmpF+gBaHD0CO9APkSD9AjvQD5Eg/QI70A+RIP0CO9APkSD9AjvQD5Eg/QI70A+RIP0CO9APkSD9AjvQD5Eg/QI70A+RIP0CO9APkSD9AjvQD5Eg/QI70A+Ts883rDQBctWakH6DF4QOQI/0AOdIPkCP9ADnSD5Aj/QA50g+QI/0AOdIPkCP9ADnSD5Aj/QA50g+QI/0AOdIPkCP9ADnSD5Aj/QA50g+QI/0AOdIPkCP9ADnSD5Aj/QA5/8mNPTHI1j+2AAAAAElFTkSuQmCC);');
    s.push ('   background-repeat:   no-repeat;');
    s.push ('   background-size:     contain;');
@@ -1123,13 +1129,15 @@ function process_textentry (i_deck, i_card, htm, opening_tags) {
    card.card_front = htm;
    card.textentry_required_b = true;
 
-   // Set up data for this card.  Card back will be set on the fly depending on
-   // text entered.
+   // Set up data for this card, create a div for each feedback alt -- so can
+   // measure each, set front and back card size.  Div to show selected in
+   // this.flip () > textentry_set_card_back () depending on text entered.
    card.choices = [];
    card.textentry_plural_b = textentry_plural_b;
    card.feedback_htmls = [];
    card.all_choices = [];
    card.card_back = '';
+   var card_back = '';
 
    // Loop over [c]s.
    var i_choice = 0;
@@ -1150,6 +1158,11 @@ function process_textentry (i_deck, i_card, htm, opening_tags) {
          got_feedback_b = true;
 
          card.feedback_htmls.push (r.feedback_html);
+         card_back +=  '<div id="textentry_feedback_qdeck' + i_deck + '-f' + i_choice + '" class="card_back_textentry">\n'
+                     +    '<p class="back_textentry_p">' + T ('You entered') + ' &ldquo;<span class="back_qcard_textentry">&emsp;&emsp;&emsp;&emsp;&emsp;</span>&rdquo;</p>'
+                     +    r.feedback_html
+                     + '</div>\n';
+
 
          // Check that there's not more than one feedback item accompanying
          // this choice.
@@ -1212,6 +1225,7 @@ function process_textentry (i_deck, i_card, htm, opening_tags) {
       card.all_choices = card.all_choices.concat (nonblank_alts);
       i_choice++;
    }
+   card.card_back = card_back;
 
    // If default choice ([c] *) and feedback/answer supplied, must be at least
    // one other choice-feedback/answer pair.
@@ -1265,13 +1279,18 @@ function process_feedback_item (choice_html) {
 this.textentry_hint = function (i_deck) {
    deckdata[i_deck].textentry_n_hints++;
 
+   // Disable hint button, reset label.
+   $ ('#textentry_hint-qdeck' + i_deck).attr ('disabled', true).removeClass ('qbutton').addClass ('qbutton_disabled').html ('Add.<br />hint');
+
    var i_card = deckdata[i_deck].i_card;
    var card = deckdata[i_deck].cards[i_card];
    var textentry_hint = card.all_choices[0].substr (0, deckdata[i_deck].textentry_n_hints);
-   $ ('#textentry-qdeck' + i_deck).val (textentry_hint).focus ();
+   var textentry_obj = $ ('#textentry-qdeck' + i_deck);
+   textentry_obj.val (textentry_hint).focus ();
 
-   // Disable hint button, reset label.
-   $ ('#textentry_hint-qdeck' + i_deck).attr ('disabled', true).removeClass ('qbutton').addClass ('qbutton_disabled').html ('Add.<br />hint');
+   // Trigger search on entry -- handles hints that don't match anything (grays
+   // "Check answer"/"Flip") and those that do.
+   textentry_obj.autocomplete ('search');
 }
 
 
@@ -1307,7 +1326,7 @@ function create_card_back_html (i_deck, i_card, htm, opening_tags, front_textent
 
       // No.  If there was textentry on front, create default echo.
       if (front_textentry_b) {
-         var prepend_html = '<p id="back_textentry_p-qdeck' + i_deck + '" class="back_textentry_p">You wrote &ldquo;<span id="back_textentry-qdeck' + i_deck + '" class="back_qcard_textentry"></span>&rdquo;</p>';
+         var prepend_html = '<p id="back_textentry_p-qdeck' + i_deck + '" class="back_textentry_p">' + T ('You wrote') + ' &ldquo;<span id="back_textentry-qdeck' + i_deck + '" class="back_qcard_textentry">&emsp;&emsp;&emsp;&emsp;&emsp;</span>&rdquo;</p>';
          new_html = prepend_html + new_html;
       }
    }
@@ -1452,7 +1471,9 @@ function create_qdeck_divs (i_deck, qdeck_tag) {
    // override WordPress class for <table>).
    var m = qdeck_tag.match (/\[qdeck([^\]]*)\]/m);
    var attributes = m[1];
-   var default_style = ' style="box-sizing: content-box; -moz-box-sizing: content-box; width: 500px; height: 300px; border: 2px solid black;"';
+   var default_style = ' style="width: 500px; height: 300px; border: 2px solid black;"';
+   deckdata[i_deck].card_width_setting = '500px';
+   deckdata[i_deck].card_height_setting = '300px';
    if (! attributes) {
       attributes = default_style;
    } else {
@@ -1464,9 +1485,19 @@ function create_qdeck_divs (i_deck, qdeck_tag) {
       } else {
          if (attributes.search ('width') == -1) {
             attributes = attributes.replace (/(style\s*?=\s*?["'])/m, '$1width: 500px; ');
+         } else {
+            m = attributes.match (/width\s*:\s*([^;\s]*)[;\s$]/m);
+            if (m) {
+               deckdata[i_deck].card_width_setting = m[1];
+            }
          }
          if (attributes.search ('height') == -1) {
             attributes = attributes.replace (/(style\s*?=\s*?["'])/m, '$1height: 300px; ');
+         } else {
+            m = attributes.match (/height\s*:\s*([^;\s]*)[;\s$]/m);
+            if (m) {
+               deckdata[i_deck].card_height_setting = m[1];
+            }
          }
          if (attributes.search ('border') == -1) {
             attributes = attributes.replace (/(style\s*?=\s*?["'])/m, '$1border: 2px solid black; ');
@@ -1879,10 +1910,12 @@ function done (i_deck) {
 
    deckdata[i_deck].el_qcard_card_front.html (report_html.join ('\n'));
 
+   // Set to match larger of front and back.
+   set_container_width_height (i_deck);
+
    // Set the widths of the progress, header, and next-button divs to match
-   // card front.
-   var qcard_width = set_header (i_deck, 'front');
-   set_container_width_height (i_deck, qcard_width);
+   // card.
+   set_header (i_deck, 'front');
 
 }
 
@@ -1951,18 +1984,21 @@ this.flip = function (i_deck) {
             textentry_set_card_back (i_deck, card);
          } else {
 
-            // If something entered in text box, then set back-side element to what
-            // was entered.
+            // If something entered in text box, then set back-side element to
+            // what was entered.
             var textentry = el_textentry.val ();
             if (textentry) {
 
                // Show what was within square brackets, insert user entry.
-               $('#back_textentry_p-qdeck' + i_deck).show ();
+               //$('#back_textentry_p-qdeck' + i_deck).show ();
+               $('#back_textentry_p-qdeck' + i_deck).css ('visibility', 'visible');
                $('#back_textentry-qdeck' + i_deck).html (textentry);
             } else {
 
-               // No entry on front. Don't display any of paragraph on back.
-               $('#back_textentry_p-qdeck' + i_deck).hide ();
+               // No entry on front. Don't show any of paragraph on back, but
+               // keep spacing.
+               $('#back_textentry_p-qdeck' + i_deck).css ('visibility', 'hidden');
+               //$('#back_textentry_p-qdeck' + i_deck).hide ();
             }
          }
       }
@@ -1977,7 +2013,7 @@ this.flip = function (i_deck) {
 
    // Set the widths of the progress, header, and next-button divs to match
    // card front/back.
-   set_header (i_deck, set_front_back);
+   //set_header (i_deck, set_front_back);
 
    deckdata[i_deck].el_flip.trigger ('click');
 
@@ -2018,7 +2054,7 @@ function set_header (i_deck, front_back, init_b) {
       }
    }
 
-   // Set the widths of the progress div and header div to match card front.
+   // Set the widths of the progress div and header div to match card side.
    var qcard_width = $('#qcard_card-qdeck' + i_deck + ' div.' + front_back + ' table.qcard_table').outerWidth ();
    if (debug[0]) {
       console.log ('[set_header] qcard_width: ', qcard_width);
@@ -2033,6 +2069,15 @@ function set_header (i_deck, front_back, init_b) {
 
 // -----------------------------------------------------------------------------
 this.set_card_front_and_back = function (i_deck, i_card) {
+
+   // Reset card width and height to original settings (so possible resize of
+   // previous card won't persist).
+   deckdata[i_deck].el_qcard_table_front.css ({
+                        width:    deckdata[i_deck].card_width_setting,
+                        height: deckdata[i_deck].card_height_setting});
+   deckdata[i_deck].el_qcard_table_back.css ({
+                        width:    deckdata[i_deck].card_width_setting,
+                        height: deckdata[i_deck].card_height_setting});
 
    var card_front_back = ['card_front', 'card_back'];
 
@@ -2077,19 +2122,20 @@ this.set_card_front_and_back = function (i_deck, i_card) {
       $ ('button.flip-qdeck' + i_deck).attr ('title', T ('Show the other side'));
    }
 
-   // Set the widths of the progress, header, and next-button divs to match
-   // card front.
-   var qcard_width = set_header (i_deck, 'front');
+   // Set card size to larger of front or back.
+   set_container_width_height (i_deck, card.textentry_required_b);
 
-   set_container_width_height (i_deck, qcard_width);
+   // Set the widths of the progress, header, and next-button divs to match
+   // card.
+   set_header (i_deck, 'front');
 };
 
 
 // -----------------------------------------------------------------------------
 function textentry_set_card_back (i_deck, card) {
 
-   // See with which choice the user textentry is associated, set card
-   // back to answer for that choice.
+   // See with which choice the user textentry is associated, make div for
+   // feedback for that choice visible.  Hide others.
    var el_textentry = $ ('#textentry-qdeck' + i_deck);
    var entry = el_textentry.val ();
 
@@ -2116,31 +2162,74 @@ function textentry_set_card_back (i_deck, card) {
    if (i_choice == -1) {
       i_choice = i_default_choice;
    }
-   var feedback_html = '<p class="back_textentry_p">You entered &ldquo;<span class="back_qcard_textentry">' + entry + '</span>&rdquo;</p>';
-   feedback_html += card.feedback_htmls[i_choice];
 
-   // Set back.
-   deckdata[i_deck].el_qcard_card_back.html (feedback_html);
+   // Hide all.
+   var el_qcard_card_back = deckdata[i_deck].el_qcard_card_back;
+   el_qcard_card_back.find ('div.card_back_textentry').css ({visibility: 'hidden'});
+
+   // Set the textentry value.
+   el_qcard_card_back.find ('span.back_qcard_textentry').html (entry);
+
+   // Show this one.  Do "manual" centering, because position relative has
+   // different effect on table cell.
+   var card_width  = el_qcard_card_back.outerWidth ();
+   var card_height = el_qcard_card_back.outerHeight ();
+
+   var div_width  = el_qcard_card_back.find ('#textentry_feedback_qdeck' + i_deck + '-f' + i_choice).outerWidth ();
+   var div_height = el_qcard_card_back.find ('#textentry_feedback_qdeck' + i_deck + '-f' + i_choice).outerHeight ();
+
+   var left = card_width/2  - div_width/2;
+   var top  = card_height/2 - div_height/2
+
+   el_qcard_card_back.find ('#textentry_feedback_qdeck' + i_deck + '-f' + i_choice).css ({visibility: 'visible', left: left + 'px', top: top + 'px'});
 }
 
 
 // -----------------------------------------------------------------------------
-function set_container_width_height (i_deck, qcard_width) {
+function set_container_width_height (i_deck, textentry_required_b) {
 
-   // Get height of front and back, set height of container to larger of the
-   // two.
+   // Get width and height of front and back, set size to match largest
+   // dimensions.
+   var width_front  = deckdata[i_deck].el_qcard_table_front.outerWidth ();
    var height_front = deckdata[i_deck].el_qcard_table_front.outerHeight ();
-   var height_back  = deckdata[i_deck].el_qcard_table_back.outerHeight ();
-   var max_height = Math.max (height_front, height_back);
+
+   var width_back  = 0;
+   var height_back = 0;
+   if (textentry_required_b) {
+
+      // Find largest width and height of alternate feedback divs.
+      var el_qcard_table_back = deckdata[i_deck].el_qcard_table_back;
+      var i_card = deckdata[i_deck].i_card;
+      var n_choices = deckdata[i_deck].cards[i_card].choices.length;
+      for (var i_choice=0; i_choice<n_choices; i_choice++) {
+         var width_back_i  = el_qcard_table_back.find ('#textentry_feedback_qdeck' + i_deck + '-f' + i_choice).outerWidth ();
+         var height_back_i = el_qcard_table_back.find ('#textentry_feedback_qdeck' + i_deck + '-f' + i_choice).outerHeight ();
+         width_back  = Math.max (width_back,  width_back_i);
+         height_back = Math.max (height_back, height_back_i);
+      }
+   } else {
+      width_back  = deckdata[i_deck].el_qcard_table_back.outerWidth ();
+      height_back = deckdata[i_deck].el_qcard_table_back.outerHeight ();
+   }
+
+   // Add 10px for padding (that position: absolute absorbs).
+   var max_width  = Math.max (width_front,  width_back)  + 10;
+   var max_height = Math.max (height_front, height_back) + 10;
 
    if (debug[0]) {
       var header_height = deckdata[i_deck].el_header.height ();
       console.log ('[set_container_width_height] height_front: ', height_front, ', height_back: ', height_back, ', header_height: ', header_height);
    }
 
-   // Add height of header, progress div and "next" buttons.
+   deckdata[i_deck].el_qcard_table_front.outerWidth (max_width);
+   deckdata[i_deck].el_qcard_table_back.outerWidth (max_width);
+
+   deckdata[i_deck].el_qcard_table_front.outerHeight (max_height);
+   deckdata[i_deck].el_qcard_table_back.outerHeight (max_height);
+
+   // Set height and width of container to match.
    deckdata[i_deck].el_qcard_container.height (max_height);
-   deckdata[i_deck].el_qcard_container.width (qcard_width);
+   deckdata[i_deck].el_qcard_container.width (max_width);
 }
 
 

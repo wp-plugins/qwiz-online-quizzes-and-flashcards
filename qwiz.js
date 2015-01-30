@@ -1,5 +1,6 @@
 /*
  * Version 2.28 2015-01-??
+ * Remove resizing handles (because now have images that would show).
  * random="true" option for quizzes.
  * Free-form input ([textentry]) with suggestions/hints.
  *
@@ -378,7 +379,10 @@ function init_qwizzled (content_obj, local_n_qwizzes) {
 
    // Targets no longer draggable (from qwizzled create/edit step).
    // Also reset borders.
-   content_obj.find ('td.qwizzled_canvas .qwizzled_target').removeClass ('ui-draggable ui-draggable-handle ui-resizable').css ({'border-style': 'dotted', 'border-color': 'gray'});
+   content_obj.find ('td.qwizzled_canvas .qwizzled_target').removeClass ('ui-draggable ui-draggable-handle').css ({'border-style': 'dotted', 'border-color': 'gray'});
+
+   // Remove resizing handle divs.
+   content_obj.find ('td.qwizzled_canvas .qwizzled_target div.ui-resizable-handle').remove ();
 
    // Image-linked targets need border-width.
    content_obj.find ('div.qwizzled_image div.qwizzled_target').css ('border-width', '2px');
@@ -1380,7 +1384,7 @@ function create_qwiz_divs (i_qwiz, qwiz_tag, htm, exit_html) {
    if (non_default_width_b) {
       var xattributes = attributes.replace (/(style\s*=\s*"[^"]*)/, '$1; position: absolute;');
 
-      // Correct double ";;" if we done that.
+      // Correct double ";;" if we've done that.
       xattributes.replace (/;\s*;/, ';');
       top_html = '<div id="xqwiz' + i_qwiz + '" class="xqwiz" ' + xattributes + '></div>\n';
    }
@@ -1763,7 +1767,7 @@ function display_question (i_qwiz, i_question) {
    } else {
 
       // See if this is a [textentry] question.
-      if (qwizdata[i_qwiz].textentry[i_question]) {
+      if (qwizdata[i_qwiz].textentry && qwizdata[i_qwiz].textentry[i_question]) {
 
          // ....................................................................
          // [textentry] question.
