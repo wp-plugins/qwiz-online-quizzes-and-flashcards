@@ -1,5 +1,6 @@
 /*
  * Version 2.28 2015-01-??
+ * Don't do container set on one-card deck.
  * Resize card front/back to larger of two (including alternate textentry backs).
  * Textentry with required input and suggestions/hints.
  *
@@ -203,11 +204,11 @@ $(document).ready (function () {
             q.process_card (i_deck);
          } else {
             deckdata[i_deck].el_qcard_card_front.html (deckdata[i_deck].intro_html);
-         }
 
-         // Set to match larger of front and back.
-         set_container_width_height (i_deck);
-         set_header (i_deck, 'front', true);
+            // Set to match larger of front and back.
+            set_container_width_height (i_deck);
+            set_header (i_deck, 'front', true);
+         }
       }
    }
 
@@ -2095,7 +2096,7 @@ this.set_card_front_and_back = function (i_deck, i_card) {
 
          // If no intro, and this is first card, add Qwiz icon to front.
          var qwiz_icon_div = '';
-         if (no_intro_b[i_deck] && deckdata[i_deck].n_reviewed == 1) {
+         if (no_intro_b[i_deck] && deckdata[i_deck].n_reviewed == 0) {
             qwiz_icon_div = create_qwiz_icon_div (i_deck);
          }
          deckdata[i_deck].el_qcard_card_front.html (card[side] + qwiz_icon_div);
@@ -2122,12 +2123,18 @@ this.set_card_front_and_back = function (i_deck, i_card) {
       $ ('button.flip-qdeck' + i_deck).attr ('title', T ('Show the other side'));
    }
 
-   // Set card size to larger of front or back.
-   set_container_width_height (i_deck, card.textentry_required_b);
+   // DKTMP
+   // Let's try a bit of delay.  Closure.
+   //var delay_set = function () {
 
-   // Set the widths of the progress, header, and next-button divs to match
-   // card.
-   set_header (i_deck, 'front');
+      // Set card size to larger of front or back.
+      set_container_width_height (i_deck, card.textentry_required_b);
+
+      // Set the widths of the progress, header, and next-button divs to match
+      // card.
+      set_header (i_deck, 'front');
+   //}
+   //setTimeout (delay_set, 10);
 };
 
 
@@ -2227,9 +2234,9 @@ function set_container_width_height (i_deck, textentry_required_b) {
    deckdata[i_deck].el_qcard_table_front.outerHeight (max_height);
    deckdata[i_deck].el_qcard_table_back.outerHeight (max_height);
 
-   // Set height and width of container to match.
-   deckdata[i_deck].el_qcard_container.height (max_height);
+   // Set width and height of container to match.
    deckdata[i_deck].el_qcard_container.width (max_width);
+   deckdata[i_deck].el_qcard_container.height (max_height);
 }
 
 

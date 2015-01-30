@@ -1,5 +1,6 @@
 /*
  * Version 2.28 2015-01-??
+ * Hide Qwiz icon when autocomplete starts.
  * Remove resizing handles (because now have images that would show).
  * random="true" option for quizzes.
  * Free-form input ([textentry]) with suggestions/hints.
@@ -145,7 +146,7 @@ debug.push (false);    // 1 - radio/choices html.
 debug.push (false);    // 2 - feedback html.
 debug.push (false);    // 3 - old/new html dump.
 debug.push (false);    // 4 - question tags/topics.
-debug.push (true );    // 5 - [textentry] / autocomplete.
+debug.push (false);    // 5 - [textentry] / autocomplete.
 
 var $ = jQuery;
 
@@ -3170,15 +3171,22 @@ function canned_feedback (correct_b) {
 // -----------------------------------------------------------------------------
 var find_matching_terms = function (request, response) {
 
+   // If no separate intro page, and this is first question, hide qwiz icon.
+   if (qwizdata[textentry_i_qwiz].i_question == 0 
+                         && (no_intro_b[textentry_i_qwiz] 
+                             || qwizdata[textentry_i_qwiz].n_questions == 1)) {
+      $ ('div.qwiz div#icon_qwiz' + textentry_i_qwiz).hide ();
+   }
+
    var entry = request.term.toLowerCase ();
    var entry_metaphone = metaphone (entry);
    if (debug[5]) {
       console.log ('[find_matching_terms] entry_metaphone; ', entry_metaphone);
    }
 
-   // See if first character of entry metaphone matches first
-   // character of any answer metaphone.  If so, determine shortest
-   // answer metaphone that matches.
+   // See if first character of entry metaphone matches first character of any
+   // answer metaphone.  If so, determine shortest answer metaphone that
+   // matches.
    var required_entry_length = 100;
    var required_metaphone_length = 100;
    for (var i=0; i<textentry_answer_metaphones[textentry_i_qwiz].length; i++) {
