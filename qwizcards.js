@@ -174,7 +174,7 @@ $(document).ready (function () {
    // set in qwiz-online-quizzes-wp-plugin.php: div.entry-content, div.post-entry,
    // div.container.  Apparently themes can change this; these have come up so far.
    // Body default for stand-alone use.
-   var content = qqc.get_qwiz_param ('content', 'body');
+   content = qqc.get_qwiz_param ('content', 'body');
    Tcheck_answer_message = T ('Enter your best guess - eventually we\'ll provide suggestions or offer a hint');
 
    // Add default styles for qcard divs to page.
@@ -359,13 +359,6 @@ function init_textentry_autocomplete (i_deck, i_card) {
    deckdata[i_deck].check_answer_disabled_b = true;
    deckdata[i_deck].textentry_n_hints = 0;
 
-   // If haven't loaded metaphone.js, do so now.
-   if (! loaded_metaphone_js_b) {
-      loaded_metaphone_js_b = true;
-      var plugin_url = qqc.get_qwiz_param ('url');
-      qqc.add_script (plugin_url + 'metaphone.js');
-   }
-
    // Use terms given with [terms]...[/terms] for this flashcard deck; otherwise
    // load default terms if haven't done so already.
    if (deckdata[i_deck].terms) {
@@ -376,6 +369,7 @@ function init_textentry_autocomplete (i_deck, i_card) {
       }
    } else {
       if (! default_textentry_terms_metaphones) {
+         var plugin_url = qqc.get_qwiz_param ('url', './');
          var terms_data = qqc.get_textentry_terms (plugin_url + 'terms.txt');
          default_textentry_terms_metaphones = qqc.process_textentry_terms (terms_data);
       }
@@ -419,12 +413,12 @@ function init_textentry_autocomplete (i_deck, i_card) {
    textentry_answer_metaphones[i_deck]
       = textentry_answers[i_deck].map (function (answer) {
                                           answer = answer.replace (/\s*(\S+)\s.*/, '\$1');
-                                          return metaphone (answer);
+                                          return qqc.metaphone (answer);
                                        })
 
    var textentry_answers_metaphones
       = textentry_answers[i_deck].map (function (answer) {
-                                  return [answer, metaphone (answer)];
+                                  return [answer, qqc.metaphone (answer)];
                                });
    if (debug[6]) {
       console.log ('[display_question] textentry_answers_metaphones: ', textentry_answers_metaphones);
@@ -2123,9 +2117,8 @@ this.set_card_front_and_back = function (i_deck, i_card) {
       $ ('button.flip-qdeck' + i_deck).attr ('title', T ('Show the other side'));
    }
 
-   // DKTMP
    // Let's try a bit of delay.  Closure.
-   //var delay_set = function () {
+   var delay_set = function () {
 
       // Set card size to larger of front or back.
       set_container_width_height (i_deck, card.textentry_required_b);
@@ -2133,8 +2126,8 @@ this.set_card_front_and_back = function (i_deck, i_card) {
       // Set the widths of the progress, header, and next-button divs to match
       // card.
       set_header (i_deck, 'front');
-   //}
-   //setTimeout (delay_set, 10);
+   }
+   setTimeout (delay_set, 50);
 };
 
 
@@ -2223,9 +2216,9 @@ function set_container_width_height (i_deck, textentry_required_b) {
    var max_width  = Math.max (width_front,  width_back)  + 10;
    var max_height = Math.max (height_front, height_back) + 10;
 
-   if (debug[0]) {
-      var header_height = deckdata[i_deck].el_header.height ();
-      console.log ('[set_container_width_height] height_front: ', height_front, ', height_back: ', height_back, ', header_height: ', header_height);
+   // DKTMP
+   if (debug[0] || true) {
+      console.log ('[set_container_width_height] width_front: ', width_front, ', width_back: ', width_back);
    }
 
    deckdata[i_deck].el_qcard_table_front.outerWidth (max_width);
@@ -2353,7 +2346,7 @@ function shuffle (array) {
 var find_matching_terms = function (request, response) {
 
    var entry = request.term.toLowerCase ();
-   var entry_metaphone = metaphone (entry);
+   var entry_metaphone = qqc.metaphone (entry);
    if (debug[6]) {
       console.log ('[find_matching_terms] entry_metaphone; ', entry_metaphone);
    }

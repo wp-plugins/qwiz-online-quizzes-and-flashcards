@@ -367,7 +367,31 @@ function process_html () {
 
    // If any [textentry] free-form input, set up autocomplete.
    if (textentry_b) {
-      init_textentry_autocomplete ();
+
+      // If this is stand-alone version, and qcard_ present, wait until it's
+      // done (since re-writes body html).
+      if (content == 'body' && typeof (qcard_) != 'undefined') {
+         var n_tries = 0;
+         var run_init_textentry_autocomplete = function () {
+            var ok_b = false;
+            console.log ('[run_init_textentry_autocomplete]', n_tries);
+            if (qcard_.processing_complete_b || n_tries > 30) {
+               console.log ('[run_init_textentry_autocomplete] OK');
+               init_textentry_autocomplete ();
+               ok_b = true;
+            }
+
+            // Do every 10th of a second until success.
+            if (! ok_b) {
+               setTimeout (run_init_textentry_autocomplete, 100);
+               n_tries++;
+            }
+         }
+         run_init_textentry_autocomplete ();
+      } else {
+         init_textentry_autocomplete ();
+      }
+
    }
 
    // Set flag to display page (qwizscripts.js).
@@ -458,7 +482,7 @@ function init_qwizzled (content_obj, local_n_qwizzes) {
 // -----------------------------------------------------------------------------
 function init_textentry_autocomplete () {
 
-   $ ('.qwiz_textentry').autocomplete ({
+   $ ('input.qwiz_textentry').autocomplete ({
       minLength:     3,
       source:        find_matching_terms,
       close:         menu_closed,
@@ -1772,13 +1796,6 @@ function display_question (i_qwiz, i_question) {
 
          // ....................................................................
          // [textentry] question.
-         // If haven't loaded metaphone.js, do so now.
-         if (! loaded_metaphone_js_b) {
-            loaded_metaphone_js_b = true;
-            var plugin_url = qqc.get_qwiz_param ('url');
-            qqc.add_script (plugin_url + 'metaphone.js');
-         }
-
          // Use terms given with [terms]...[/terms] for this quiz; otherwise
          // load default terms if haven't done so already.
          if (qwizdata[i_qwiz].terms) {
@@ -1789,6 +1806,7 @@ function display_question (i_qwiz, i_question) {
             }
          } else {
             if (! default_textentry_terms_metaphones) {
+               var plugin_url = qqc.get_qwiz_param ('url', './');
                var terms_data = qqc.get_textentry_terms (plugin_url + 'terms.txt');
                default_textentry_terms_metaphones = qqc.process_textentry_terms (terms_data);
             }
@@ -1826,7 +1844,7 @@ function display_question (i_qwiz, i_question) {
          textentry_answer_metaphones[i_qwiz]
             = textentry_answers[i_qwiz].map (function (answer) {
                                                 answer = answer.replace (/\s*(\S+)\s.*/, '\$1');
-                                                return metaphone (answer);
+                                                return qqc.metaphone (answer);
                                              })
 
          // List of terms (term, metaphone pairs) for this question: (1) default
@@ -1854,7 +1872,7 @@ function display_question (i_qwiz, i_question) {
          // (3) Answers.
          var textentry_answers_metaphones
             = textentry_answers[i_qwiz].map (function (answer) {
-                                        return [answer, metaphone (answer)];
+                                        return [answer, qqc.metaphone (answer)];
                                      });
          if (debug[5]) {
             console.log ('[display_question] textentry_answers_metaphones: ', textentry_answers_metaphones);
@@ -3179,7 +3197,7 @@ var find_matching_terms = function (request, response) {
    }
 
    var entry = request.term.toLowerCase ();
-   var entry_metaphone = metaphone (entry);
+   var entry_metaphone = qqc.metaphone (entry);
    if (debug[5]) {
       console.log ('[find_matching_terms] entry_metaphone; ', entry_metaphone);
    }
