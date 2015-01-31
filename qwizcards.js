@@ -2216,8 +2216,7 @@ function set_container_width_height (i_deck, textentry_required_b) {
    var max_width  = Math.max (width_front,  width_back)  + 10;
    var max_height = Math.max (height_front, height_back) + 10;
 
-   // DKTMP
-   if (debug[0] || true) {
+   if (debug[0]) {
       console.log ('[set_container_width_height] width_front: ', width_front, ', width_back: ', width_back);
    }
 
