@@ -207,7 +207,6 @@ $(document).ready (function () {
 
             // Set to match larger of front and back.
             set_container_width_height (i_deck);
-            set_header (i_deck, 'front', true);
          }
       }
    }
@@ -1907,11 +1906,6 @@ function done (i_deck) {
 
    // Set to match larger of front and back.
    set_container_width_height (i_deck);
-
-   // Set the widths of the progress, header, and next-button divs to match
-   // card.
-   set_header (i_deck, 'front');
-
 }
 
 
@@ -2005,10 +1999,6 @@ this.flip = function (i_deck) {
       $ ('button.flip-qdeck' + i_deck).html (T ('Flip'));
 
    }
-
-   // Set the widths of the progress, header, and next-button divs to match
-   // card front/back.
-   //set_header (i_deck, set_front_back);
 
    deckdata[i_deck].el_flip.trigger ('click');
 
@@ -2117,17 +2107,34 @@ this.set_card_front_and_back = function (i_deck, i_card) {
       $ ('button.flip-qdeck' + i_deck).attr ('title', T ('Show the other side'));
    }
 
-   // Let's try a bit of delay.  Closure.
-   var delay_set = function () {
+   // How soon does new html show?  Test.
+   /*
+   var ms_count = 0;
+   var width_front = 0;
+   var width_back  = 0;
+   var now = new Date ();
+   var start_ms = now.getTime ();
+   var size_test = function () {
+      var new_width_front  = deckdata[i_deck].el_qcard_table_front.outerWidth ();
+      var new_width_back  = deckdata[i_deck].el_qcard_table_back.outerWidth ();
+      if (new_width_front != width_front || new_width_back != width_back) {
+         width_front = new_width_front;
+         width_back  = new_width_back;
+         var now = new Date ();
+         var e_ms = now.getTime () - start_ms;
+         console.log ('[size_test] ms_count: ', ms_count, ', e_ms: ', e_ms, ', width_front: ', width_front, ', width_back: ', width_back);
+      }
 
-      // Set card size to larger of front or back.
-      set_container_width_height (i_deck, card.textentry_required_b);
-
-      // Set the widths of the progress, header, and next-button divs to match
-      // card.
-      set_header (i_deck, 'front');
+      if (ms_count < 200) {
+         setTimeout (size_test, 5);
+      }
+      ms_count += 5;
    }
-   setTimeout (delay_set, 50);
+   size_test ();
+   */
+
+   // Set card size to larger of front or back.
+   set_container_width_height (i_deck, card.textentry_required_b);
 };
 
 
@@ -2193,42 +2200,76 @@ function set_container_width_height (i_deck, textentry_required_b) {
    var width_front  = deckdata[i_deck].el_qcard_table_front.outerWidth ();
    var height_front = deckdata[i_deck].el_qcard_table_front.outerHeight ();
 
-   var width_back  = 0;
-   var height_back = 0;
-   if (textentry_required_b) {
+   var width_back   = deckdata[i_deck].el_qcard_table_back.outerWidth ();
+   var height_back  = deckdata[i_deck].el_qcard_table_back.outerHeight ();
 
-      // Find largest width and height of alternate feedback divs.
-      var el_qcard_table_back = deckdata[i_deck].el_qcard_table_back;
-      var i_card = deckdata[i_deck].i_card;
-      var n_choices = deckdata[i_deck].cards[i_card].choices.length;
-      for (var i_choice=0; i_choice<n_choices; i_choice++) {
-         var width_back_i  = el_qcard_table_back.find ('#textentry_feedback_qdeck' + i_deck + '-f' + i_choice).outerWidth ();
-         var height_back_i = el_qcard_table_back.find ('#textentry_feedback_qdeck' + i_deck + '-f' + i_choice).outerHeight ();
-         width_back  = Math.max (width_back,  width_back_i);
-         height_back = Math.max (height_back, height_back_i);
-      }
-   } else {
-      width_back  = deckdata[i_deck].el_qcard_table_back.outerWidth ();
-      height_back = deckdata[i_deck].el_qcard_table_back.outerHeight ();
-   }
-
-   // Add 10px for padding (that position: absolute absorbs).
-   var max_width  = Math.max (width_front,  width_back)  + 10;
-   var max_height = Math.max (height_front, height_back) + 10;
-
+   var max_width  = Math.max (width_front,  width_back);
+   var max_height = Math.max (height_front, height_back);
    if (debug[0]) {
       console.log ('[set_container_width_height] width_front: ', width_front, ', width_back: ', width_back);
    }
 
-   deckdata[i_deck].el_qcard_table_front.outerWidth (max_width);
-   deckdata[i_deck].el_qcard_table_back.outerWidth (max_width);
+   // We'll set things right away, and again after a delay if rendering is
+   // catching up.  Closure.
+   var init_b = true;
+   var delay_set_container_width_height = function () {
+      var new_width_front  = deckdata[i_deck].el_qcard_table_front.outerWidth ();
+      var new_height_front = deckdata[i_deck].el_qcard_table_front.outerHeight ();
 
-   deckdata[i_deck].el_qcard_table_front.outerHeight (max_height);
-   deckdata[i_deck].el_qcard_table_back.outerHeight (max_height);
+      var new_width_back  = 0;
+      var new_height_back = 0;
+      if (textentry_required_b) {
 
-   // Set width and height of container to match.
-   deckdata[i_deck].el_qcard_container.width (max_width);
-   deckdata[i_deck].el_qcard_container.height (max_height);
+         // Find largest width and height of alternate feedback divs.
+         var el_qcard_table_back = deckdata[i_deck].el_qcard_table_back;
+         var i_card = deckdata[i_deck].i_card;
+         var n_choices = deckdata[i_deck].cards[i_card].choices.length;
+         for (var i_choice=0; i_choice<n_choices; i_choice++) {
+            var new_width_back_i  = el_qcard_table_back.find ('#textentry_feedback_qdeck' + i_deck + '-f' + i_choice).outerWidth ();
+            var new_height_back_i = el_qcard_table_back.find ('#textentry_feedback_qdeck' + i_deck + '-f' + i_choice).outerHeight ();
+            new_width_back  = Math.max (new_width_back,  new_width_back_i);
+            new_height_back = Math.max (new_height_back, new_height_back_i);
+         }
+      } else {
+         new_width_back  = deckdata[i_deck].el_qcard_table_back.outerWidth ();
+         new_height_back = deckdata[i_deck].el_qcard_table_back.outerHeight ();
+      }
+
+      var new_max_width  = Math.max (new_width_front,  new_width_back);
+      var new_max_height = Math.max (new_height_front, new_height_back);
+
+      if (init_b || new_max_width != max_width || new_max_height != max_height) {
+         init_b = false;
+         if (textentry_required_b) {
+
+            // Add 10px for padding (that position: absolute absorbs).
+            new_max_width  += 10;
+            new_max_height += 10;
+         }
+         max_width  = new_max_width;
+         max_height = new_max_height;
+
+         if (debug[0]) {
+            console.log ('[delay_set_container_width_height] new_width_front: ', new_width_front, ', new_width_back: ', new_width_back);
+         }
+
+         deckdata[i_deck].el_qcard_table_front.outerWidth (max_width);
+         deckdata[i_deck].el_qcard_table_back.outerWidth (max_width);
+
+         deckdata[i_deck].el_qcard_table_front.outerHeight (max_height);
+         deckdata[i_deck].el_qcard_table_back.outerHeight (max_height);
+
+         // Set width and height of container to match.
+         deckdata[i_deck].el_qcard_container.width (max_width);
+         deckdata[i_deck].el_qcard_container.height (max_height);
+
+         // Set the widths of the progress, header, and next-button divs to match
+         // card.
+         set_header (i_deck, 'front');
+      }
+   }
+   setTimeout (delay_set_container_width_height, 10);
+   setTimeout (delay_set_container_width_height, 500);
 }
 
 
