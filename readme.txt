@@ -21,6 +21,17 @@ Activate the plugin through the 'Plugins' menu in WordPress
 
 == Changelog ==
 
+= 2.28 =
+2015-01-??
+"the_content" filter: allow JavaScript to detect mismatched [qwiz]-[/qwiz] pairs.
+Error messages returned from qwiz_qcards_common.js.
+Correct content='body' for standalone flashcard decks.
+Resize flashcard front/back to larger of two (including alternate textentry backs).
+Remove resizing handles in labeled diagrams (now have images that would show).
+Free-form input ([textentry]) with suggestions/hints for quizzes and flashcards.
+Create qwiz_qcards_common.js to hold common code.
+random="true" option for quizzes.
+
 = 2.27 =
 2015-01-05
 Make sure labeled-diagram questions contain matching opening/closing divs.

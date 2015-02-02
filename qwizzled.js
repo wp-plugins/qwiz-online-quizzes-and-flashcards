@@ -308,7 +308,7 @@ this.exit_main_menu = function () {
 
 
 // -----------------------------------------------------------------------------
-// Add style to editing page header (in iframe).
+// Add style to editing-page header.
 function add_style () {
 
    var s = [];

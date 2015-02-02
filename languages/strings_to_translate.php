@@ -37,9 +37,11 @@
       /* Translators: as in "there are three cards in total" */
       'cards total' => __ ('cards total', $q),
 
+      'Check answer' => __ ('Check answer', $q),
       'Congratulations, you answered all questions correctly' => __ ('Congratulations, you answered all questions correctly', $q),
       'correct' => __ ('correct', $q),
       'Correct!' => __ ('Correct!', $q),
+      'Could not read terms file' => __ ('Could not read terms file', $q),
       'Excellent!' => __ ('Excellent!', $q),
       'Flip' => __ ('Flip', $q),
 
@@ -49,9 +51,13 @@
       /* Translators: as in "For topic Biology..." */
       'For topic' => __ ('For topic', $q),
 
+      /* Translators: as in "[terms] found, but not [/terms]" */
+      'found, but not' => __ ('found, but not', $q),
+
       'Good!' => __ ('Good!', $q),
       'Got it!' => __ ('Got it!', $q),
       'Great!' => __ ('Great!', $q),
+      'Hint' => __ ('Hint', $q),
 
       /*'Translators: as in In this %s-flashcard stack, you clicked "Got it!" on the first try for every card. */
       'In this %s-flashcard stack, you clicked' => __ ('In this %s-flashcard stack, you clicked', $q),
@@ -128,6 +134,8 @@
       'You answered all of these questions correctly' => __ ('You answered all of these questions correctly', $q),
       'You answered both of these questions correctly' => __ ('You answered both of these questions correctly', $q),
       'You answered this question correctly' => __ ('You answered this question correctly', $q),
+      'You entered' => __ ('You entered', $q),
+      'You wrote' => __ ('You wrote', $q),
       'Your score is' => __ ('Your score is', $q),
       'Your score is %s correct out of %s' => __ ('Your score is %s correct out of %s', $q),
 
@@ -140,6 +148,7 @@
       'Could not find editing window.  You need to be editing a page or post in Visual mode.' => __ ('Could not find editing window.  You need to be editing a page or post in Visual mode.', $q),
       'Did not find [qwiz]...[/qwiz] shortcodes' => __ ('Did not find [qwiz]...[/qwiz] shortcodes', $q),
       'End of labeled-diagram question' => __ ('End of labeled-diagram question', $q),
+      'Error' => __ ('Error', $q),
       'Error: no text selected' => __ ('Error: no text selected', $q),
       'labeled diagram editing menu' => __ ('labeled diagram editing menu', $q),
       'Please select "Visual" mode to create a target/drop zone' => __ ('Please select "Visual" mode to create a target/drop zone', $q),
@@ -162,15 +171,20 @@
       'Did not find feedback ("[f]") for' => __ ('Did not find feedback ("[f]") for', $q),
       'Did not find question tags ("[q]") for' => __ ('Did not find question tags ("[q]") for', $q),
       'Did not find target "drop-zones" for labels.  Please check that all labels and target "drop zones" were correctly processed and saved during the edit of this page' => __ ('Did not find target "drop-zones" for labels.  Please check that all labels and target "drop zones" were correctly processed and saved during the edit of this page', $q),
+      'Did not find [terms]...[/terms] shortcode pair in file' => __ ('Did not find [terms]...[/terms] shortcode pair in file', $q),
       'does not match number of labels' => __ ('does not match number of labels', $q),
       'Error found' => __ ('Error found', $q),
       'Errors found' => __ ('Errors found', $q),
       '(exit text) must be last' => __ ('(exit text) must be last', $q),
       'Feedback [f] is required for a one-choice question' => __ ('Feedback [f] is required for a one-choice question', $q),
+      'For [textentry] question, wildcard choice ("*", for any other user entry) cannot be marked correct "[c*]"' => __ ('For [textentry] question, wildcard choice ("*", for any other user entry) cannot be marked correct "[c*]"', $q),
+      'For [textentry] question, wildcard choice ("*", for any other user entry) must be accompanied by feedback "[f]"' => __ ('For [textentry] question, wildcard choice ("*", for any other user entry) must be accompanied by feedback "[f]"', $q),
       'Got more than one answer ("[a]") -- card back -- for' => __ ('Got more than one answer ("[a]") -- card back -- for', $q),
       'More than one choice was marked correct' => __ ('More than one choice was marked correct', $q),
       'More than one feedback shortcode [f] given with choice' => __ ('More than one feedback shortcode [f] given with choice', $q),
       'No choice was marked correct' => __ ('No choice was marked correct', $q),
+      'No data read from terms file' => __ ('No data read from terms file', $q),
+      'No text given for [textentry] choice' => __ ('No text given for [textentry] choice', $q),
       'Number of feedback items does not match number of choices' => __ ('Number of feedback items does not match number of choices', $q),
       'Number of feedback items' => __ ('Number of feedback items', $q),
       'Please fix and try again' => __ ('Please fix and try again', $q),

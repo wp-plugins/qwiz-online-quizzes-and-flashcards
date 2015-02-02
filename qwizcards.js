@@ -1,4 +1,9 @@
 /*
+ * Version 2.28 2015-01-??
+ * Don't do container set on one-card deck.
+ * Resize card front/back to larger of two (including alternate textentry backs).
+ * Textentry with required input and suggestions/hints.
+ *
  * Version 2.27 2015-01-05
  * Reset header width to match card width for summary report.
  * Toolbar option - keep "next" button active.
@@ -105,20 +110,16 @@ debug.push (false);    // 2 - answer (card back) html.
 debug.push (false);    // 3 - old/new html dump.
 debug.push (false);    // 4 - card tags/topics.
 debug.push (false);    // 5 - "next" buttons, element objects.
+debug.push (false);    // 6 - [textentry] w/ required input.
 
 var $ = jQuery;
 
 // Private data, but global to this qcard instance.
 var q = this;
+var qqc;
 q.processing_complete_b = false;
 
-// The identifier -- including qualifiers like "#" -- of the page content (that
-// perhaps contains inline flashcard decks) on WordPress.  Default
-// set in qwiz-online-quizzes-wp-plugin.php: div.entry-content, div.post-entry,
-// div.container.  Apparently themes can change this; these have come up so far.
-// Body default for stand-alone use.
-var content = get_qwiz_param ('content', 'body');
-
+var content;
 var errmsgs = [];
 
 var n_decks = 0;
@@ -127,25 +128,54 @@ var no_intro_b = [];
 var deck_id;
 var deckdata = [];
 
-// ----------------------
-// DKTMP: needs to be by deck
+var card_reviewed_b = false;
+var next_button_active_b  = false;
 
+var textentry_i_deck;
+var loaded_metaphone_js_b = false;
+
+// Object (singular and plural) of arrays of term-metaphone pairs.
+// Constant across quizzes.  
+var default_textentry_terms_metaphones;
+
+// (deckdata[i_deck].textentry_terms_metaphones are quiz-specific terms given
+// with [terms]...[/terms].)
+
+// These vary with quiz, and are set up anew for each [textentry] question.
+var current_card_textentry_terms_metaphones = {};
+
+var textentry_answers = {};
+var textentry_answer_metaphones = {};
+
+var textentry_matches = {};
+var lc_textentry_matches = {};
+
+var Tcheck_answer_message;
+
+// ----------------------
 // Array of topics (will check that individual card entries are in this list).
 // Short names.
 var topics = [];
 var n_topics;
 
 // Topic description for summary report.
-var topic_descriptions = new Object;
+var topic_descriptions = {};
 
 // Statistics by topic.
-var topic_statistics = new Object;
-
-var card_reviewed_b = false;
-var next_button_active_b  = false;
+var topic_statistics = {};
 
 // -----------------------------------------------------------------------------
 $(document).ready (function () {
+
+   qqc = qwiz_qcards_common;
+
+   // The identifier -- including qualifiers like "#" -- of the page content (that
+   // perhaps contains inline flashcard decks) on WordPress.  Default
+   // set in qwiz-online-quizzes-wp-plugin.php: div.entry-content, div.post-entry,
+   // div.container.  Apparently themes can change this; these have come up so far.
+   // Body default for stand-alone use.
+   content = qqc.get_qwiz_param ('content', 'body');
+   Tcheck_answer_message = T ('Enter your best guess - eventually we\'ll provide suggestions or offer a hint');
 
    // Add default styles for qcard divs to page.
    add_style ();
@@ -154,7 +184,7 @@ $(document).ready (function () {
 
    // Error messages, if any.
    if (errmsgs.length) {
-      alert (plural ('Error found', 'Errors found', errmsgs.length) + ':\n\n' + errmsgs.join ('\n'));
+      alert (Tplural ('Error found', 'Errors found', errmsgs.length) + ':\n\n' + errmsgs.join ('\n'));
    }
 
    if (n_decks) {
@@ -166,6 +196,7 @@ $(document).ready (function () {
          // If no intro for a deck or single-card deck, move immediately to
          // first card.  Otherwise, set header and show introductory html along
          // with button to start deck.
+
          // Set header so there's something in it (measure height).
          set_header (i_deck, 'front', true);
          if (no_intro_b[i_deck] || deckdata[i_deck].n_cards == 1) {
@@ -173,11 +204,10 @@ $(document).ready (function () {
             q.process_card (i_deck);
          } else {
             deckdata[i_deck].el_qcard_card_front.html (deckdata[i_deck].intro_html);
-         }
 
-         // Do it again to set proper width.
-         var qcard_width = set_header (i_deck, 'front', true);
-         set_container_width_height (i_deck, qcard_width);
+            // Set to match larger of front and back.
+            set_container_width_height (i_deck);
+         }
       }
    }
 
@@ -309,6 +339,107 @@ function process_html () {
 
 
 // -----------------------------------------------------------------------------
+// Set up [textentry] autocomplete for this card.
+function init_textentry_autocomplete (i_deck, i_card) {
+
+   $ ('.qdeck_textentry_autocomplete').autocomplete ({
+      minLength:     3,
+      source:        find_matching_terms,
+      close:         menu_closed,
+      open:          menu_shown,
+      select:        item_selected
+   });
+
+   $ ('.qdeck_textentry_autocomplete').keyup (menu_closed);
+
+   // Gray out "Check answer"/"Flip" button, but leave enabled -- click will
+   // print alert rather than do flip.  Also provide alert text as title.
+   $ ('button.flip-qdeck' + i_deck).removeClass ('qbutton').addClass ('qbutton_disabled').attr ('title', Tcheck_answer_message);
+   deckdata[i_deck].check_answer_disabled_b = true;
+   deckdata[i_deck].textentry_n_hints = 0;
+
+   // Use terms given with [terms]...[/terms] for this flashcard deck; otherwise
+   // load default terms if haven't done so already.
+   if (deckdata[i_deck].terms) {
+
+      // Only do this once per flashcard deck.
+      if (! deckdata[i_deck].textentry_terms_metaphones) {
+         deckdata[i_deck].textentry_terms_metaphones = qqc.process_textentry_terms (deckdata[i_deck].terms);
+      }
+   } else {
+      if (! default_textentry_terms_metaphones) {
+         var plugin_url = qqc.get_qwiz_param ('url', './');
+         var terms_data = qqc.get_textentry_terms (plugin_url + 'terms.txt', deckdata);
+         default_textentry_terms_metaphones = qqc.process_textentry_terms (terms_data);
+      }
+   }
+
+   // Also need to process additional terms for this flashcard deck, if any.
+   // Only do once per deck.
+   if (deckdata[i_deck].add_terms) {
+      if (! deckdata[i_deck].add_textentry_terms_metaphones) {
+         deckdata[i_deck].add_textentry_terms_metaphones = qqc.process_textentry_terms (deckdata[i_deck].add_terms);
+      }
+   }
+
+   // Set terms for this card.  List of terms (term, metaphone pairs): 
+   // (1) default or specific to this flashcard deck; plus (2) additional terms
+   // for this deck, if any; and (3) specified entries for this [textentry].
+   // Singular or plural in each case.
+   var card = deckdata[i_deck].cards[i_card];
+
+   var singular_plural;
+   if (card.textentry_plural_b) {
+      singular_plural = 'plural';
+   } else {
+      singular_plural = 'singular';
+   }
+
+   // (1) Quiz-specific or default.
+   if (deckdata[i_deck].terms) {
+      current_card_textentry_terms_metaphones[i_deck] = deckdata[i_deck].textentry_terms_metaphones[singular_plural];
+   } else {
+      current_card_textentry_terms_metaphones[i_deck] = default_textentry_terms_metaphones[singular_plural];
+   }
+
+   // (2) Additional.
+   if (deckdata[i_deck].add_terms) {
+      current_card_textentry_terms_metaphones[i_deck] = current_card_textentry_terms_metaphones[i_deck].concat (deckdata[i_deck].add_textentry_terms_metaphones[singular_plural]);
+   }
+   // (3) All specified entries.  Calculate metaphones up to first blank
+   // following a non-blank.
+   textentry_answers[i_deck] = card.all_choices;
+   textentry_answer_metaphones[i_deck]
+      = textentry_answers[i_deck].map (function (answer) {
+                                          answer = answer.replace (/\s*(\S+)\s.*/, '\$1');
+                                          return qqc.metaphone (answer);
+                                       })
+
+   var textentry_answers_metaphones
+      = textentry_answers[i_deck].map (function (answer) {
+                                  return [answer, qqc.metaphone (answer)];
+                               });
+   if (debug[6]) {
+      console.log ('[display_question] textentry_answers_metaphones: ', textentry_answers_metaphones);
+   }
+   current_card_textentry_terms_metaphones[i_deck] = current_card_textentry_terms_metaphones[i_deck].concat (textentry_answers_metaphones);
+
+   // Sort and de-dupe.
+   current_card_textentry_terms_metaphones[i_deck]
+      = qqc.sort_dedupe_terms_metaphones (current_card_textentry_terms_metaphones[i_deck]);
+
+   if (debug[6]) {
+      console.log ('[display_question] current_card_textentry_terms_metaphones[i_deck].length: ', current_card_textentry_terms_metaphones[i_deck].length);
+      console.log ('[display_question] current_card_textentry_terms_metaphones[i_deck].slice (0, 10): ', current_card_textentry_terms_metaphones[i_deck].slice (0, 10));
+      var i_start = current_card_textentry_terms_metaphones[i_deck].length - 10;
+      if (i_start > 0) {
+         console.log ('[display_question] current_card_textentry_terms_metaphones[i_deck].slice (' + i_start + '): ', current_card_textentry_terms_metaphones[i_deck].slice (i_start));
+      }
+   }
+}
+
+
+// -----------------------------------------------------------------------------
 function add_style () {
 
    var s = [];
@@ -331,43 +462,95 @@ function add_style () {
    s.push ('}');
 
    s.push ('div.qcard_header {');
-   s.push ('   color:           white;');
-   s.push ('   background:      black;');
-   s.push ('   margin:          0px;');
-   s.push ('   padding:         0px;');
+   s.push ('   color:               white;');
+   s.push ('   background:          black;');
+   s.push ('   margin:              0px;');
+   s.push ('   padding:             0px;');
    s.push ('}');
 
    /* Any sub-elements of header have zero margin. */
    s.push ('div.qcard_header * {');
-   s.push ('   margin:          0px;');
-                             /* top right bot left */
-   s.push ('   padding:         0px 5px 0px 5px;');
+   s.push ('   margin:              0px;');
+                                 /* top right bot left */
+   s.push ('   padding:             0px 5px 0px 5px;');
    s.push ('}');
 
             /* Card */
-   s.push ('.qcard_card {');
+   s.push ('div.qcard_card {');
    s.push ('   position:            relative;');
    s.push ('}');
 
    s.push ('.qcard_textentry {');
-   s.push ('   font-size:           13pt;');
+   s.push ('   display:             inline-block;');
+   s.push ('   position:            relative;');
+   s.push ('   width:               240px;');
    s.push ('   font-weight:         bold;');
    s.push ('   color:               blue;');
+   s.push ('}');
+
+   s.push ('div.card_back_textentry {');
+   s.push ('   position:            absolute;');
+   s.push ('   top:                 0px;');
+   s.push ('   left:                0px;');
+   s.push ('   visibility:          hidden;');
+   s.push ('}');
+
+   s.push ('.back_qcard_textentry {');
+   s.push ('   font-weight:         bold;');
+   s.push ('   color:               blue;');
+   s.push ('}');
+
+   s.push ('input.qcard_textentry::-webkit-input-placeholder {');
+   s.push ('   font-size:           83%;');
+   s.push ('   font-weight:         normal;');
+   s.push ('   color:               gray;');
+   s.push ('}');
+
+   s.push ('input.qcard_textentry::-moz-placeholder {');
+   s.push ('   font-size:           83%;');
+   s.push ('   font-weight:         normal;');
+   s.push ('   color:               gray;');
+   s.push ('}');
+
+   /* Older versions of Firefox */
+   s.push ('input.qcard_textentry:-moz-placeholder {');
+   s.push ('   font-size:           83%;');
+   s.push ('   font-weight:         normal;');
+   s.push ('   color:               gray;');
+   s.push ('}');
+
+   s.push ('input.qcard_textentry:-ms-input-placeholder {');
+   s.push ('   font-size:           83%;');
+   s.push ('   font-weight:         normal;');
+   s.push ('   color:               gray;');
+   s.push ('}');
+
+   s.push ('button.textentry_hint {');
+   s.push ('   position:            absolute;');
+   s.push ('   right:               2px;');
+   s.push ('   top:                 50%;');
+   s.push ('   transform:           translateY(-50%);');
+   s.push ('   font-size:           11px;');
+   s.push ('   line-spacing:        90%;');
+                                 /* top right bot left */
+   s.push ('   padding:             2px 2px 1px 2px;');
+   s.push ('   border-radius:       5px;');
+   s.push ('   display:             none;');
    s.push ('}');
 
    s.push ('.back_textentry_p {');
    s.push ('   margin-top:          0px;');
    s.push ('}');
 
-   s.push ('.qcard_table {');
+   s.push ('table.qcard_table {');
    s.push ('   border-collapse:     separate;');
    s.push ('}');
 
-   s.push ('.qcard_card .front {');
+   s.push ('div.qcard_card .front {');
    s.push ('   min-height:          280px;');
    s.push ('}');
 
-   s.push ('.qcard_card td.center {');
+   s.push ('div.qcard_card td.center {');
    s.push ('   position:            relative;');
    s.push ('   padding:             5px;');
    s.push ('   text-align:          center;');
@@ -376,7 +559,7 @@ function add_style () {
    s.push ('   font-weight:         bold;');
    s.push ('}');
 
-   s.push ('.qcard_card img {');
+   s.push ('div.qcard_card img {');
    s.push ('   border:              0px;');
    s.push ('   box-shadow:          none;');
    s.push ('}');
@@ -398,7 +581,7 @@ function add_style () {
    s.push ('   opacity:         1.0;');
    s.push ('}');
 
-   s.push ('.qcard_card .back .center {');
+   s.push ('div.qcard_card .back .center {');
    s.push ('   background-image: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAf4AAAE2CAIAAAAPtmerAAAACXBIWXMAAA7EAAAOxAGVKw4bAAAEnklEQVR4nO3YMW1AMRQEwTgyf3ix9Mm8sLCLnUFw1Ra3ZuYHgJLf1wMAuE36AXKkHyBH+gFypB8gR/oBcqQfIEf6AXKkHyBH+gFypB8gR/oBcqQfIEf6AXKkHyBH+gFypB8gR/oBcqQfIEf6AXKkHyBH+gFypB8gR/oBcqQfIEf6AXKkHyBH+gFypB8gR/oBcqQfIEf6AXKkHyBH+gFypB8gR/oBcqQfIEf6AXKkHyBH+gFypB8gR/oBcqQfIEf6AXKkHyBH+gFypB8gR/oBcqQfIGf//P293gDAVWtmXm8A4CqHD0CO9APkSD9AjvQD5Eg/QI70A+RIP0CO9APkSD9AjvQD5Eg/QI70A+RIP0CO9APkSD9AjvQD5Eg/QI70A+RIP0CO9APkSD9AjvQD5Eg/QI70A+Ts883rDQBctWakH6DF4QOQI/0AOdIPkCP9ADnSD5Aj/QA50g+QI/0AOdIPkCP9ADnSD5Aj/QA50g+QI/0AOdIPkCP9ADnSD5Aj/QA50g+QI/0AOdIPkCP9ADnSD5Aj/QA5+3zzegMAV60Z6QdocfgA5Eg/QI70A+RIP0CO9APkSD9AjvQD5Eg/QI70A+RIP0CO9APkSD9AjvQD5Eg/QI70A+RIP0CO9APkSD9AjvQD5Eg/QI70A+RIP0CO9APkSD9Azj7fvN4AwFVrRvoBWhw+ADnSD5Aj/QA50g+QI/0AOdIPkCP9ADnSD5Aj/QA50g+QI/0AOdIPkCP9ADnSD5Aj/QA50g+QI/0AOdIPkCP9ADnSD5Aj/QA50g+QI/0AOdIPkLPPN683AHDVmpF+gBaHD0CO9APkSD9AjvQD5Eg/QI70A+RIP0CO9APkSD9AjvQD5Eg/QI70A+RIP0CO9APkSD9AjvQD5Eg/QI70A+RIP0CO9APkSD9AjvQD5Eg/QI70A+Ts883rDQBctWakH6DF4QOQI/0AOdIPkCP9ADnSD5Aj/QA50g+QI/0AOdIPkCP9ADnSD5Aj/QA50g+QI/0AOdIPkCP9ADnSD5Aj/QA50g+QI/0AOdIPkCP9ADnSD5Aj/QA5+3zzegMAV60Z6QdocfgA5Eg/QI70A+RIP0CO9APkSD9AjvQD5Eg/QI70A+RIP0CO9APkSD9AjvQD5Eg/QI70A+RIP0CO9APkSD9AjvQD5Eg/QI70A+RIP0CO9APkSD9Azj7fvN4AwFVrRvoBWhw+ADnSD5Aj/QA50g+QI/0AOdIPkCP9ADnSD5Aj/QA50g+QI/0AOdIPkCP9ADnSD5Aj/QA50g+QI/0AOdIPkCP9ADnSD5Aj/QA50g+QI/0AOdIPkLPPN683AHDVmpF+gBaHD0CO9APkSD9AjvQD5Eg/QI70A+RIP0CO9APkSD9AjvQD5Eg/QI70A+RIP0CO9APkSD9AjvQD5Eg/QI70A+RIP0CO9APkSD9AjvQD5Eg/QI70A+Ts883rDQBctWakH6DF4QOQI/0AOdIPkCP9ADnSD5Aj/QA50g+QI/0AOdIPkCP9ADnSD5Aj/QA50g+QI/0AOdIPkCP9ADnSD5Aj/QA50g+QI/0AOdIPkCP9ADnSD5Aj/QA5/8mNPTHI1j+2AAAAAElFTkSuQmCC);');
    s.push ('   background-repeat:   no-repeat;');
    s.push ('   background-size:     contain;');
@@ -635,7 +818,7 @@ function process_qdeck_pair (htm, i_deck) {
    var no_intro_i_b = false;
 
    // Is deck encoded?  Decode if necessary.
-   htm = decode_qdeck (htm, qdeck_tag);
+   //htm = decode_qdeck (htm, qdeck_tag);
 
    // Capture any initial closing tags after [qdeck ...] -- will put them in
    // front of <div> that replaces [qdeck ...].
@@ -648,10 +831,21 @@ function process_qdeck_pair (htm, i_deck) {
    // Delete [qdeck], any initial closing tags.
    htm = htm.replace (/\[qdeck[^\]]*\]((<\/[^>]+>\s*)*)/m, '');
 
+   // Delete any initial whitespace.
+   htm = qqc.trim (htm);
+
    // Make sure there's at least one card.
    if (htm.search (/\[q([^\]]*)\]/m) == -1) {
       errmsgs.push (T ('Did not find question tags ("[q]") for') + ' qdeck ' + (i_deck + 1));
    } else {
+
+      // Look for [terms]...[/terms] and/or [add_terms]...[/add_terms] pairs.
+      // Parse, and delete.  Include opening tags in front and closing tags
+      // after.
+      htm = qqc.process_inline_textentry_terms (htm, 'terms', deckdata, i_deck);
+      errmsgs = errmsgs.concat (deckdata.additional_errmsgs);
+      htm = qqc.process_inline_textentry_terms (htm, 'add_terms', deckdata, i_deck);
+      errmsgs = errmsgs.concat (deckdata.additional_errmsgs);
 
       // See if html up to first shortcode is just whitespace, including empty
       // paragraphs.  Limit to first 2000 characters.
@@ -663,7 +857,7 @@ function process_qdeck_pair (htm, i_deck) {
       }
 
       // See if header.  Sets deckdata[i_deck].header_html.
-      htm = process_header (htm, i_deck, 0, true);
+      htm = process_header (htm, i_deck, true);
 
       // See if intro.  Limit to first 2000 characters.
       var intro_html = parse_html_block (htm.substr (0, 2000), ['[i]'], ['[q]', '[q ']);
@@ -762,8 +956,16 @@ function process_qdeck_pair (htm, i_deck) {
 
       // Save each card and answer html in data array.
       for (var i_card=0; i_card<n_cards; i_card++) {
-         card = process_card_input (i_deck, i_card, cards_html[i_card],
-                                    q_opening_tags[i_card]);
+         var card;
+
+         // See if required input for [textentry] -- [c] or [c*] on card.
+         if (cards_html[i_card].search (/\[c\]|\[c\*\]/m) != -1) {
+            card = process_textentry (i_deck, i_card, cards_html[i_card],
+                                      q_opening_tags[i_card]);
+         } else {
+            card = process_card_input (i_deck, i_card, cards_html[i_card],
+                                       q_opening_tags[i_card]);
+         }
          deckdata[i_deck].cards.push (card);
       }
 
@@ -787,12 +989,12 @@ function process_qdeck_pair (htm, i_deck) {
 // -----------------------------------------------------------------------------
 function create_qwiz_icon_div (i_deck) {
    var style = '';
-   if (get_qwiz_param ('beta')) {
+   if (qqc.get_qwiz_param ('beta')) {
       style = 'style = "background: red;"';
    }
    var divs = [];
    divs.push ('<div id="icon_qdeck' + i_deck + '" class="icon_qdeck" ' + style + '>');
-   var icon_qwiz = get_qwiz_param ('icon_qwiz');
+   var icon_qwiz = qqc.get_qwiz_param ('icon_qwiz');
    if (icon_qwiz != 'Not displayed') {
       var title = 'Qwiz - online quizzes and flashcards';
       if (icon_qwiz != 'Icon only') {
@@ -818,7 +1020,7 @@ function create_qwiz_icon_div (i_deck) {
 function process_card_input (i_deck, i_card, htm, opening_tags) {
 
    // Object for this card.
-   var card = new Object;
+   var card = {};
    card.got_it = false;
 
    // Start with any opening tags that preceded "[q]" tag.
@@ -833,7 +1035,7 @@ function process_card_input (i_deck, i_card, htm, opening_tags) {
    // If [textentry], change to html equivalent.  Save flag if there.
    var new_card_front_html = card_front_textentry_html (card_front_html, i_deck);
    card.card_front = new_card_front_html;
-   var front_textentry_b = new_card_front_html != card_front_html;
+   var front_textentry_b = new_card_front_html.length != card_front_html.length;
 
 
    // ..........................................................................
@@ -845,7 +1047,7 @@ function process_card_input (i_deck, i_card, htm, opening_tags) {
 
    // Take off initial "[a]".
    if (! card_back_html) {
-      errmsgs.push (T ('Did not find answer ("[a]") -- card back -- for') + ' qdeck ' + (i_deck + 1) + ', card ' + (i_card + 1) + '\n' + htm);
+      errmsgs.push (T ('Did not find answer ("[a]") -- card back -- for') + ' qdeck ' + (i_deck + 1) + ', ' + T ('card') + ' ' + (i_card + 1) + '\n' + htm);
       card_back_html = '';
    } else {
       card_back_html = card_back_html[0].substring (3);
@@ -854,7 +1056,7 @@ function process_card_input (i_deck, i_card, htm, opening_tags) {
    // Split into individual items.  Should be just one.
    var card_back_items = card_back_html.split (/\[a\]/);
    if (card_back_items.length != 1) {
-      errmsgs.push (T ('Got more than one answer ("[a]") -- card back -- for') + ': qdeck ' + (1 + i_deck) + ', card ' + (1 + i_card) + '\n' + htm);
+      errmsgs.push (T ('Got more than one answer ("[a]") -- card back -- for') + ': qdeck ' + (1 + i_deck) + ', ' + T ('card') + ' ' + (1 + i_card) + '\n' + htm);
    }
 
    // Capture any opening tags before "[a]" tag.
@@ -877,6 +1079,240 @@ function process_card_input (i_deck, i_card, htm, opening_tags) {
 
 
 // -----------------------------------------------------------------------------
+// Process input for card with [textentry] with required input/autocomplete.
+function process_textentry (i_deck, i_card, htm, opening_tags) {
+
+   // Object for this card.
+   var card = {};
+   card.got_it = false;
+
+   // Start with any opening tags that preceded "[q]" tag.
+   var card_front_html = opening_tags + htm;
+
+   // Look for [textentry], see if plurals specified..
+   var textentry_plural_b = false;
+   var m = htm.match (/\[textentry([^\]]*)\]/m);
+   if (! m) {
+      errmsgs.push (T ('Free-form input choices [c] or [c*] card does not have [textentry]'));
+   } else {
+      var attributes = m[1];
+      if (attributes) {
+
+         // Look for "plural=" attribute.  Match regular double-quote, or
+         // left- or right-double-quote.
+         attributes = qqc.replace_smart_quotes (attributes);
+         textentry_plural_b = qqc.get_attr (attributes, 'plural') == 'true';
+      }
+   }
+
+   // Replace [textentry] with input textbox and (hidden, initially) hint button.
+   var input_and_button_htm =   '<div class="qcard_textentry">\n'
+                              +    '<input type="text" id="textentry-qdeck' + i_deck + '" class="qcard_textentry qdeck_textentry_autocomplete" placeholder="' + T ('Type chars, then select from list') + '" onfocus="' + qname + '.set_textentry_i_deck (this)" />\n'
+                              +    '<button id="textentry_hint-qdeck' + i_deck + '" class="qbutton textentry_hint" onclick="' + qname + '.textentry_hint (' + i_deck + ')" disabled>'
+                              +        T ('Hint')
+                              +    '</button>\n'
+                              + '</div>\n';
+   htm = htm.replace (/\[textentry([^\]]*)\]/, input_and_button_htm);
+
+   // Look for choices and answers/feedback (interleaved, answer/feedback
+   // required for each choice).  Save as data, delete here.
+   var choice_start_tags = ['[c]', '[c*]'];
+   var choice_next_tags  = ['[c]', '[c*]', '[x]'];
+
+   var got_feedback_b = false;
+
+   // Look for first [c], including any opening tags.
+   var c_pos = htm.search (/\s*(<[^\/][^>]*\s*)*?\[c\*{0,1}\]/m); 
+
+   // Start with [c]s.
+   var remaining_htm = htm.substr (c_pos);
+
+   // Delete opening tags before first [c] and the rest.
+   htm = htm.substr (0, c_pos);
+
+   // Save as card front, set flag that entry required.
+   card.card_front = htm;
+   card.textentry_required_b = true;
+
+   // Set up data for this card, create a div for each feedback alt -- so can
+   // measure each, set front and back card size.  Div to show selected in
+   // this.flip () > textentry_set_card_back () depending on text entered.
+   card.choices = [];
+   card.textentry_plural_b = textentry_plural_b;
+   card.feedback_htmls = [];
+   card.all_choices = [];
+   card.card_back = '';
+   var card_back = '';
+
+   // Loop over [c]s.
+   var i_choice = 0;
+   var default_choice_given_b = false;
+   while (true) {
+      var choice_html = parse_html_block (remaining_htm, choice_start_tags,
+                                          choice_next_tags);
+      if (choice_html == 'NA') {
+         break;
+      }
+      remaining_htm = remaining_htm.substr (choice_html.length);
+
+      // See if there's feedback within the choice html.
+      var r = process_feedback_item (choice_html);
+      choice_html  = r.choice_html;
+
+      if (r.feedback_html) {
+         got_feedback_b = true;
+
+         card.feedback_htmls.push (r.feedback_html);
+         card_back +=  '<div id="textentry_feedback_qdeck' + i_deck + '-f' + i_choice + '" class="card_back_textentry">\n'
+                     +    '<p class="back_textentry_p">' + T ('You entered') + ' &ldquo;<span class="back_qcard_textentry">&emsp;&emsp;&emsp;&emsp;&emsp;</span>&rdquo;</p>'
+                     +    r.feedback_html
+                     + '</div>\n';
+
+
+         // Check that there's not more than one feedback item accompanying
+         // this choice.
+         var r = process_feedback_item (choice_html);
+         if (r.feedback_html) {
+            errmsgs.push (T ('More than one answer or feedback shortcode [a] or [f] given with [textentry] choice') + ': qdeck ' + (1 + i_deck) + ', ' + T ('card') + ' ' + (1 + i_card) + ', ' + T ('choice') + ' ' + (1 + i_choice));
+         }
+      } else {
+
+         // No answers/feedback given for this choice.
+         errmsgs.push (T ('Did not get answer/feedback [a] or [f] for [textentry] choice') + ': qdeck ' + (1 + i_deck) + ', ' + T ('card') + ' ' + (1 + i_card) + ', ' + T ('choice') + ' ' + (1 + i_choice));
+         card.feedback_htmls.push ('');
+      }
+
+      // Parse choice data.  [c] or [c*] followed by semicolon-separated list
+      // of potential answers.  Delete up through [c] or [c*].
+      choice_html = choice_html.replace (/.*\[c\*{0,1}\]/m, '');
+
+      // Delete any tags and EOLs and non-breaking spaces.
+      choice_html = choice_html.replace (/<[^>]+>|\n|&nbsp;/g, '');
+
+      // Error if just blanks and semicolons.
+      if (choice_html.replace (';', '').search (/\S/) == -1) {
+         errmsgs.push (T ('No text given for [textentry] choice') + ' - qdeck ' + (i_deck + 1) + ', ' + T ('question') + ' ' + (1 + i_card) + ', ' + T ('choice') + ' ' + (1 + i_choice));
+      }
+
+      // Split on semicolons.
+      var alts = choice_html.split (/\s*;\s*/);
+
+      // Eliminate any blank entries.
+      var nonblank_alts = [];
+      for (var i=0; i<alts.length; i++) {
+         if (alts[i].search (/\S/) != -1) {
+            nonblank_alts.push (qqc.trim (alts[i]));
+         }
+      }
+
+      // If default choice/feedback ("*" entered), set indicator.
+      if (nonblank_alts[0] == '*') {
+         default_choice_given_b = true;
+
+         // Must be accompanied by feedback/answer (no default for "wrong
+         // answers").
+         if (card.feedback_htmls[i_choice] == '') {
+            errmsgs.push (T ('For [textentry] card, wildcard choice ("*", for any other user entry) must be accompanied by answer/feedback "[a] or [f]"'));
+         }
+      }
+
+      // Save these, associated with this choice.
+      card.choices.push (nonblank_alts);
+
+      // Also save as simple array for this card.  Check no duplicates (only
+      // first instance feedback would be given).
+      var n_alts = nonblank_alts.length;
+      for (var i=0; i<n_alts; i++) {
+         if (card.all_choices.indexOf (nonblank_alts[i]) != -1) {
+            errmsgs.push (T ('Entry given in more than one [textentry] choice') + ': ' + nonblank_alts[i] + ' - qdeck ' + (i_deck + 1) + ', ' + T ('card') + ' ' + (1 + i_card) + ', ' + T ('choice') + ' ' + (1 + i_choice));
+         }
+      }
+      card.all_choices = card.all_choices.concat (nonblank_alts);
+      i_choice++;
+   }
+   card.card_back = card_back;
+
+   // If default choice ([c] *) and feedback/answer supplied, must be at least
+   // one other choice-feedback/answer pair.
+   if (default_choice_given_b) {
+      if (card.choices.length == 1) {
+         errmsgs.push (T ('Need to define acceptable entries for [textentry] card in addition to "other entry" choice ([c] *)') + ' - qdeck ' + (i_deck + 1) + ', ' + T ('card') + ' ' + (1 + i_card));
+      }
+   }
+   if (debug[6]) {
+      console.log ('[process_textentry] card.choices:', card.choices);
+      console.log ('[process_textentry] card.feedback_htmls:', card.feedback_htmls);
+   }
+
+   return card;
+}
+
+
+// -----------------------------------------------------------------------------
+function process_feedback_item (choice_html) {
+
+   // Answers/feedback.
+   var feedback_start_tags = ['[a]', '[f]'];
+   var feedback_next_tags  = ['[a]', '[f]', '[x]'];
+
+   var feedback_html = parse_html_block (choice_html, feedback_start_tags,
+                                              feedback_next_tags);
+   if (feedback_html != 'NA') {
+
+      // Yes.  Take out of the choice html.
+      choice_html = choice_html.replace (feedback_html, '');
+
+      // Delete [a] or [f].
+      feedback_html = feedback_html.replace (/\[[af]\]/, '');
+      if (debug[2]) {
+         console.log ('[process_feedback_item] feedback_html: ', feedback_html);
+      }
+   } else {
+      feedback_html = '';
+   }
+   if (debug[2]) {
+      console.log ('[process_feedback_item] feedback_html:', feedback_html);
+      console.log ('[process_feedback_item] choice_html:', choice_html);
+   }
+
+   return {'feedback_html': feedback_html, 'choice_html': choice_html};
+}
+
+
+// -----------------------------------------------------------------------------
+// Provide first letters of first correct answer as hint, up to five letters.
+this.textentry_hint = function (i_deck) {
+   deckdata[i_deck].textentry_n_hints++;
+
+   // Disable hint button, reset label.
+   $ ('#textentry_hint-qdeck' + i_deck).attr ('disabled', true).removeClass ('qbutton').addClass ('qbutton_disabled').html ('Add.<br />hint');
+
+   var i_card = deckdata[i_deck].i_card;
+   var card = deckdata[i_deck].cards[i_card];
+   var textentry_hint = card.all_choices[0].substr (0, deckdata[i_deck].textentry_n_hints);
+   var textentry_obj = $ ('#textentry-qdeck' + i_deck);
+   textentry_obj.val (textentry_hint).focus ();
+
+   // Trigger search on entry -- handles hints that don't match anything (grays
+   // "Check answer"/"Flip") and those that do.
+   textentry_obj.autocomplete ('search');
+}
+
+
+// -----------------------------------------------------------------------------
+this.set_textentry_i_deck = function (input_el) {
+
+   // See which flashcard deck this is.  Save in global (private) variable.
+   // id looks like textentry-qdeck0
+   var id = input_el.id;
+   textentry_i_deck = id.match (/[0-9]+/)[0];
+   if (debug[6]) {
+      console.log ('[set_textentry_i_deck] textentry_i_deck: ', textentry_i_deck);
+   }
+}
+
+
+// -----------------------------------------------------------------------------
 function create_card_back_html (i_deck, i_card, htm, opening_tags, front_textentry_b) {
 
    var new_html = opening_tags + htm;
@@ -886,7 +1322,7 @@ function create_card_back_html (i_deck, i_card, htm, opening_tags, front_textent
 
       // Yes.  Error if no textentry on front.
       if (! front_textentry_b) {
-         errmsg.push (T ('[textentry] on back of card, but not on front') + ' - deck ' + (i_deck+1) + ', card ' (i_card+1));
+         errmsg.push (T ('[textentry] on back of card, but not on front') + ' - qdeck ' + (i_deck+1) + ', ' + T ('card') + ' ' (i_card+1));
       }
 
       // Convert to equivalent html.
@@ -895,7 +1331,7 @@ function create_card_back_html (i_deck, i_card, htm, opening_tags, front_textent
 
       // No.  If there was textentry on front, create default echo.
       if (front_textentry_b) {
-         var prepend_html = '<p id="back_textentry_p-qdeck' + i_deck + '" class="back_textentry_p">You wrote &ldquo;<span id="back_textentry-qdeck' + i_deck + '" class="qcard_textentry"></span>&rdquo;</p>';
+         var prepend_html = '<p id="back_textentry_p-qdeck' + i_deck + '" class="back_textentry_p">' + T ('You wrote') + ' &ldquo;<span id="back_textentry-qdeck' + i_deck + '" class="back_qcard_textentry">&emsp;&emsp;&emsp;&emsp;&emsp;</span>&rdquo;</p>';
          new_html = prepend_html + new_html;
       }
    }
@@ -1000,7 +1436,7 @@ function parse_html_block (htm, qtags, qnext_tags, ignore_nbsp_b) {
 // If [h] (or [H]), capture header tag/text, including opening tags before
 // [h], up to intro ([i]) if allowed, or question ([q]).  Delete header from
 // intro.
-function process_header (htm, i_deck, i_question, intro_b) {
+function process_header (htm, i_deck, intro_b) {
    var qtags = ['[h]'];
    var qnext_tags = ['[q]', '[q '];
    if (intro_b != undefined) {
@@ -1041,32 +1477,43 @@ function create_qdeck_divs (i_deck, qdeck_tag) {
    var m = qdeck_tag.match (/\[qdeck([^\]]*)\]/m);
    var attributes = m[1];
    var default_style = ' style="width: 500px; height: 300px; border: 2px solid black;"';
+   deckdata[i_deck].card_width_setting = '500px';
+   deckdata[i_deck].card_height_setting = '300px';
    if (! attributes) {
       attributes = default_style;
    } else {
 
       // Replace any "smart quotes" with regular quotes.
-      attributes = replace_smart_quotes (attributes);
+      attributes = qqc.replace_smart_quotes (attributes);
       if (attributes.search (/style\s*?=/m) == -1) {
          attributes += default_style;
       } else {
          if (attributes.search ('width') == -1) {
             attributes = attributes.replace (/(style\s*?=\s*?["'])/m, '$1width: 500px; ');
+         } else {
+            m = attributes.match (/width\s*:\s*([^;\s]*)[;\s$]/m);
+            if (m) {
+               deckdata[i_deck].card_width_setting = m[1];
+            }
          }
          if (attributes.search ('height') == -1) {
             attributes = attributes.replace (/(style\s*?=\s*?["'])/m, '$1height: 300px; ');
+         } else {
+            m = attributes.match (/height\s*:\s*([^;\s]*)[;\s$]/m);
+            if (m) {
+               deckdata[i_deck].card_height_setting = m[1];
+            }
          }
          if (attributes.search ('border') == -1) {
             attributes = attributes.replace (/(style\s*?=\s*?["'])/m, '$1border: 2px solid black; ');
          }
       }
 
-      // If "random=..." present, parse out true/false, delete.  Default for
-      // this deck.
-      var random = get_attr (attributes, 'random');
+      // If "random=..." present, parse out true/false.
+      var random = qqc.get_attr (attributes, 'random');
       deckdata[i_deck].random_b = random == 'true';
       if (debug[0]) {
-         console.log ('[create_qwiz_divs] random:', random, ', random_b:', deckdata[i_deck].random_b);
+         console.log ('[create_qdeck_divs] random:', random, ', random_b:', deckdata[i_deck].random_b);
       }
    }
 
@@ -1124,8 +1571,8 @@ function process_topics (i_deck, card_tags) {
       var matches = card_tag.match (/\[q +([^\]]*)\]/);
       if (matches) {
          var attributes = matches[1];
-         attributes = replace_smart_quotes (attributes);
-         var card_topics = get_attr (attributes, 'topic');
+         attributes = qqc.replace_smart_quotes (attributes);
+         var card_topics = qqc.get_attr (attributes, 'topic');
          if (card_topics) {
             if (debug[4]) {
                console.log ('[process_topics] card_topics: ', card_topics);
@@ -1278,7 +1725,7 @@ function card_back_textentry_html (htm, i_deck) {
    if (htm.indexOf ('id="back_textentry"') != -1) {
       htm = htm.replace ('back_textentry', 'back_textentry-qdeck' + i_deck);
    } else {
-      htm = htm.replace ('textentry', '<span id="back_textentry-qdeck' + i_deck + '" class="qdeck_textentry"></span>');
+      htm = htm.replace ('textentry', '<span id="back_textentry-qdeck' + i_deck + '" class="back_qdeck_textentry"></span>');
    }
 
    // Convert "[" and "]" to paragraph.
@@ -1318,7 +1765,7 @@ function check_and_init_topics () {
    // Set up statistics by topic.  Object of objects (list of lists).
    for (var i_topic=0; i_topic<n_topics; i_topic++) {
       var topic = topics[i_topic];
-      topic_statistics[topic] = new Object;
+      topic_statistics[topic] = {};
       topic_statistics[topic].n_got_it = 0;
    }
 
@@ -1455,11 +1902,11 @@ function done (i_deck) {
    var overall;
    if (deckdata[i_deck].n_reviewed == deckdata[i_deck].n_cards) {
       overall = T ('In this %s-flashcard stack, you clicked') + ' "' + T ('Got it!') + '" ' + T ('on the first try for every card') + '.';
-      overall = overall.replace ('%s', number_to_word (deckdata[i_deck].n_cards));
+      overall = overall.replace ('%s', qqc.number_to_word (deckdata[i_deck].n_cards));
    } else {
       overall = T('This flashcard stack had %s cards.  It took you %s tries until you felt comfortable enough to click') + ' "' + T ('Got it!') + '" ' + T ('for each card') + '.';
-      overall = overall.replace ('%s', number_to_word (deckdata[i_deck].n_cards));
-      overall = overall.replace ('%s', number_to_word (deckdata[i_deck].n_reviewed));
+      overall = overall.replace ('%s', qqc.number_to_word (deckdata[i_deck].n_cards));
+      overall = overall.replace ('%s', qqc.number_to_word (deckdata[i_deck].n_reviewed));
    }
    report_html.push ('<p>' + overall + '</p>');
 
@@ -1468,24 +1915,26 @@ function done (i_deck) {
 
    deckdata[i_deck].el_qcard_card_front.html (report_html.join ('\n'));
 
-   // Set the widths of the progress, header, and next-button divs to match
-   // card front.
-   var qcard_width = set_header (i_deck, 'front');
-   set_container_width_height (i_deck, qcard_width);
-
+   // Set to match larger of front and back.
+   set_container_width_height (i_deck);
 }
 
 
 // -----------------------------------------------------------------------------
 function display_progress (i_deck) {
    var progress_html;
-   progress_html = '<p>' + deckdata[i_deck].n_cards + ' ' + T ('cards total') + ', ' + deckdata[i_deck].n_reviewed + ' ' + plural ('card', 'cards', deckdata[i_deck].n_reviewed) + ' ' + T ('reviewed') + ', ' + deckdata[i_deck].n_to_go + ' ' + plural ('card', 'cards', deckdata[i_deck].n_to_go) + ' ' + T ('to go') + '</p>';
+   progress_html = '<p>' + deckdata[i_deck].n_cards + ' ' + T ('cards total') + ', ' + deckdata[i_deck].n_reviewed + ' ' + Tplural ('card', 'cards', deckdata[i_deck].n_reviewed) + ' ' + T ('reviewed') + ', ' + deckdata[i_deck].n_to_go + ' ' + Tplural ('card', 'cards', deckdata[i_deck].n_to_go) + ' ' + T ('to go') + '</p>';
    deckdata[i_deck].el_progress.html (progress_html);
 }
 
 
 // -----------------------------------------------------------------------------
 this.flip = function (i_deck) {
+
+   if (deckdata[i_deck].check_answer_disabled_b) {
+      alert (Tcheck_answer_message);
+      return;
+   }
 
    var el_textentry = $ ('#textentry-qdeck' + i_deck);
    var el_front = $ ('#qcard_card-qdeck' + i_deck + ' div.front');
@@ -1526,18 +1975,31 @@ this.flip = function (i_deck) {
          // Mac).
          el_textentry.css ('visibility', 'hidden');
 
-         // If something entered in text box, then set back-side element to what
-         // was entered.
-         var textentry = el_textentry.val ();
-         if (textentry) {
+         var i_card = deckdata[i_deck].i_card;
+         var card = deckdata[i_deck].cards[i_card];
+         if (card.textentry_required_b) {
 
-            // Show what was within square brackets, insert user entry.
-            $('#back_textentry_p-qdeck' + i_deck).show ();
-            $('#back_textentry-qdeck' + i_deck).html (textentry);
+            // Find with which choice the user textentry is associated, set card
+            // back to answer for that choice.
+            textentry_set_card_back (i_deck, card);
          } else {
 
-            // No entry on front. Don't display any of paragraph on back.
-            $('#back_textentry_p-qdeck' + i_deck).hide ();
+            // If something entered in text box, then set back-side element to
+            // what was entered.
+            var textentry = el_textentry.val ();
+            if (textentry) {
+
+               // Show what was within square brackets, insert user entry.
+               //$('#back_textentry_p-qdeck' + i_deck).show ();
+               $('#back_textentry_p-qdeck' + i_deck).css ('visibility', 'visible');
+               $('#back_textentry-qdeck' + i_deck).html (textentry);
+            } else {
+
+               // No entry on front. Don't show any of paragraph on back, but
+               // keep spacing.
+               $('#back_textentry_p-qdeck' + i_deck).css ('visibility', 'hidden');
+               //$('#back_textentry_p-qdeck' + i_deck).hide ();
+            }
          }
       }
       set_front_back = 'back';
@@ -1548,10 +2010,6 @@ this.flip = function (i_deck) {
       $ ('button.flip-qdeck' + i_deck).html (T ('Flip'));
 
    }
-
-   // Set the widths of the progress, header, and next-button divs to match
-   // card front/back.
-   set_header (i_deck, set_front_back);
 
    deckdata[i_deck].el_flip.trigger ('click');
 
@@ -1592,7 +2050,7 @@ function set_header (i_deck, front_back, init_b) {
       }
    }
 
-   // Set the widths of the progress div and header div to match card front.
+   // Set the widths of the progress div and header div to match card side.
    var qcard_width = $('#qcard_card-qdeck' + i_deck + ' div.' + front_back + ' table.qcard_table').outerWidth ();
    if (debug[0]) {
       console.log ('[set_header] qcard_width: ', qcard_width);
@@ -1607,6 +2065,15 @@ function set_header (i_deck, front_back, init_b) {
 
 // -----------------------------------------------------------------------------
 this.set_card_front_and_back = function (i_deck, i_card) {
+
+   // Reset card width and height to original settings (so possible resize of
+   // previous card won't persist).
+   deckdata[i_deck].el_qcard_table_front.css ({
+                        width:    deckdata[i_deck].card_width_setting,
+                        height: deckdata[i_deck].card_height_setting});
+   deckdata[i_deck].el_qcard_table_back.css ({
+                        width:    deckdata[i_deck].card_width_setting,
+                        height: deckdata[i_deck].card_height_setting});
 
    var card_front_back = ['card_front', 'card_back'];
 
@@ -1624,7 +2091,7 @@ this.set_card_front_and_back = function (i_deck, i_card) {
 
          // If no intro, and this is first card, add Qwiz icon to front.
          var qwiz_icon_div = '';
-         if (no_intro_b[i_deck] && deckdata[i_deck].n_reviewed == 1) {
+         if (no_intro_b[i_deck] && deckdata[i_deck].n_reviewed == 0) {
             qwiz_icon_div = create_qwiz_icon_div (i_deck);
          }
          deckdata[i_deck].el_qcard_card_front.html (card[side] + qwiz_icon_div);
@@ -1639,31 +2106,181 @@ this.set_card_front_and_back = function (i_deck, i_card) {
       $('#textentry-qdeck' + i_deck).focus ();
    }
 
-   // Set the widths of the progress, header, and next-button divs to match
-   // card front.
-   var qcard_width = set_header (i_deck, 'front');
+   // If textentry with required input/autocomplete set up autocomplete (since
+   // just set new html).  Also load metaphone.js, and -- if needed -- terms, if
+   // haven't done so already.
+   if (card.textentry_required_b) {
+      init_textentry_autocomplete (i_deck, i_card);
+   } else {
 
-   set_container_width_height (i_deck, qcard_width);
+      // In case previous card was textentry with required input, set button
+      // title back to default, make sure flag set.
+      $ ('button.flip-qdeck' + i_deck).attr ('title', T ('Show the other side'));
+   }
+
+   // How soon does new html show?  Test.
+   /*
+   var ms_count = 0;
+   var width_front = 0;
+   var width_back  = 0;
+   var now = new Date ();
+   var start_ms = now.getTime ();
+   var size_test = function () {
+      var new_width_front  = deckdata[i_deck].el_qcard_table_front.outerWidth ();
+      var new_width_back  = deckdata[i_deck].el_qcard_table_back.outerWidth ();
+      if (new_width_front != width_front || new_width_back != width_back) {
+         width_front = new_width_front;
+         width_back  = new_width_back;
+         var now = new Date ();
+         var e_ms = now.getTime () - start_ms;
+         console.log ('[size_test] ms_count: ', ms_count, ', e_ms: ', e_ms, ', width_front: ', width_front, ', width_back: ', width_back);
+      }
+
+      if (ms_count < 200) {
+         setTimeout (size_test, 5);
+      }
+      ms_count += 5;
+   }
+   size_test ();
+   */
+
+   // Set card size to larger of front or back.
+   set_container_width_height (i_deck, card.textentry_required_b);
 };
 
 
 // -----------------------------------------------------------------------------
-function set_container_width_height (i_deck, qcard_width) {
+function textentry_set_card_back (i_deck, card) {
 
-   // Get height of front and back, set height of container to larger of the
-   // two.
-   var height_front = deckdata[i_deck].el_qcard_table_front.outerHeight ();
-   var height_back  = deckdata[i_deck].el_qcard_table_back.outerHeight ();
-   var max_height = Math.max (height_front, height_back);
+   // See with which choice the user textentry is associated, make div for
+   // feedback for that choice visible.  Hide others.
+   var el_textentry = $ ('#textentry-qdeck' + i_deck);
+   var entry = el_textentry.val ();
 
-   if (debug[0]) {
-      var header_height = deckdata[i_deck].el_header.height ();
-      console.log ('[set_container_width_height] height_front: ', height_front, ', height_back: ', height_back, ', header_height: ', header_height);
+   // See if entry among choices; identify default choice ("*").
+   var i_choice = -1;
+   var n_choices = card.choices.length;
+   var i_default_choice = 0;
+   for (var i=0; i<n_choices; i++) {
+      var alts = card.choices[i];
+      if (alts[0] == '*') {
+         i_default_choice = i;
+      } else {
+         var lc_alts = alts.map (function (item) {
+                                    return item.toLowerCase ();
+                                 });
+         if (lc_alts.indexOf (entry) != -1) {
+
+            // Yes, this one.
+            i_choice = i;
+            break;
+         }
+      }
+   }
+   if (i_choice == -1) {
+      i_choice = i_default_choice;
    }
 
-   // Add height of header, progress div and "next" buttons.
-   deckdata[i_deck].el_qcard_container.height (max_height);
-   deckdata[i_deck].el_qcard_container.width (qcard_width);
+   // Hide all.
+   var el_qcard_card_back = deckdata[i_deck].el_qcard_card_back;
+   el_qcard_card_back.find ('div.card_back_textentry').css ({visibility: 'hidden'});
+
+   // Set the textentry value.
+   el_qcard_card_back.find ('span.back_qcard_textentry').html (entry);
+
+   // Show this one.  Do "manual" centering, because position relative has
+   // different effect on table cell.
+   var card_width  = el_qcard_card_back.outerWidth ();
+   var card_height = el_qcard_card_back.outerHeight ();
+
+   var div_width  = el_qcard_card_back.find ('#textentry_feedback_qdeck' + i_deck + '-f' + i_choice).outerWidth ();
+   var div_height = el_qcard_card_back.find ('#textentry_feedback_qdeck' + i_deck + '-f' + i_choice).outerHeight ();
+
+   var left = card_width/2  - div_width/2;
+   var top  = card_height/2 - div_height/2
+
+   el_qcard_card_back.find ('#textentry_feedback_qdeck' + i_deck + '-f' + i_choice).css ({visibility: 'visible', left: left + 'px', top: top + 'px'});
+}
+
+
+// -----------------------------------------------------------------------------
+function set_container_width_height (i_deck, textentry_required_b) {
+
+   // Get width and height of front and back, set size to match largest
+   // dimensions.
+   var width_front  = deckdata[i_deck].el_qcard_table_front.outerWidth ();
+   var height_front = deckdata[i_deck].el_qcard_table_front.outerHeight ();
+
+   var width_back   = deckdata[i_deck].el_qcard_table_back.outerWidth ();
+   var height_back  = deckdata[i_deck].el_qcard_table_back.outerHeight ();
+
+   var max_width  = Math.max (width_front,  width_back);
+   var max_height = Math.max (height_front, height_back);
+   if (debug[0]) {
+      console.log ('[set_container_width_height] width_front: ', width_front, ', width_back: ', width_back);
+   }
+
+   // We'll set things right away, and again after a delay if rendering is
+   // catching up.  Closure.
+   var init_b = true;
+   var delay_set_container_width_height = function () {
+      var new_width_front  = deckdata[i_deck].el_qcard_table_front.outerWidth ();
+      var new_height_front = deckdata[i_deck].el_qcard_table_front.outerHeight ();
+
+      var new_width_back  = 0;
+      var new_height_back = 0;
+      if (textentry_required_b) {
+
+         // Find largest width and height of alternate feedback divs.
+         var el_qcard_table_back = deckdata[i_deck].el_qcard_table_back;
+         var i_card = deckdata[i_deck].i_card;
+         var n_choices = deckdata[i_deck].cards[i_card].choices.length;
+         for (var i_choice=0; i_choice<n_choices; i_choice++) {
+            var new_width_back_i  = el_qcard_table_back.find ('#textentry_feedback_qdeck' + i_deck + '-f' + i_choice).outerWidth ();
+            var new_height_back_i = el_qcard_table_back.find ('#textentry_feedback_qdeck' + i_deck + '-f' + i_choice).outerHeight ();
+            new_width_back  = Math.max (new_width_back,  new_width_back_i);
+            new_height_back = Math.max (new_height_back, new_height_back_i);
+         }
+      } else {
+         new_width_back  = deckdata[i_deck].el_qcard_table_back.outerWidth ();
+         new_height_back = deckdata[i_deck].el_qcard_table_back.outerHeight ();
+      }
+
+      var new_max_width  = Math.max (new_width_front,  new_width_back);
+      var new_max_height = Math.max (new_height_front, new_height_back);
+
+      if (init_b || new_max_width != max_width || new_max_height != max_height) {
+         init_b = false;
+         if (textentry_required_b) {
+
+            // Add 10px for padding (that position: absolute absorbs).
+            new_max_width  += 10;
+            new_max_height += 10;
+         }
+         max_width  = new_max_width;
+         max_height = new_max_height;
+
+         if (debug[0]) {
+            console.log ('[delay_set_container_width_height] new_width_front: ', new_width_front, ', new_width_back: ', new_width_back);
+         }
+
+         deckdata[i_deck].el_qcard_table_front.outerWidth (max_width);
+         deckdata[i_deck].el_qcard_table_back.outerWidth (max_width);
+
+         deckdata[i_deck].el_qcard_table_front.outerHeight (max_height);
+         deckdata[i_deck].el_qcard_table_back.outerHeight (max_height);
+
+         // Set width and height of container to match.
+         deckdata[i_deck].el_qcard_container.width (max_width);
+         deckdata[i_deck].el_qcard_container.height (max_height);
+
+         // Set the widths of the progress, header, and next-button divs to match
+         // card.
+         set_header (i_deck, 'front');
+      }
+   }
+   setTimeout (delay_set_container_width_height, 10);
+   setTimeout (delay_set_container_width_height, 500);
 }
 
 
@@ -1704,6 +2321,7 @@ this.next_card = function (i_deck) {
 
 
 // -----------------------------------------------------------------------------
+/*
 function decode_qdeck (htm, qdeck_tag) {
 
    // Get html after [qdeck] tag and before [/qdeck] tag.
@@ -1725,6 +2343,7 @@ function decode_qdeck (htm, qdeck_tag) {
 
    return htm;
 }
+*/
 
 
 // -----------------------------------------------------------------------------
@@ -1775,6 +2394,149 @@ function shuffle (array) {
 
 
 // -----------------------------------------------------------------------------
+var find_matching_terms = function (request, response) {
+
+   var entry = request.term.toLowerCase ();
+   var entry_metaphone = qqc.metaphone (entry);
+   if (debug[6]) {
+      console.log ('[find_matching_terms] entry_metaphone; ', entry_metaphone);
+   }
+
+   // See if first character of entry metaphone matches first
+   // character of any answer metaphone.  If so, determine shortest
+   // answer metaphone that matches.
+   var required_entry_length = 100;
+   var required_metaphone_length = 100;
+   for (var i=0; i<textentry_answer_metaphones[textentry_i_deck].length; i++) {
+      if (entry[0] == textentry_answers[textentry_i_deck][i][0].toLowerCase ()) {
+         required_entry_length = Math.min (required_entry_length, textentry_answers[textentry_i_deck][i].length);
+         if (debug[6]) {
+            console.log ('[find_matching_terms] entry[0]:', entry[0], ', textentry_answers[textentry_i_deck][i][0]:', textentry_answers[textentry_i_deck][i][0]);
+         }
+      }
+      if (entry_metaphone[0] == textentry_answer_metaphones[textentry_i_deck][i][0]) {
+         required_metaphone_length = Math.min (required_metaphone_length, textentry_answer_metaphones[textentry_i_deck][i].length);
+         if (debug[6]) {
+            console.log ('[find_matching_terms] textentry_answer_metaphones[textentry_i_deck][i]:', textentry_answer_metaphones[textentry_i_deck][i], ', required_metaphone_length:', required_metaphone_length);
+         }
+      }
+   }
+   if (required_entry_length != 100) {
+      required_entry_length -= 2;
+      required_entry_length = Math.min (5, required_entry_length);
+   }
+
+   if (required_metaphone_length != 100) {
+      required_metaphone_length--;
+      if (required_metaphone_length < 2) {
+         required_metaphone_length = 2;
+      } else if (required_metaphone_length > 4) {
+         required_metaphone_length = 4;
+      }
+   }
+   if (debug[6]) {
+      console.log ('[find_matching_terms] required_entry_length:', required_entry_length, ', required_metaphone_length:', required_metaphone_length);
+   }
+
+   // Entry consisting of repeated single character doesn't count as "long".
+   // Replace any three or more of same character in a row with just one.
+   var deduped_entry = entry.replace (/(.)\1{2,}/gi, '\$1');
+   if (deduped_entry.length < required_entry_length && entry_metaphone.length < required_metaphone_length) {
+      textentry_matches[textentry_i_deck] = [];
+
+   } else {
+      if (debug[6]) {
+         console.log ('[find_matching_terms] request.term:', request.term, entry_metaphone, entry_metaphone.length);
+      }
+      textentry_matches[textentry_i_deck] = $.map (current_card_textentry_terms_metaphones[textentry_i_deck], function (term_i) {
+         if (term_i[1].indexOf (entry_metaphone) === 0 || term_i[0].toLowerCase ().indexOf (entry) === 0) {
+            if (debug[6]) {
+               console.log ('[find_matching_terms] term_i:', term_i);
+            }
+            return term_i[0];
+         }
+      });
+      lc_textentry_matches[textentry_i_deck] 
+         = textentry_matches[textentry_i_deck].map (function (item) {
+                                                       return item.toLowerCase ();
+                                                    });
+      if (debug[6]) {
+         console.log ('[find_matching_terms] textentry_matches[textentry_i_deck]:', textentry_matches[textentry_i_deck]);
+      }
+   }
+
+   // If entry length five or more, and matches list does not include first
+   // correct answer, and haven't used up hints, enable hint.
+   if (debug[6]) {
+      console.log ('[find_matching_terms] deduped_entry.length: ', deduped_entry.length, ', textentry_matches[textentry_i_deck].length: ', textentry_matches[textentry_i_deck].length, ', deckdata[textentry_i_deck].textentry_n_hints: ', deckdata[textentry_i_deck].textentry_n_hints);
+   }
+   if (deduped_entry.length >= 5 && deckdata[textentry_i_deck].textentry_n_hints < 5) {
+      var i_card = deckdata[textentry_i_deck].i_card;
+      var card = deckdata[textentry_i_deck].cards[i_card];
+      var lc_first_choice = card.all_choices[0];
+      if (lc_textentry_matches[textentry_i_deck].indexOf (lc_first_choice) == -1) {
+         $ ('#textentry_hint-qdeck' + textentry_i_deck).removeAttr ('disabled').removeClass ('qbutton_disabled').addClass ('qbutton').show ();
+      }
+   }
+   response (textentry_matches[textentry_i_deck]);
+}
+
+
+// -----------------------------------------------------------------------------
+// When menu closed: if current entry doesn't fully match anything on the last
+// set of matches, disable "Check answer".
+function menu_closed (e) {
+
+   // Do only if "Check answer" not already disabled.
+   if (! deckdata[textentry_i_deck].check_answer_disabled_b) {
+      var lc_entry = e.target.value.toLowerCase ();
+      if (debug[6]) {
+         console.log ('[menu_closed] textentry_matches[textentry_i_deck]: ', textentry_matches[textentry_i_deck]);
+      }
+      if (lc_textentry_matches[textentry_i_deck].indexOf (lc_entry) == -1) {
+         $ ('button.flip-qdeck' + textentry_i_deck).removeClass ('qbutton').addClass ('qbutton_disabled');
+         deckdata[textentry_i_deck].check_answer_disabled_b = true;
+      }
+   }
+}
+
+
+// -----------------------------------------------------------------------------
+// When suggestion menu shown: (1) if the matches list shown includes the first
+// correct answer, then set flag that hint not needed; (2) if current entry
+// _fully_ matches anything on the matches list shown, then enable "Check
+// answer"; otherwise disable "Check answer".
+function menu_shown (e) {
+
+   // Lowercase entry and matches list.
+   var lc_entry = e.target.value.toLowerCase ();
+
+   // Does matches list include first choice in list of possible choices?
+   var i_card = deckdata[textentry_i_deck].i_card;
+   var card = deckdata[textentry_i_deck].cards[i_card];
+   var lc_first_choice = card.all_choices[0];
+   if (lc_textentry_matches[textentry_i_deck].indexOf (lc_first_choice) != -1) {
+      $ ('#textentry_hint-qdeck' + textentry_i_deck).attr ('disabled', true).removeClass ('qbutton').addClass ('qbutton_disabled');
+   }
+   if (lc_textentry_matches[textentry_i_deck].indexOf (lc_entry) != -1) {
+      $ ('button.flip-qdeck' + textentry_i_deck).removeAttr ('disabled').removeClass ('qbutton_disabled').addClass ('qbutton');
+      deckdata[textentry_i_deck].check_answer_disabled_b = false;
+   } else {
+      $ ('button.flip-qdeck' + textentry_i_deck).removeClass ('qbutton').addClass ('qbutton_disabled');
+      deckdata[textentry_i_deck].check_answer_disabled_b = true;
+   }
+}
+
+
+// -----------------------------------------------------------------------------
+// When item selected, enable check answer.
+function item_selected () {
+   $ ('button.flip-qdeck' + textentry_i_deck).removeAttr ('disabled').removeClass ('qbutton_disabled').addClass ('qbutton');
+   deckdata[textentry_i_deck].check_answer_disabled_b = false;
+}
+
+
+// -----------------------------------------------------------------------------
 this.keep_next_button_active = function () {
    next_button_active_b = true;
    $ ('button.got_it').attr ('disabled', false).removeClass ('qbutton_disabled').addClass ('qbutton');
@@ -1783,111 +2545,14 @@ this.keep_next_button_active = function () {
 
 
 // -----------------------------------------------------------------------------
-function get_attr (htm, attr_name) {
-
-   var attr_value = '';
-
-   var attr_re = new RegExp (attr_name + '\\s*?=\\s*?["\\u201C\\u201D]([^"\u201C\u201D]+)["\\u201C\\u201D]', 'm');
-   var attr_match = htm.match (attr_re);
-   if (attr_match) {
-      attr_value = trim (attr_match[1]);
-   }
-
-   return attr_value;
-}
-
-
-// -----------------------------------------------------------------------------
-function replace_smart_quotes (string) {
-   var new_string = string.replace (/[\u201C\u201D]/gm, '"');
-
-   return new_string;
-}
-
-
-// -----------------------------------------------------------------------------
-var number_word = [T ('zero'), T ('one'), T ('two'), T ('three'), T ('four'), T ('five'), T ('six'), T ('seven'), T ('eight'), T ('nine'), T ('ten')];
-
-function number_to_word (number) {
-   var word;
-   if (number > 9) {
-      word = number;
-   } else {
-      word = number_word[number];
-   }
-
-   return word;
-}
-
-
-// -----------------------------------------------------------------------------
-function plural (word, plural_word, n) {
-   var new_word;
-   if (n == 1) {
-      new_word = word;
-   } else {
-      new_word = plural_word;
-   }
-
-   return T (new_word);
-}
-
-
-// -----------------------------------------------------------------------------
 function T (string) {
-
-   var t_string = '';
-
-   // Translation, if available.
-   if (typeof (qwiz_params) != 'undefined') {
-      if (typeof (qwiz_params.T) != 'undefined') {
-         if (typeof (qwiz_params.T[string]) != 'undefined') {
-            t_string = qwiz_params.T[string];
-         }
-      }
-   }
-   if (t_string == '') {
-
-      // Translation not available.  Just use default string.
-      t_string = string;
-   }
-
-   return t_string;
+   return qqc.T (string);
 }
 
 
 // -----------------------------------------------------------------------------
-function get_qwiz_param (key, default_value) {
-
-   var value = '';
-   if (typeof (qwiz_params) != 'undefined') {
-      if (typeof (qwiz_params[key]) != 'undefined') {
-         value = qwiz_params[key];
-      }
-   }
-   if (value == '') {
-
-      // qwiz_params object or key not present.  Return default value, if
-      // given, or ''.
-      if (default_value != undefined) {
-         value = default_value;
-      }
-   }
-
-   return value;
-}
-
-
-// -----------------------------------------------------------------------------
-// IE 8 does not have trim () method for strings.
-function trim (s) {
-   if ('a'.trim) {
-      s = s.trim ();
-   } else {
-      s = s.replace (/^\s+|\s+$/g, '');
-   }
-
-   return s;
+function Tplural (word, plural_word, n) {
+   return qqc.Tplural (word, plural_word, n);
 }
 
 
