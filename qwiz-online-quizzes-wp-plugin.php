@@ -3,7 +3,7 @@
  * Plugin Name: Qwiz - online quizzes and flashcards
  * Plugin URI: http://dkprojects.net/qwiz
  * Description: Easy online quizzes and flashcards for WordPress
- * Version: beta6 for 2.28
+ * Version: beta7 for 2.28
  * Author: Dan Kirshner
  * Author URI: http://dkprojects.net/qwiz
  * License: GPL2
@@ -220,11 +220,6 @@ add_action ('admin_bar_menu', 'qwiz_admin_bar_item', 999);
 function qwiz_process_shortcodes_initially ($content) {
    global $debug;
 
-   // Always preface content with one empty wrapper div of each type: signals
-   // we're on WordPress.
-   $content =   '<div class="qwiz_wrapper"  style="display: none;"></div>'
-              . '<div class="qdeck_wrapper" style="display: none;"></div>'
-              . $content;
    if (strpos ($content, '[qwiz') !== false || strpos ($content, '[qdeck') !== false) {
 
       // [qwizdemo] and [qcarddemo] contents -- save, replace with placeholder
@@ -236,8 +231,15 @@ function qwiz_process_shortcodes_initially ($content) {
       if (qwiz_check_shortcode_pairs_ok ($content, 'qwiz')
                          && qwiz_check_shortcode_pairs_ok ($content, 'qdeck')) {
 
-         // Yes, valid pairs.  Wrap each such pair, but make sure balanced
-         // <div> ... </div> tag pairs inside (move unmatched tags outside).
+         // Yes, valid pairs.  Preface content with one empty wrapper div of 
+         // each type: signals we're on WordPress.  (Do only if valid pairs
+         // so that JavaScript can separately catch and report the error.)
+         $content =   '<div class="qwiz_wrapper"  style="display: none;"></div>'
+                    . '<div class="qdeck_wrapper" style="display: none;"></div>'
+                    . $content;
+
+         // Wrap each such pair, but make sure balanced <div> ... </div> 
+         // tag pairs inside (move unmatched tags outside).
          $content = qwiz_wrap_shortcode_pairs ($content, 'qwiz');
          $content = qwiz_wrap_shortcode_pairs ($content, 'qdeck');
       }
@@ -370,7 +372,7 @@ function qwiz_check_shortcode_pairs_ok ($content, $qwiz_qdeck) {
    $error_b = false;
    $n_qwiz_qdecks = preg_match_all ("/\[$qwiz_qdeck|\[\/$qwiz_qdeck\]/", $content, $matches, PREG_SET_ORDER);
    if ($debug) {
-      error_log ("[qwiz_check_shortcode_pairs_ok] n_qwiz_qdecks: $n_qwiz_qdecks");
+      error_log ("[qwiz_check_shortcode_pairs_ok] n_${qwiz_qdeck}_s: $n_qwiz_qdecks");
    }
    if ($n_qwiz_qdecks) {
       if ($n_qwiz_qdecks % 2 != 0) {

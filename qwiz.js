@@ -1186,7 +1186,9 @@ function process_qwiz_pair (htm, i_qwiz) {
       // Parse, and delete.  Include opening tags in front and closing tags
       // after.
       htm = qqc.process_inline_textentry_terms (htm, 'terms', qwizdata, i_qwiz);
+      errmsgs = errmsgs.concat (qwizdata.additional_errmsgs);
       htm = qqc.process_inline_textentry_terms (htm, 'add_terms', qwizdata, i_qwiz);
+      errmsgs = errmsgs.concat (qwizdata.additional_errmsgs);
 
       // See if html up to first shortcode is just whitespace, including empty
       // paragraphs.  Limit to first 2000 characters.
@@ -1807,7 +1809,7 @@ function display_question (i_qwiz, i_question) {
          } else {
             if (! default_textentry_terms_metaphones) {
                var plugin_url = qqc.get_qwiz_param ('url', './');
-               var terms_data = qqc.get_textentry_terms (plugin_url + 'terms.txt');
+               var terms_data = qqc.get_textentry_terms (plugin_url + 'terms.txt', qwizdata);
                default_textentry_terms_metaphones = qqc.process_textentry_terms (terms_data);
             }
          }
@@ -2969,7 +2971,7 @@ function create_radio_button_html (i_qwiz, i_question, i_choice, choice_tag) {
       data_correct = 'data-correct="1" ';
       correct = 1;
    }
-   htm += '<input type="radio" id="radio-qwiz' + i_qwiz + '-q' + i_question + '-a' + i_choice + '" name="qwiz' + i_qwiz + '-q' + i_question + '" ' + data_correct + ' onclick="' + qname + '.process_choice (\'qwiz' + i_qwiz + '-q' + i_question + '-a' + i_choice + '\')" />\n';
+   htm += '<input type="radio" id="radio-qwiz' + i_qwiz + '-q' + i_question + '-a' + i_choice + '" name="qwiz' + i_qwiz + '-q' + i_question + '" ' + data_correct + ' style="border: none;" onclick="' + qname + '.process_choice (\'qwiz' + i_qwiz + '-q' + i_question + '-a' + i_choice + '\')" />\n';
 
    if (debug[1]) {
       console.log ('[create_radio_button_html] htm: ', htm);

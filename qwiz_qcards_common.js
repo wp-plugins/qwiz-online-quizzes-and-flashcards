@@ -50,11 +50,11 @@ this.process_textentry_terms = function (data) {
 
          // Slash.  Either plural form given (after slash), or there is no
          // plural form (nothing after slash).
-         term_i_singular = term_i.substr (0, i_pos_slash); 
+         term_i_singular = term_i.substr (0, i_pos_slash);
          if (i_pos_slash == term_i.length-1) {
             term_i_plural = term_i.substr (0, i_pos_slash);
          } else {
-            term_i_plural = term_i.substr (i_pos_slash+1); 
+            term_i_plural = term_i.substr (i_pos_slash+1);
          }
       }
       terms.singular.push ([term_i_singular, qqc.metaphone (term_i_singular)]);
@@ -68,9 +68,11 @@ this.process_textentry_terms = function (data) {
 // -----------------------------------------------------------------------------
 this.process_inline_textentry_terms = function (htm, terms_add_terms, qdata, i_q) {
 
+   qdata.additional_errmsgs = [];
+
    // Allow multiple [add_terms]...[/add_terms] pairs.
    var multiple_b = terms_add_terms == 'add_terms';
-   var r_local = extract_delete_shortcode_content (htm, terms_add_terms, multiple_b);
+   var r_local = extract_delete_shortcode_content (htm, terms_add_terms, multiple_b, qdata);
    if (r_local.content == 'NA') {
       return htm;
    }
@@ -86,36 +88,38 @@ this.process_inline_textentry_terms = function (htm, terms_add_terms, qdata, i_q
 
          // Download linked-file content.
          var terms_url = m[1];
-         var terms_data = qqc.get_textentry_terms (terms_url);
+         var terms_data = qqc.get_textentry_terms (terms_url, qdata);
+         if (terms_data) {
 
-         // If linked file not .txt, look for [terms]...[/terms] shortcodes, get
-         // content.
-         if (terms_url.substr (terms_url.length - 4) != '.txt') {
-            /*
-            if (debug[5]) {
-               console.log ('[process_inline_textentry_terms] terms_url: ', terms_url);
-               console.log ('[process_inline_textentry_terms] terms_data.substr (0, 100): ', terms_data.substr (0, 100));
-            }
-            */
-            r_remote = extract_delete_shortcode_content (terms_data, 'terms', false);
-            if (r_remote.content == 'NA') {
-               errmsgs.push (T ('Did not find [terms]...[/terms] shortcode pair in file') + ' ' + terms_url);
-            } else {
-               terms_htm.push (r_remote.content);
-            }
-         } else {
-
-            // Is .txt file. If [terms] present, parse content between shortcode
-            // pairs.  Otherwise, use whole thing.
-            if (terms_data.indexOf ('[terms]') != -1) {
-               r_remote = extract_delete_shortcode_content (terms_data, 'terms', false);
+            // If linked file not .txt, look for [terms]...[/terms] shortcodes, get
+            // content.
+            if (terms_url.substr (terms_url.length - 4) != '.txt') {
+               /*
+               if (debug[5]) {
+                  console.log ('[process_inline_textentry_terms] terms_url: ', terms_url);
+                  console.log ('[process_inline_textentry_terms] terms_data.substr (0, 100): ', terms_data.substr (0, 100));
+               }
+               */
+               r_remote = extract_delete_shortcode_content (terms_data, 'terms', false, qdata);
                if (r_remote.content == 'NA') {
-                  errmsgs.push (T ('Did not find [terms]...[/terms] shortcode pair in file') + ' ' + terms_url);
+                  qdata.additional_errmsgs.push (qqc.T ('Did not find [terms]...[/terms] shortcode pair in file') + ' ' + terms_url);
                } else {
                   terms_htm.push (r_remote.content);
                }
             } else {
-               terms_htm.push (terms_data);
+
+               // Is .txt file. If [terms] present, parse content between shortcode
+               // pairs.  Otherwise, use whole thing.
+               if (terms_data.indexOf ('[terms]') != -1) {
+                  r_remote = extract_delete_shortcode_content (terms_data, 'terms', false, qdata);
+                  if (r_remote.content == 'NA') {
+                     qdata.additional_errmsgs.push (qqc.T ('Did not find [terms]...[/terms] shortcode pair in file') + ' ' + terms_url);
+                  } else {
+                     terms_htm.push (r_remote.content);
+                  }
+               } else {
+                  terms_htm.push (terms_data);
+               }
             }
          }
 
@@ -138,7 +142,7 @@ this.process_inline_textentry_terms = function (htm, terms_add_terms, qdata, i_q
 
 
 // -----------------------------------------------------------------------------
-function extract_delete_shortcode_content (htm, shortcode, multiple_b) {
+function extract_delete_shortcode_content (htm, shortcode, multiple_b, qdata) {
 
    var content = [];
 
@@ -153,7 +157,7 @@ function extract_delete_shortcode_content (htm, shortcode, multiple_b) {
 
          var closing_pos = htm.indexOf (closing_shortcode);
          if (closing_pos < opening_pos) {
-            errmsgs.push (opening_shortcode + ' ' + T ('found, but not') + ' ' + closing_shortcode);
+            qdata.additional_errmsgs.push (opening_shortcode + ' ' + qqc.T ('found, but not') + ' ' + closing_shortcode);
          } else {
 
             // Find shortcodes, including opening and closing tags.
@@ -202,8 +206,9 @@ this.sort_dedupe_terms_metaphones = function (terms_metaphones) {
 
 
 // -----------------------------------------------------------------------------
-this.get_textentry_terms = function (terms_url) {
+this.get_textentry_terms = function (terms_url, qdata) {
 
+   var error_b = false;
    var terms_data = '';
 
    // Don't do asynchronously -- question can get displayed before have terms!
@@ -213,12 +218,18 @@ this.get_textentry_terms = function (terms_url) {
       url:        terms_url,
       dataType:   'text',
       error:      function (xhr, desc, exceptionobj) {
-                     alert (qqc.T ('Could not read terms file') + ': ' + terms_url);
+                     qdata.additional_errmsgs.push (qqc.T ('Could not read terms file') + ': ' + terms_url);
+                     error_b = true;
                   },
       success:    function (data) {
                      terms_data = data;
                   }
    });
+   if (! error_b) {
+      if (! terms_data) {
+         qdata.additional_errmsgs.push (qqc.T ('No data read from terms file') + ': ' + terms_url);
+      }
+   }
    return terms_data;
 }
 

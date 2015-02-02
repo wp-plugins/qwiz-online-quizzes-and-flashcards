@@ -369,7 +369,7 @@ function init_textentry_autocomplete (i_deck, i_card) {
    } else {
       if (! default_textentry_terms_metaphones) {
          var plugin_url = qqc.get_qwiz_param ('url', './');
-         var terms_data = qqc.get_textentry_terms (plugin_url + 'terms.txt');
+         var terms_data = qqc.get_textentry_terms (plugin_url + 'terms.txt', deckdata);
          default_textentry_terms_metaphones = qqc.process_textentry_terms (terms_data);
       }
    }
@@ -831,10 +831,21 @@ function process_qdeck_pair (htm, i_deck) {
    // Delete [qdeck], any initial closing tags.
    htm = htm.replace (/\[qdeck[^\]]*\]((<\/[^>]+>\s*)*)/m, '');
 
+   // Delete any initial whitespace.
+   htm = qqc.trim (htm);
+
    // Make sure there's at least one card.
    if (htm.search (/\[q([^\]]*)\]/m) == -1) {
       errmsgs.push (T ('Did not find question tags ("[q]") for') + ' qdeck ' + (i_deck + 1));
    } else {
+
+      // Look for [terms]...[/terms] and/or [add_terms]...[/add_terms] pairs.
+      // Parse, and delete.  Include opening tags in front and closing tags
+      // after.
+      htm = qqc.process_inline_textentry_terms (htm, 'terms', deckdata, i_deck);
+      errmsgs = errmsgs.concat (deckdata.additional_errmsgs);
+      htm = qqc.process_inline_textentry_terms (htm, 'add_terms', deckdata, i_deck);
+      errmsgs = errmsgs.concat (deckdata.additional_errmsgs);
 
       // See if html up to first shortcode is just whitespace, including empty
       // paragraphs.  Limit to first 2000 characters.
