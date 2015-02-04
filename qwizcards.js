@@ -1,5 +1,5 @@
 /*
- * Version 2.28 2015-01-??
+ * Version 2.28 2015-02-03
  * Don't do container set on one-card deck.
  * Resize card front/back to larger of two (including alternate textentry backs).
  * Textentry with required input and suggestions/hints.

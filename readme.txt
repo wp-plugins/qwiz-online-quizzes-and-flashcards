@@ -2,7 +2,7 @@
 Contributors: dan_kirshner
 Tags: interactive quiz, quiz, flashcards, labeled diagrams
 Tested up to: 4.1
-Stable tag: 2.27
+Stable tag: 2.28
 License: GPL2
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
@@ -22,11 +22,12 @@ Activate the plugin through the 'Plugins' menu in WordPress
 == Changelog ==
 
 = 2.28 =
-2015-01-??
+2015-02-03
 "the_content" filter: allow JavaScript to detect mismatched [qwiz]-[/qwiz] pairs.
 Error messages returned from qwiz_qcards_common.js.
 Correct content='body' for standalone flashcard decks.
 Resize flashcard front/back to larger of two (including alternate textentry backs).
+Hide Qwiz icon when autocomplete starts.
 Remove resizing handles in labeled diagrams (now have images that would show).
 Free-form input ([textentry]) with suggestions/hints for quizzes and flashcards.
 Create qwiz_qcards_common.js to hold common code.

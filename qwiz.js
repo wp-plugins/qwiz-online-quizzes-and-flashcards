@@ -1,5 +1,5 @@
 /*
- * Version 2.28 2015-01-??
+ * Version 2.28 2015-02-03
  * Hide Qwiz icon when autocomplete starts.
  * Remove resizing handles (because now have images that would show).
  * random="true" option for quizzes.
