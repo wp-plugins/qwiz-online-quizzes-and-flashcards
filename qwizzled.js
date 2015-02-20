@@ -1,4 +1,9 @@
 /*
+ * Version 2.29 2015-02-??
+ * Don't use <code></code> for already-wrapped [q] and [l].
+ * Warnings on removing blank labels.
+ * Error if selection already is a target.
+ *
  * Version 2.27 2015-01-05
  * Make sure labeled-diagram questions contain matching opening/closing divs.
  *
@@ -67,8 +72,9 @@ var qname = 'qwizzled';
 
 // Debug settings.
 var debug = [];
-debug.push (false);    // 0 - general.
-debug.push (false);    // 1 - htm detail in parse_html_block ().
+debug.push (true );    // 0 - general.
+debug.push (true );    // 1 - htm detail in parse_html_block ().
+debug.push (true );    // 2 - Preliminary checks.
 
 var $ = jQuery;
 
@@ -534,25 +540,34 @@ this.create_target1 = function (multiple_targets_f) {
 this.create_target2 = function (multiple_targets_f) {
 
    // Preliminary check 1: Look for already-wrapped labels -- label divs --  and
-   // make sure no new [l] shortcodes have been added inside.  If so, move out.
+   // make sure no additional [l] shortcodes have been added inside.  If so,
+   // move out.
    edit_area.find ('.qwizzled_label').each (function () {
+
       var label_html = $ (this).html ();
 
-      // Grab any opening tags that go with it.
-      var r = parse_html_block (label_html, ['[l]'], []);
-      var new_label_html = r.htm_block;
-      if (new_label_html != 'NA') {
+      // More than one label (including old style) in here?
+      var m = label_html.match (/\[(<code><\/code>)*l\]/gm);
+      if (m && m.length > 1) {
 
-         if (debug[0]) {
-            console.log ('[create_target2] new_label_html:', new_label_html);
+         // Move second label out.  Grab any opening tags that go with second 
+         // label.
+         var first_label_pos = label_html.search (/\[(<code><\/code>)*l\]/);
+         var r = parse_html_block (label_html.substr (first_label_pos + 1), ['[l]'], []);
+         var new_label_html = r.htm_block;
+         if (new_label_html != 'NA') {
+
+            if (debug[2]) {
+               console.log ('[create_target2] new_label_html:', new_label_html);
+            }
+
+            // Remove new label from div html.
+            label_html = label_html.replace (new_label_html, '');
+            $ (this).html (label_html);
+
+            // Add new label after.
+            $ (this).after (new_label_html);
          }
-
-         // Remove new label from div html.
-         label_html = label_html.replace (new_label_html, '');
-         $ (this).html (label_html);
-
-         // Add new label after.
-         $ (this).after (new_label_html);
       }
    });
 
@@ -584,17 +599,42 @@ this.create_target2 = function (multiple_targets_f) {
    }
 
    // Preliminary check 2: If any wrapped question divs (div.qwizzled_question),
-   // make sure balanced divs between each question -- wrapped or not.
+   // if more than one question inside a question div, error.
    var any_new_html_b = false;
    var new_html = htm;
    if (htm.search ('qwizzled_question') != -1) {
-      if (debug[0]) {
+      if (debug[2]) {
          console.log ('[create_target2] preliminary check 2...');
       }
 
       // Yes, some have been wrapped.
-      var question_start_tags = ['[q]', '[q ', '<div class="qwizzled_question">'];
+      var error_b = false;
+      edit_area.find ('div.qwizzled_question').each (function () {
+
+         if (! error_b) {
+            var qwizzled_question_html = $ (this).html ()
+            var m = qwizzled_question_html.match (/\[(<code><\/code>)*q[ \]]/gm);
+            if (debug[2]) {
+               console.log ('[create_target2] m:', m);
+            }
+            if (m && m.length > 1) {
+               alert (T ('A new question shortcode [q] has been placed inside an existing question.  Please move it outside and try again.') + '*');
+               $ ('div#qwizzled_main_menu_items .menu_spinner').css ('visibility', 'hidden');
+               error_b = true;
+            }
+         }
+      });
+      if (error_b) {
+         return;
+      }
+
+      // Preliminary check 3: make sure balanced divs between each wrapped
+      // question.
+      var question_start_tags = ['<div class="qwizzled_question">'];
       var question_next_tags = question_start_tags.concat (['[x]', '[/qwiz]']);
+      if (debug[2]) {
+         console.log ('[create_target2] preliminary check 3...');
+      }
       var ipos = 0;
       while (true) {
 
@@ -611,7 +651,7 @@ this.create_target2 = function (multiple_targets_f) {
          if (new_question_html) {
             any_new_html_b = true;
             new_html = new_html.replace (question_html, new_question_html);
-            if (debug[0]) {
+            if (debug[2]) {
                console.log ('[create_target2] new_html:', new_html);
             }
          }
@@ -642,7 +682,8 @@ this.create_target2 = function (multiple_targets_f) {
       // [fx]).  Wrap labels.  If no feedback given, create with canned
       // response.  html returned only if labels inside.  
       question_start_tags = ['[q]', '[q '];
-      var question_html = process_notwrapped_questions (qwiz_matches[i_qwiz], question_start_tags, false);
+
+      var question_html = process_notwrapped_questions (qwiz_matches[i_qwiz], question_start_tags);
       if (question_html) {
          any_new_html_b = true;
          new_html = new_html.replace (qwiz_matches[i_qwiz], question_html);
@@ -669,6 +710,11 @@ this.create_target2 = function (multiple_targets_f) {
    }
 
    if (any_new_html_b || any_new_question_div_b) {
+
+      // If any empty label divs, or labels that comments have gotten into, fix
+      // (delete empties, move comments out).  Use jQuery to find label divs.
+      check_fix_label_divs ();
+
       // Find paragraphs and headers within labels, wrap their inner html with 
       // highlight span if haven't already done so.
       edit_area.find ('*.qwizzled_label > p, *.qwizzled_label > :header').each (function () {
@@ -732,6 +778,9 @@ this.create_target2 = function (multiple_targets_f) {
 // -----------------------------------------------------------------------------
 this.exit_click_on_a_label = function () {
 
+   if (debug[2]) {
+      console.log ('[exit_click_on_a_label] qwizzled_main_menu_feedback:', qwizzled_main_menu_feedback);
+   }
    qwizzled_main_menu_feedback.hide ();
    waiting_for_label_click_b = false;
    label_will_have_multiple_targets_b = false;
@@ -791,22 +840,14 @@ this.label_clicked = function (local_el_label_div) {
 
             // If it's a div -- a rectangle on an image -- delete it.  If it's a
             // span or spans, replace the <span> with its content.
-            var div_span_obj = qwizzled_question_obj.find ('.qwizzled_target-' + assoc_id);
-            if (div_span_obj.length) {
-               if (div_span_obj[0].tagName.toLowerCase () == 'div') {
-                  div_span_obj.remove ();
-               } else {
-
-                  // Remove wrapper if there (backwards compatibility), remove
-                  // qwizzled_target spans (keeping content).
-                  div_span_obj.parents ('span.text_target_wrapper').contents ().unwrap ();
-                  div_span_obj.contents ().unwrap ();
-               }
-            }
+            remove_target (qwizzled_question_obj, assoc_id);
 
             // Get the label's current border colors/style classes -- re-use for new
             // target.
             label_border_class = get_label_border_class (el_label_div);
+            if (debug[0]) {
+               console.log ('[label_clicked] label_border_class:', label_border_class);
+            }
          } else {
             create_target_b = false;
          }
@@ -840,6 +881,23 @@ this.label_clicked = function (local_el_label_div) {
 
 
 // -----------------------------------------------------------------------------
+function remove_target (qwizzled_question_obj, assoc_id) {
+   var div_span_obj = qwizzled_question_obj.find ('.qwizzled_target-' + assoc_id);
+   if (div_span_obj.length) {
+      if (div_span_obj[0].tagName.toLowerCase () == 'div') {
+         div_span_obj.remove ();
+      } else {
+
+         // Remove wrapper if there (backwards compatibility), remove
+         // qwizzled_target spans (keeping content).
+         div_span_obj.parents ('span.text_target_wrapper').contents ().unwrap ();
+         div_span_obj.contents ().unwrap ();
+      }
+   }
+}
+
+
+// -----------------------------------------------------------------------------
 this.target_text_selected = function (e) {
 
    var selected_text = tinymce_ed.selection.getContent ();
@@ -866,6 +924,18 @@ this.target_text_selected = function (e) {
       return false;
    }
    waiting_for_target_select_b = false;
+
+   // If selection already is a target, error.
+   var target_obj = node_obj.parents ('[class*="qwizzled_target"]');
+   var classes = node_obj.attr ('class');
+   if (target_obj.length || (classes && classes.search ('qwizzled_target') != -1)) {
+      alert (T ('Selection already is a target'));
+
+      // Cancel feedback.
+      qwizzled_main_menu_feedback.hide ();
+
+      return false;
+   }
 
    // If doesn't exist, create association ID between label and target.  Use
    // time (in seconds) as unique ID.  We'll also use it to identify image
@@ -1071,6 +1141,9 @@ this.target_text_selected = function (e) {
             var m = classes.match (/qtarget_assoc[0-9]*/g);
             if (m) { 
                var qtargets = m.join (' ');
+               if (debug[0]) {
+                  console.log ('[target_text_selected] el_label_div: ', el_label_div, ', removeClass (' + qtargets + ')');
+               }
                $ (el_label_div).removeClass (qtargets);
             }
             $ (el_label_div).addClass ('qtarget_assoc' + assoc_id);
@@ -1340,27 +1413,31 @@ function process_wrapped_questions () {
       if (is_only_tags_and_whitespace (htm)) {
          $ (this).remove ();
       } else {
+         any_labeled_diagram_questions_b = true;
       
-         // Error if new [q] inside question div.
-         if (htm.search (/\[q[ \]]/m) != -1) {
+         // Error if more than one [q] inside question div.
+         var m = htm.match (/\[q[ \]]/gm);
+         if (m && m.length > 1) {
             alert (T ('A new question shortcode [q] has been placed inside an existing question.  Please move it outside and try again.'));
             $ ('div#qwizzled_main_menu_items .menu_spinner').css ('visibility', 'hidden');
-            exit_click_on_a_label ();
-         }
+            q.exit_click_on_a_label ();
+         } else {
 
-         // Can set flag -- got at least one question.
-         no_q_code_b = false;
+            // Can set flag -- got at least one question.
+            no_q_code_b = false;
 
-         // Process already-wrapped and not-yet-wrapped labels and feedback, if any.
-         htm = process_question (htm, true);
+            // Process already-wrapped and not-yet-wrapped labels and feedback,
+            // if any.
+            htm = process_question (htm, true);
 
-         // Replace htm if any change.
-         if (htm) {
-            any_new_question_div_b = true;
-            $ (this).html (htm);
+            // Replace htm if any change.
+            if (htm) {
+               any_new_question_div_b = true;
+               $ (this).html (htm);
 
-            // Reinitialize dragging.
-            reinit_dragging ();
+               // Reinitialize dragging.
+               reinit_dragging ();
+            }
          }
       }
    });
@@ -1370,9 +1447,8 @@ function process_wrapped_questions () {
 
 
 // -----------------------------------------------------------------------------
-// Look for questions in qwiz html.  Do for each question.  doing_wrapped_b is
-// true if question start tag is "<div ...".
-function process_notwrapped_questions (qwiz_html, question_start_tags, doing_wrapped_b) {
+// Look for questions in qwiz html.  Do for each question.
+function process_notwrapped_questions (qwiz_html, question_start_tags) {
 
    var question_next_tags = ['[q]', '[q ', '<div class="qwizzled_question">', '[x]', '[/qwiz]'];
 
@@ -1384,12 +1460,24 @@ function process_notwrapped_questions (qwiz_html, question_start_tags, doing_wra
    var new_qwiz_html = qwiz_html;
    while (true) {
 
+      // Need to avoid [q]s already inside qwizzled_question divs.  Method will
+      // be to see what comes first, <div class="qwizzled_question"... or [q].
+      // If <div... first, move past the next [q] (which is inside the div).
+      var qwizzled_question_div_pos = qwiz_html.substr (ipos).search ('<div class="qwizzled_question">'); 
+      if (qwizzled_question_div_pos != -1) {
+         var q_pos = qwiz_html.substr (ipos).search (/\[q[ \]]/);
+         if (debug[0]) {
+            console.log ('[process_notwrapped_questions] qwizzled_question_div_pos:', qwizzled_question_div_pos, ', q_pos:', q_pos);
+         }
+         if (qwizzled_question_div_pos < q_pos) {
+            ipos += q_pos + 2;
+            continue;
+         }
+      }
+
       // Get html up to next question, including labels, feedback, and hints.
-      // Question before first label may already be wrapped in "canvas" div.
-      // If doing wrapped div, see if just tags and whitespace (which includes
-      // &nbsp;).
       var rqwiz = parse_html_block (qwiz_html.substr (ipos), question_start_tags,
-                                    question_next_tags, doing_wrapped_b);
+                                    question_next_tags, false);
       var question_html = rqwiz.htm_block;
       if (question_html == 'NA') {
          break;
@@ -1401,6 +1489,9 @@ function process_notwrapped_questions (qwiz_html, question_start_tags, doing_wra
 
       // Create canvas div -- up to first label if or feedback shortcode or
       // hint if one of these present, otherwise everything.
+      if (debug[0]) {
+         console.log ('[process_notwrapped_questions] create canvas div...');
+      }
       var label_pos = new_question_html.search (/\[l\]|\[f*\]|\[fx\]|\[hint\]/m);
       var label_etc_start_tags = ['[l]', '[f*]', '[fx]', '[hint]'];
       var r = parse_html_block (new_question_html, question_start_tags, label_etc_start_tags);
@@ -1411,7 +1502,7 @@ function process_notwrapped_questions (qwiz_html, question_start_tags, doing_wra
 
       // Include clear div in case any images.
       var canvas_div = '<div class="qwizzled_canvas">'
-                       + canvas_div_content.replace (/\[q/, '[<code><\/code>q')
+                       + canvas_div_content
                        + '<div style="clear: both;"></div>'
                        + '</div>';
       new_question_html = new_question_html.replace (canvas_div_content, canvas_div);
@@ -1420,7 +1511,7 @@ function process_notwrapped_questions (qwiz_html, question_start_tags, doing_wra
       }
 
       // Process labels and feedback.
-      new_question_html = process_question (new_question_html, doing_wrapped_b);
+      new_question_html = process_question (new_question_html, false);
 
       if (new_question_html) {
          any_new_html_b = true;
@@ -1454,21 +1545,6 @@ function process_question (question_html, doing_wrapped_b) {
    }
    var any_new_html_b = false;
 
-   // Look for already-wrapped labels in this question.  Delete empty divs.
-   // "[", "]", "*" normally escaped (so can match "[c*]", for example).
-   // "{" translated to "[", "}" to "]", "#" to "*".
-   var label_start_tags = ['<div{^>}#?class\\s#=\\s#"{^"}#?qwizzled_label'];
-   var r = process_labels (question_html, label_start_tags, true);
-   if (r.any_labels_b) {
-
-      // Global var.
-      any_labeled_diagram_questions_b = true;
-   }
-   if (r.new_html) {
-      any_new_html_b = true;
-      question_html = r.new_html;
-   }
-
    // If there's a comment at the end -- that is, just opening tags, 
    // comment, closing tags, and whitespace -- delete it temporarily, add
    // back to end when done.
@@ -1486,8 +1562,9 @@ function process_question (question_html, doing_wrapped_b) {
       }
    }
 
-   // Look for not-yet-wrapped labels in this question.  If not followed by
-   // [f*] and [fx], add shortcodes and canned responses after wrap.
+   // Look for not-yet-wrapped labels in this question.
+   // If not followed by [f*] and [fx], add shortcodes and canned responses
+   // after wrap.
    label_start_tags = ['[l]'];
    var r = process_labels (question_html, label_start_tags, false);
    if (r.any_labels_b) {
@@ -1515,6 +1592,60 @@ function process_question (question_html, doing_wrapped_b) {
 
 
 // -----------------------------------------------------------------------------
+function check_fix_label_divs () {
+
+   // Use jQuery to get label divs.
+   edit_area.find ('div.qwizzled_label').each (function () {
+      var label_html = $ (this).html ();
+      if (debug[1]) {
+         console.log ('[check_fix_label_divs] label_html:', label_html);
+      }
+
+      // If just tags and whitespace, delete div.
+      if (is_only_tags_and_whitespace (label_html)) {
+
+         // Remove associated target, if any.
+         var classes = $ (this).attr ('class');
+         var m = classes.match (/qtarget_assoc([0-9]*)/);
+         if (m) { 
+            assoc_id = m[1];
+            var qwizzled_question_obj = $ (this).parents ('.qwizzled_question');
+            remove_target (qwizzled_question_obj, assoc_id);
+         }
+
+         // Delete label div.
+         $ (this).remove ();
+
+      } else if (is_only_tags_and_whitespace (label_html, '[l]')) {
+
+         // Blank label (had [l], but that's all).
+         errmsgs.push (T ('Label [l] is blank'));
+
+      } else {
+      
+         // If any comments inside label, move to after the label (save, delete,
+         // add back after).  Include whitespace and opening/closing tags.
+         var new_label_html = label_html;
+         var label_comments = '';
+         var re = new RegExp ('\\s*(<[^\/][^>]*>)*\\s*\\[!+\\][\\s\\S]*?\\[\\/!+\\]\\s*(<\\/[^>]+>)*\\s*', 'gm');
+         var m = new_label_html.match (re);
+         if (m) {
+            label_comments = m.join ('');
+            if (debug[0]) {
+               console.log ('[process_wrapped_labels] new_label_html:', new_label_html);
+               console.log ('[process_wrapped_labels] label_comments:', label_comments);
+            }
+            new_label_html = new_label_html.replace (re, '');
+            $ (this).html (new_label_html);
+            $ (this).after (label_comments);
+         }
+      }
+   });
+}
+
+
+// -----------------------------------------------------------------------------
+// Only do not-yet-wrapped labels.
 function process_labels (question_html, label_start_tags, doing_wrapped_b) {
 
    // Get everything up to next label -- will process/parse out feedback
@@ -1528,12 +1659,27 @@ function process_labels (question_html, label_start_tags, doing_wrapped_b) {
    var any_new_html_b = false;
    var any_labels_b = false;
 
-   // Skip visited -- in case no change.
+   // Skip visited -- in case no new html.
    var ipos = 0;
    var new_question_html = question_html;
    while (true) {
-      // If doing wrapped div, see if just tags and whitespace (which includes
-      // &nbsp;).
+
+      // Need to avoid [l]s already inside qwizzled_label divs.  Method will
+      // be to see what comes first, <div class="qwizzled_label"... or [l].
+      // If <div... first, move past the next [l] (which is inside the div).
+      var qwizzled_label_div_pos = question_html.substr (ipos).search ('<div class="qwizzled_label">'); 
+      if (qwizzled_label_div_pos != -1) {
+         var q_pos = question_html.substr (ipos).search (/\[q[ \]]/);
+         if (debug[0]) {
+            console.log ('[process_labels] qwizzled_label_div_pos:', qwizzled_label_div_pos, ', q_pos:', q_pos);
+         }
+         if (qwizzled_label_div_pos < q_pos) {
+            ipos += q_pos + 2;
+            continue;
+         }
+      }
+
+      // Get html up to next label.
       var r = parse_html_block (question_html.substr (ipos), label_start_tags,
                                 label_next_tags, doing_wrapped_b);
       var label_html = r.htm_block;
@@ -1571,12 +1717,12 @@ function process_labels (question_html, label_start_tags, doing_wrapped_b) {
          any_labels_b = true;
          if (! doing_wrapped_b) {
             any_new_html_b = true;
-            var new_label_html = new_label_html.replace (/\[l\]/, '[<code><\/code>l]');
             if (debug[0]) {
                console.log ('[process_labels] new_label_html:', new_label_html);
             }
 
-            // Not yet wrapped, so see if feedback present within the label.
+            // Not yet wrapped, so see if feedback present within the label
+            // html.
             var feedback_htmls = [];
             while (true) {
                var rf = parse_html_block (new_label_html, feedback_start_tags, 
@@ -1586,8 +1732,9 @@ function process_labels (question_html, label_start_tags, doing_wrapped_b) {
                   break;
                }
 
-               // Take feedback out of label.  If feedback is empty, ignore --
-               // will create feedback with canned response.  Otherwise, save.
+               // Take feedback out of label html.  If feedback is empty,
+               // ignore -- will create feedback with canned response.
+               // Otherwise, save.
                new_label_html = new_label_html.replace (feedback_html, '');
                if (debug[0]) {
                   console.log ('[process_labels] feedback_html:', feedback_html);
@@ -1602,18 +1749,23 @@ function process_labels (question_html, label_start_tags, doing_wrapped_b) {
             // and headers with &nbsp; and/or <br> in them.
             new_label_html = new_label_html.replace (/(\s*(<[ph][^>]*>)*\s*(&nbsp;|<br[^>]*>)*\s*(<\/[ph][^>]*>)*\s*)*$/gm, '');
 
-            // Div for labels (not span: somebody eats spans around <p> elements).
-            // Add highlight class to div only if there are no paragraph or header
-            // tags inside.  Also, when no paragraph or header tags, make div
-            // inline.
-            var highlight = '';
-            var style     = '';
-            var ph_pos = new_label_html.search (/<p|<h[1-6]/m);
-            if (ph_pos == -1) {
-               highlight = ' qwizzled_highlight_label';
-               style     = ' style="display: inline;"';
+            // Div for labels if not already wrapped.  (Not span: somebody eats
+            // spans around <p> elements.)  "Opening tag" for wrapped label is
+            // div with class qwizzled_label.
+            if (new_label_html.search ('qwizzled_label') == -1) {
+
+               // Add highlight class to div only if there are no paragraph or
+               // header tags inside.  Also, when no paragraph or header tags,
+               // make div inline.
+               var highlight = '';
+               var style     = '';
+               var ph_pos = new_label_html.search (/<p|<h[1-6]/m);
+               if (ph_pos == -1) {
+                  highlight = ' qwizzled_highlight_label';
+                  style     = ' style="display: inline;"';
+               }
+               new_label_html = '<div class="qwizzled_label' + highlight + '"' + style + '>' + new_label_html + '</div>'; 
             }
-            new_label_html = '<div class="qwizzled_label' + highlight + '"' + style + '>' + new_label_html + '</div>'; 
 
             // Add back comments, if any.
             new_label_html += label_comments;
@@ -1786,7 +1938,7 @@ function check_fix_matching_divs (htm) {
             comment_html = comment_match[1];
             htm = htm.replace (comment_html, '');
 
-            if (debug[0]) {
+            if (debug[2]) {
                console.log ('[check_fix_matching_divs] comment_html:', comment_html);
             }
          }
@@ -1808,9 +1960,13 @@ function check_fix_matching_divs (htm) {
                   // divs needed.
                   new_htm.push (div_matches[i]);
                   n_new_closing_divs++;
-                  console.log ('[check_fix_matching_divs] unmatched opening div:', div_matches[i]);
+                  if (debug[2]) {
+                     console.log ('[check_fix_matching_divs] unmatched opening div:', div_matches[i]);
+                  }
                } else {
-                  console.log ('[check_fix_matching_divs] unmatched closing div', i);
+                  if (debug[2]) {
+                     console.log ('[check_fix_matching_divs] unmatched closing div', i);
+                  }
                }
             }
             new_htm.push (pieces[i+1]);
@@ -1828,7 +1984,7 @@ function check_fix_matching_divs (htm) {
       }
    }
    new_htm = new_htm.join ('');
-   if (debug[0]) {
+   if (debug[2]) {
       console.log ('[check_fix_matching_divs] new_htm:', new_htm);
    }
 
@@ -1902,6 +2058,9 @@ function parse_html_block (htm, qtags, qnext_tags, is_all_whitespace_b) {
        + next_tags_pat;      // $(4 + n_qtags + 4 ... 5) opening tags, if any
                              // followed by 
                              // $(4 + n_qtags + 5 + 0 ... 2) next shortcode
+   if (debug[1]) {
+      console.log ('[parse_html_block] re_txt: ', re_txt);
+   }
    var re = new RegExp (re_txt, 'im');
    var htm_match = htm.match (re);
    var htm_block = '';
@@ -1943,10 +2102,25 @@ function parse_html_block (htm, qtags, qnext_tags, is_all_whitespace_b) {
 
 
 // -----------------------------------------------------------------------------
-function is_only_tags_and_whitespace (htm) {
+function is_only_tags_and_whitespace (htm, take_out_shortcode) {
 
-   var htm_wo_tags = htm.replace (/<[^>]+>/gm, '');
-   var only_tags_and_whitespace_b = htm_wo_tags.search (/\S/) == -1;
+   if (debug[1]) {
+      console.log ('[is_only_tags_and_whitespace] htm:', htm);
+   }
+
+   // Take out tags.
+   var htm = htm.replace (/<[^>]+>/gm, '');
+
+   if (take_out_shortcode) {
+
+      // Also take out shortcode.
+      htm = htm.replace (take_out_shortcode, '');
+   }
+
+   var only_tags_and_whitespace_b = htm.search (/\S/) == -1;
+   if (debug[1]) {
+      console.log ('[is_only_tags_and_whitespace] only_tags_and_whitespace_b:', only_tags_and_whitespace_b);
+   }
 
    return only_tags_and_whitespace_b;
 }
