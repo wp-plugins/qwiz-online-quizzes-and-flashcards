@@ -1,4 +1,7 @@
 /*
+ * Version 2.28 2015-02-28
+ * Fix bug -- hint required matching first character.
+ *
  * Version 2.28 2015-02-03
  * Hide Qwiz icon when autocomplete starts.
  * Remove resizing handles (because now have images that would show).
@@ -3245,6 +3248,7 @@ var find_matching_terms = function (request, response) {
    var deduped_entry = entry.replace (/(.)\1{2,}/gi, '\$1');
    if (deduped_entry.length < required_entry_length && entry_metaphone.length < required_metaphone_length) {
       textentry_matches[textentry_i_qwiz] = [];
+      lc_textentry_matches[textentry_i_qwiz] = [];
 
    } else {
       if (debug[5]) {
