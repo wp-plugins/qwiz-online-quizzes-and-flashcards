@@ -7,6 +7,7 @@
  * Author: Dan Kirshner
  * Author URI: http://dkprojects.net/qwiz
  * License: GPL2
+ *
  */
 
 /*  Copyright 2014  Dan Kirshner  (email : dan_kirshner@yahoo.com)
