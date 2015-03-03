@@ -1,4 +1,48 @@
 /*
+ * Version 2.29 2015-02-??
+ * Word-wrap normal for labels (problem in Firefox on Mac).
+ * Don't use <code></code> for already-wrapped [q] and [l].
+ * Fix bug -- hint required matching first character.
+ *
+ * Version 2.28 2015-02-03
+ * Hide Qwiz icon when autocomplete starts.
+ * Remove resizing handles (because now have images that would show).
+ * random="true" option for quizzes.
+ * Free-form input ([textentry]) with suggestions/hints.
+ *
+ * Version 2.27 2015-01-05
+ * Toolbar option - keep "next" button active.
+ * Just count targets, not labels.
+ * Feedback interleaved with choices, optional.
+ *
+ * Version 2.26 2014-12-21
+ * Look for WP content filter-created divs, rewrite only that HTML.
+ * Take xqwiz sizing div out of flow.
+ *
+ * Version 2.25 2014-12-16
+ * Fix search for any [qwiz] shortcode.
+ *
+ * Version 2.24 2014-12-15
+ * Make $ (= jQuery) private.
+ *
+ * Version 2.22 2014-12-07
+ * Multiple targets for a single label.
+ * Tolerate whitespace before [h].
+ * Fix check for paragraph with header plus something else -- don't delete.
+ * Reinstate containment for labels -- by table size.
+ * qtarget_sibs-... instead of text_target_wrapper (except for backwards compatibility).
+ * Don't allow draggable labels to be "underneath" already-placed labels.
+ *
+ * Version 2.21 2014-12-02
+ * Workaround for Firefox 33.1 problem with long regular expression and long
+ * string in intro parse.
+ *
+ * Version 2.20 2014-11-20
+ * Handle "smart quotes" in attributes.
+ *
+ * Version 2.19 2014-11-19
+ * Add "Q #1/4" to labeled diagram progress.
+ *
  * Version 2.16 2014-11-12
  * Delete <br> in header.
  *
@@ -102,24 +146,23 @@ var qname = 'qwiz_';
 
 // Debug settings.
 var debug = [];
-debug.push (false);    // 0 - general.
+debug.push (true );    // 0 - general.
 debug.push (false);    // 1 - radio/choices html.
 debug.push (false);    // 2 - feedback html.
 debug.push (false);    // 3 - old/new html dump.
-debug.push (false);    // 4 - question tags/topics.
+debug.push (true );    // 4 - question tags/topics.
+debug.push (false);    // 5 - [textentry] / autocomplete.
 
-$ = jQuery;
+var $ = jQuery;
 
 // Private data, but global to this qwiz instance.
 var q = this;
+var qqc;
+q.processing_complete_b = false;
 
-// The identifier -- including qualifiers like "#" -- of the page content (that
-// perhaps contains inline quizzes) on WordPress.  Multiple-entries default
-// set in qwiz-online-quizzes-wp-plugin.php: div.entry-content, div.post-entry,
-// div.container.  Apparently themes can change this; these have come up so far.
-// Body default for stand-alone use.
-var content = get_qwiz_param ('content', 'body');
-
+var content;
+var correct;
+var incorrect;
 var errmsgs = [];
 
 var n_qwizzes = 0;
@@ -132,19 +175,57 @@ var header_html;
 
 var drag_and_drop_initialized_b = false;
 var try_again_obj = '';
+var next_button_active_b = false;
 
+var textentry_b = false;
+var loaded_metaphone_js_b = false;
+
+// Object (singular and plural) of arrays of term-metaphone pairs.
+// Constant across quizzes.  
+var default_textentry_terms_metaphones;
+
+// (qwizdata[i_qwiz].textentry_terms_metaphones are quiz-specific terms given
+// with [terms]...[/terms].)
+
+// These vary with quiz, and are set up anew for each [textentry] question.
+var current_question_textentry_terms_metaphones = {};
+
+var textentry_answers = {};
+var textentry_answer_metaphones = {};
+
+var textentry_matches = {};
+var lc_textentry_matches = {};
+var textentry_i_qwiz;
+
+var Tcheck_answer_message;
+
+var qrecord_b = false;
+var declined_login_b;
 
 // -----------------------------------------------------------------------------
 $ (document).ready (function () {
 
-   // Add default styles for qwiz divs to page.
-   add_style ();
+   qqc = qwiz_qcards_common;
+
+   correct = [T ('Good!'), T ('Correct!'), T ('Excellent!'), T ('Great!')];
+   incorrect = [T ('No.'), T ('No, that\'s not correct.'), T ('Sorry, that\'s not correct.')];
+
+   // The identifier -- including qualifiers like "#" -- of the page content (that
+   // perhaps contains inline quizzes) on WordPress.  Multiple-entries default
+   // set in qwiz-online-quizzes-wp-plugin.php: div.entry-content, div.post-entry,
+   // div.container.  Apparently themes can change this; these have come up so far.
+   // Body default for stand-alone use.
+   content = qqc.get_qwiz_param ('content', 'body');
+   Tcheck_answer_message = T ('Enter your best guess - eventually we\'ll provide suggestions or offer a hint');
+
+   // Set flag to skip login if cookie set.
+   declined_login_b = $.cookie ('qwiz_declined_login');
 
    process_html ();
 
    // Error messages, if any.
    if (errmsgs.length) {
-      alert (plural ('Error found', 'Errors found', errmsgs.length) + ':\n\n' + errmsgs.join ('\n'));
+      alert (Tplural ('Error found', 'Errors found', errmsgs.length) + ':\n\n' + errmsgs.join ('\n'));
    }
 
    if (n_qwizzes) {
@@ -170,23 +251,37 @@ function process_html () {
 
       // See if only whitespace outside [!] ... [/!].
       var comment_htm = $ (this).html ();
-      if (comment_htm.search (/\s*(<.+?>)*\s*\[!\][\s\S]*\[\/!\]\s*(<.+?>)*\s*/m) == 0) {
+      if (comment_htm.search (/\s*(<.+?>)*\s*\[!+\][\s\S]*?\[\/!+\]\s*(<.+?>)*\s*$/m) == 0) {
          $ (this).remove ();
       }
    });
 
    // Look for [qwiz] and [/qwiz] that are only thing inside parents (e.g.,
    // <p>[qwiz]</p>).  Replace with "unwrapped" content if so.
-   $ ('p:contains("qwiz]"), :header:contains("qwiz]")').each (function () {
+   $ ('p:contains("qwiz"), :header:contains("qwiz")').each (function () {
       var tag_htm = $ (this).html ();
-      if (tag_htm.search (/\s*\[\/{0,1}qwiz\]\s*/m) == 0) {
+      if (tag_htm.search (/\s*\[\/{0,1}qwiz[^\]]*\]\s*/m) == 0) {
          $ (this).replaceWith (tag_htm);
       }
    });
 
-   // Read WordPress user content divs, look for inline qwiz "tags", loop
-   // over tag pairs.
-   $ (content).each (function () {
+   // We're either going to deal with HTML (stand-alone version) or divs (added
+   // by WordPress content filter).  The divs allow us to replace content
+   // specific to qwiz/qdeck -- avoid clobbering any events bound to remaining
+   // html by other plugins.  See if there are such divs.  WP content filter
+   // always adds at least one empty div, so don't have to do HTML branch.
+   var div_html_selector = '';
+   var qwiz_divs_obj = $ ('div.qwiz_wrapper');
+   if (qwiz_divs_obj.length) {
+      div_html_selector = 'div.qwiz_wrapper';
+   } else {
+      div_html_selector = content;
+   }
+
+   // Read appropriate divs, look for inline qcard shortcodes, loop over
+   // shortcode pairs.
+   var i_qwiz = 0;
+   $ (div_html_selector).each (function () {
       var htm = $ (this).html ();
       if (! htm) {
 
@@ -194,7 +289,7 @@ function process_html () {
       } else {
 
          // See if there is a qwiz or qwizzes.
-         var qwiz_pos = htm.search ('[qwiz]');
+         var qwiz_pos = htm.search (/\[qwiz/);
          if (qwiz_pos != -1) {
 
             // Remove and save text inside [qwizdemo] ... [/qwizdemo] pairs.
@@ -216,7 +311,7 @@ function process_html () {
 
             // Take out any remaining [!]...[\!] comments (those that were not
             // inside paragraph or header elements).
-            new_htm = new_htm.replace (/\[!\][\s\S]*?\[\/!\]/gm, '');
+            new_htm = new_htm.replace (/\[!+\][\s\S]*?\[\/!+\]/gm, '');
 
             // Check that there are pairs.
             var do_not_process_htm = check_qwiz_tag_pairs (new_htm);
@@ -230,16 +325,22 @@ function process_html () {
                qwizzled_b = false;
                var qwiz_matches = new_htm.match (/\[qwiz[\s\S]*?\[\/qwiz\]/gm);
                if (qwiz_matches) {
-                  n_qwizzes = qwiz_matches.length;
+                  var local_n_qwizzes = qwiz_matches.length;
                   if (debug[0]) {
-                     console.log ('[process_html] n_qwizzes: ', n_qwizzes);
+                     console.log ('[process_html] local_n_qwizzes: ', local_n_qwizzes);
                      console.log ('               qwiz_matches[0]: ', qwiz_matches[0]);
                   }
 
                   // Loop over qwiz-tag pairs.
-                  for (i_qwiz=0; i_qwiz<n_qwizzes; i_qwiz++) {
-                     var new_qwiz_html = process_qwiz_pair (qwiz_matches[i_qwiz]);
-                     new_htm = new_htm.replace (/(<[^\/][^>]*?>\s*)*?\[qwiz[\s\S]*?\[\/qwiz\]/m, new_qwiz_html);
+                  for (ii_qwiz=0; ii_qwiz<local_n_qwizzes; ii_qwiz++) {
+                     var new_qwiz_html = process_qwiz_pair (qwiz_matches[ii_qwiz], i_qwiz);
+
+                     // Let's take out <p...> and <h...> from before [qwiz].
+                     new_htm = new_htm.replace (/(<[ph][^>]*>\s*)*?\[qwiz[\s\S]*?\[\/qwiz\]/m, new_qwiz_html);
+                     i_qwiz++;
+                  }
+                  if (debug[3]) {
+                     console.log ('process_html] new_htm:', new_htm);
                   }
                }
             }
@@ -259,20 +360,68 @@ function process_html () {
             // If any labeled diagrams in this content div, do prep: targets
             // no longer draggable, targets, size image wrappers.
             if (qwizzled_b) {
-               init_qwizzled ($ (this));
+               init_qwizzled ($ (this), local_n_qwizzes);
             }
          }
+
+         // If wrapper divs, unwrap.
+         if (qwiz_divs_obj.length) {
+            $ (this).contents ().unwrap ();
+         }
       }
+      n_qwizzes = i_qwiz;
    });
+
+   // If any quizzes subject to recording, set user menus -- if this comes after
+   // check_session_id () callback, it will properly set the menus (while the
+   // callback may not have worked if the html hadn't been set at that time).
+   if (qrecord_b) {
+      q.set_user_menus_and_icons ();
+   }
+
+   // If any [textentry] free-form input, set up autocomplete.
+   if (textentry_b) {
+
+      // If this is stand-alone version, and qcard_ present, wait until it's
+      // done (since re-writes body html).
+      if (content == 'body' && typeof (qcard_) != 'undefined') {
+         var n_tries = 0;
+         var run_init_textentry_autocomplete = function () {
+            var ok_b = false;
+            console.log ('[run_init_textentry_autocomplete]', n_tries);
+            if (qcard_.processing_complete_b || n_tries > 30) {
+               console.log ('[run_init_textentry_autocomplete] OK');
+               init_textentry_autocomplete ();
+               ok_b = true;
+            }
+
+            // Do every 10th of a second until success.
+            if (! ok_b) {
+               setTimeout (run_init_textentry_autocomplete, 100);
+               n_tries++;
+            }
+         }
+         run_init_textentry_autocomplete ();
+      } else {
+         init_textentry_autocomplete ();
+      }
+
+   }
+
+   // Set flag to display page (qwizscripts.js).
+   q.processing_complete_b = true;
 }
 
 
 // -----------------------------------------------------------------------------
-function init_qwizzled (content_obj) {
+function init_qwizzled (content_obj, local_n_qwizzes) {
 
    // Targets no longer draggable (from qwizzled create/edit step).
    // Also reset borders.
-   content_obj.find ('td.qwizzled_canvas .qwizzled_target').removeClass ('ui-draggable ui-draggable-handle ui-resizable').css ({'border-style': 'dotted', 'border-color': 'gray'});
+   content_obj.find ('td.qwizzled_canvas .qwizzled_target').removeClass ('ui-draggable ui-draggable-handle').css ({'border-style': 'dotted', 'border-color': 'gray'});
+
+   // Remove resizing handle divs.
+   content_obj.find ('td.qwizzled_canvas .qwizzled_target div.ui-resizable-handle').remove ();
 
    // Image-linked targets need border-width.
    content_obj.find ('div.qwizzled_image div.qwizzled_target').css ('border-width', '2px');
@@ -292,16 +441,26 @@ function init_qwizzled (content_obj) {
       if (debug[0]) {
          console.log ('[init_qwizzled] img_width_px:', img_width_px);
       }
+      if (! img_width_px) {
+
+         // width="235" not present.  Try to get from src, which sometimes
+         // looks like: .../diagram.png?resize=455%2C336   ("%2C" is ",")
+         var src = $ (this).attr ('src');
+         var m = src.match (/resize=([0-9]+)(%2C|,)/);
+         if (m) {
+            img_width_px = m[1];
+         }
+      }
       if (img_width_px) {
          $ (this).parent ().css ('width', img_width_px + 'px');
       } else {
-         console.log ('[init_qwizzled] Did not find image width');
+         console.log ('[init_qwizzled] Did not find image width - $ (this).attr (\'src\')', $ (this).attr ('src'));
       }
    });
 
    // Save deep copy of each qwizzled question -- in case restart quiz.
    // Set up object.
-   for (var i_qwiz=0; i_qwiz<n_qwizzes; i_qwiz++) {
+   for (var i_qwiz=n_qwizzes; i_qwiz<n_qwizzes+local_n_qwizzes; i_qwiz++) {
       if (qwizdata[i_qwiz].qwizzled_b) {
          qwizdata[i_qwiz].qwizzled = {};
 
@@ -332,6 +491,22 @@ function init_qwizzled (content_obj) {
       qwizdata[i_qwiz].qwizzled[id] = $ (this).clone (true);
    });
 }
+
+
+// -----------------------------------------------------------------------------
+function init_textentry_autocomplete () {
+
+   $ ('input.qwiz_textentry').autocomplete ({
+      minLength:     3,
+      source:        find_matching_terms,
+      close:         menu_closed,
+      open:          menu_shown,
+      select:        item_selected
+   });
+
+   $ ('.qwiz_textentry').keyup (menu_closed);
+}
+
 
 
 // -----------------------------------------------------------------------------
@@ -414,42 +589,88 @@ this.label_dropped = function (target_obj, label_obj) {
          console.log ('[label_dropped] feedback_selector:', feedback_selector + 'c');
       }
 
-      // Yes.  Show positive feedback for this label.  Disable label drag, and
-      // remove class to signal no re-enable.  Also remove cursor css.
+      // Yes.  Show positive feedback for this label.
       $ (feedback_selector + 'c').show ();
-      label_obj.draggable ('disable').removeClass ('qwizzled_label_unplaced'); 
-      label_obj.find ('.qwizzled_highlight_label').css ('cursor', 'default');
+
+      // See if multiple targets for this label.
+      var multiple_targets_b = false;
+      m = classes.match (/qwizzled_n_targets([0-9]*)/);
+      if (m) {
+         multiple_targets_b = true;
+
+         // Either decrement targets remaining, or, if only one left, remove
+         // class.
+         var current_n_targets = m[0];
+         var n_targets = parseInt (m[1]);
+         var current_n_targets = m[0];
+         if (n_targets == 2) {
+
+            // Will be only one left.  Can treat as "normal".  Remove class.
+            label_obj.removeClass (current_n_targets);
+         } else {
+
+            // Decrement.  Set flag, remove existing class, add decremented
+            // class.
+            var new_class = 'qwizzled_n_targets' + (--n_targets);
+            label_obj.removeClass (current_n_targets).addClass (new_class);
+         }
+      }
 
       // Do-it-myself snap to target.  Make copy of label into child of the
-      // target.  Gray-out original label (apply to children, too, in case need 
-      // to overcome default), move to original position.
-      var label_copy_obj = label_obj.clone (true);
-      label_obj.css ({color: 'lightgray', left: '0px', top: '0px'});
-      label_obj.find ('*').css ({color: 'lightgray'});
+      // target.  Clone false arg says do not copy events (namely, dragging
+      // effect).
+      var label_copy_obj = label_obj.clone (false);
       label_copy_obj.appendTo (target_obj);
-      label_copy_obj.css ({position: 'absolute', left: '4px', top: '50%', transform: 'translateY(-50%)'});
+      label_copy_obj.css ({position: 'absolute', left: '4px', top: '50%', height: 'auto', width: '100%', transform: 'translateY(-50%)'});
+      label_copy_obj.removeClass ('qwizzled_label_unplaced'); 
+      label_copy_obj.find ('.qwizzled_highlight_label').css ('cursor', 'default');
 
-      // Target no longer droppable.  Use class with id so catch all siblings
-      // (multiple spans of text-target).
-      $ ('div#qwiz' + i_qwiz + '-q' + i_question + ' .qwizzled_target-' + assoc_id).droppable ('option', 'disabled', true);
-      //target_obj.droppable ('option', 'disabled', true);
+      // Move original label back to original position.
+      label_obj.css ({left: '0px', top: '0px'});
+
+      // If not multiple targets, disable drag of original label, and remove 
+      // class to signal no re-enable.  Also remove cursor css.
+      // Gray-out (apply to children, too, in case need to overcome default),
+      // move to original position.
+      if (! multiple_targets_b) {
+         label_obj.draggable ('disable').removeClass ('qwizzled_label_unplaced'); 
+         label_obj.css ({color: 'lightgray', left: '0px', top: '0px'});
+         label_obj.find ('*').css ({color: 'lightgray'});
+         label_obj.find ('.qwizzled_highlight_label').css ('cursor', 'default');
+      }
+
+      // This target no longer droppable.  If div, just this.  If span (text
+      // target, possibly with multiple spans) find relevant siblings.
+      if (target_obj[0].tagName.toLowerCase () == 'div') {
+         target_obj.droppable ('option', 'disabled', true);
+      } else {
+         var classes = target_obj.attr ('class');
+         var m = classes.match (/qtarget_sib-[0-9]*/);
+         if (m) {
+            $ ('span.' + m[0]).droppable ('option', 'disabled', true);
+         } else {
+
+            // Backwards compatibility -- assume they're in a wrapper span.
+            target_obj.siblings ('span').andSelf ().droppable ('option', 'disabled', true);
+         }
+      }
        
       // Increment number of labels correctly placed.  See if done with
       // diagram.
       qwizdata[i_qwiz].n_labels_correct++;
       var qwizq_id = '#qwiz' + i_qwiz + '-q' + i_question;
-      if (qwizdata[i_qwiz].n_labels_correct == qwizdata[i_qwiz].n_labels) {
+      if (qwizdata[i_qwiz].n_labels_correct == qwizdata[i_qwiz].n_label_targets) {
 
-         // Done with labeled diagram.  Show summary, final feedback DKTMP.
+         // Done with labeled diagram.  Show summary.
          var n_tries = qwizdata[i_qwiz].n_label_attempts;
-         var n_labels = qwizdata[i_qwiz].n_labels;
-         var correct_b = n_tries == n_labels;
+         var n_label_targets = qwizdata[i_qwiz].n_label_targets;
+         var correct_b = n_tries == n_label_targets;
          var qwizzled_summary;
          if (correct_b) {
             qwizzled_summary = 'You placed all of the items correctly on the first try!';
          } else {
-            qwizzled_summary = plural ('It took you one try', 'It took you %s tries', n_tries) + ' ' + plural ('to place this label correctly', 'to place these labels correctly', n_labels) + '.';
-            qwizzled_summary = qwizzled_summary.replace ('%s', number_to_word (n_tries));
+            qwizzled_summary = Tplural ('It took you one try', 'It took you %s tries', n_tries) + ' ' + Tplural ('to place this label correctly', 'to place these labels correctly', n_label_targets) + '.';
+            qwizzled_summary = qwizzled_summary.replace ('%s', qqc.number_to_word (n_tries));
          }
          $ (qwizq_id + '-ff').html (qwizzled_summary).show ();
 
@@ -550,311 +771,7 @@ this.try_again = function (i_qwiz, i_question, i_label) {
 
 
 // -----------------------------------------------------------------------------
-function add_style () {
-
-   var s = [];
-
-   s.push ('<style type="text/css">\n');
-
-   s.push ('.qwiz {');
-   s.push ('   position:        relative;');
-   s.push ('   border:          2px solid black;');
-   s.push ('   width:           500px;');
-   s.push ('   min-height:      300px;');
-   s.push ('   padding:         5px;');
-   s.push ('   box-sizing:      content-box;');
-   s.push ('   -moz-box-sizing: content-box;');
-   s.push ('}');
-
-   s.push ('.xqwiz {');
-   s.push ('   visibility:      hidden;');
-   s.push ('   height:          0px;');
-   s.push ('   box-sizing:      content-box;');
-   s.push ('   -moz-box-sizing: content-box;');
-   s.push ('}');
-
-   s.push ('.qwiz img {');
-   s.push ('   border:          0px;');
-   s.push ('}');
-
-   s.push ('div.qwiz-header {');
-   s.push ('   color:           white;');
-   s.push ('   background:      black;');
-   s.push ('   padding:         0px;');
-                             /* top right bot left */
-   s.push ('   margin:          -5px -5px 0px -5px;');
-   s.push ('}');
-
-   /* All sub-elements of header have zero margin. */
-   s.push ('div.qwiz-header * {');
-   s.push ('   margin:          0px;');
-   //s.push ('   padding:         5px;');
-   s.push ('   padding:         0px 5px 0px 5px;');
-   s.push ('}');
-
-   s.push ('.qwiz-mode {');
-   s.push ('   font-size:       90%;');
-   s.push ('   display:         inline-block;');
-   s.push ('   margin:          0px;');
-   s.push ('   padding-left:    3px;');
-   s.push ('   padding-right:   3px;');
-   s.push ('   color:           gray;');
-   s.push ('   cursor:          help;');
-   //s.push ('   background:      #CCCCCC;');
-   //s.push ('   border:          1px solid gray;');
-   //s.push ('   border-radius:   4px;');
-   s.push ('}');
-
-   s.push ('.qwiz-progress {');
-   s.push ('   font-size:       90%;');
-   s.push ('   display:         inline-block;');
-   s.push ('   float:           right;');
-   s.push ('   margin:          0px;');
-   s.push ('   color:           gray;');
-   s.push ('}');
-
-   // Questions start out hidden.
-   s.push ('.qwizq {');
-   s.push ('   display:         none;');
-   s.push ('   position:        relative;');
-   s.push ('}');
-
-   s.push ('.qwiz-choice:hover {');
-   s.push ('   cursor:          pointer;');
-   s.push ('   color:           #045FB4;');
-   s.push ('}');
-
-   s.push ('.qwiz-choices p {');
-   s.push ('   padding-left:    1.6em;');
-   s.push ('   text-indent:     -1.6em;');
-   s.push ('   margin-top:      0px;');
-   s.push ('   margin-bottom:   0.5em;');
-   s.push ('}');
-
-   s.push ('.qwiz-feedback {');
-   s.push ('   display:         none;');
-   s.push ('}');
-
-   s.push ('.qwiz-feedback p {');
-   s.push ('   margin-bottom:   0.3em;');
-   s.push ('}');
-
-   s.push ('div.icon_qwiz {');
-   s.push ('   position:        absolute;');
-   s.push ('   left:            2px;');
-   s.push ('   bottom:          2px;');
-   s.push ('   width:           16px;');
-   s.push ('   height:          16px;');
-   s.push ('}');
-
-   s.push ('img.icon_qwiz {');
-   s.push ('   opacity:         0.4;');
-   s.push ('}');
-
-   s.push ('img.icon_qwiz:hover {');
-   s.push ('   opacity:         1.0;');
-   s.push ('}');
-
-   // Labeled-diagram layout table.
-   s.push ('table.qwizzled_table {');
-   s.push ('   width:           100%;');
-   s.push ('   border:          none;');
-   s.push ('   margin:          0px;');
-   s.push ('}');
-
-   s.push ('table.qwizzled_table p {');
-   s.push ('   margin:          0px;');
-   s.push ('}');
-
-   // Labeled-diagram "canvas" table cell.
-   s.push ('td.qwizzled_canvas {');
-   s.push ('   width:           75%;');
-   s.push ('   border:          none;');
-   s.push ('   padding:         0px;');
-   //s.push ('   border-right:    1px solid black;');
-   s.push ('}');
-
-   // Labeled-diagram labels table cell.
-   s.push ('td.qwizzled_labels {');
-   s.push ('   vertical-align:  top;');
-   s.push ('   border:          none;');
-   s.push ('   padding:         0px;');
-   s.push ('}');
-
-   s.push ('td.qwizzled_labels_left_right {');
-   s.push ('   width:           25%;');
-   s.push ('   min-width:       125px;');
-   s.push ('}');
-
-   // Box around labels.
-   s.push ('div.qwizzled_labels_border {');
-   s.push ('   border:          1px solid black;');
-   s.push ('   padding:         3px;');
-   s.push ('}');
-
-   s.push ('p.qwizzled_label_head {');
-   s.push ('   font-size:       85%;');
-   s.push ('   font-style:      italic;');
-   s.push ('   font-weight:     bold;');
-   s.push ('   line-height:     135%;');
-   s.push ('   margin-bottom:   0.5rem;');
-   s.push ('}');
-
-   s.push ('ul.qwizzled_labels {');
-   s.push ('   margin:          0px;');
-   s.push ('   padding:         0px;');
-   s.push ('}');
-
-   // Bulleted labels indent (= padding).
-   s.push ('ul.qwizzled_labels_std li {');
-   s.push ('   padding:         0px;');
-   s.push ('   margin:          0 0 0 1rem;');
-   s.push ('   margin-left:     1rem;');
-   s.push ('}');
-
-   s.push ('ul.qwizzled_labels_inline li {');
-   s.push ('   float:           left;');
-   s.push ('   padding:         0px;');
-   s.push ('   margin:          0 0 0 2rem;');
-   s.push ('   margin-left:     2rem;');
-   s.push ('}');
-
-   // Labeled-diagram labels feedback cell.
-   s.push ('td.qwizzled_feedback {');
-   s.push ('   border:          none;');
-   //s.push ('   border-top:      1px solid black;');
-   s.push ('}');
-
-   s.push ('button.qwizzled_try_again {');
-   s.push ('   width:           6em;');
-   s.push ('   height:          1.7em;');
-   s.push ('   padding:         2px;');
-   s.push ('   margin-bottom:   -3px;');
-   s.push ('   border:          1px solid black;');
-   s.push ('   border-radius:   5px;');
-   s.push ('   font-size:       9pt;');
-   s.push ('   font-weight:     normal;');
-   s.push ('   text-transform:  none;');
-   s.push ('   color:           black;');
-   s.push ('   background:      lightgray;');
-   s.push ('}');
-
-   s.push ('button.qwizzled_try_again:hover {');
-   s.push ('   color:           gray;');
-   s.push ('   background:      white;');
-   s.push ('   border:          1px solid gray;');
-   s.push ('}');
-
-   s.push ('div.qwizzled_target {');
-   s.push ('   width:           120px;');
-   s.push ('   height:          28px;');
-   s.push ('   margin-right:     -124px;');
-   s.push ('   margin-bottom:   -32px;');
-   s.push ('   position:        absolute;');
-   s.push ('   box-sizing:      content-box;');
-   s.push ('   -moz-box-sizing: content-box;');
-   s.push ('}');
-
-   s.push ('span.qwizzled_target {');
-   s.push ('   position:        relative;');
-   s.push ('}');
-
-   s.push ('.qwizzled_target_border {');
-   s.push ('   border:          2px dotted gray;');
-   s.push ('   padding-left:    2px;');
-   s.push ('   padding-right:   2px;');
-   s.push ('}');
-
-   s.push ('.qwizzled_border_all {');
-   s.push ('   border-width:    2px;');
-   s.push ('}');
-
-   s.push ('.qwizzled_border_left {');
-   s.push ('   border-width:    2px 0px 2px 2px;');
-   s.push ('}');
-
-   s.push ('.qwizzled_border_right {');
-   s.push ('   border-width:    2px 2px 2px 0px;');
-   s.push ('}');
-
-   s.push ('.qwizzled_border_center {');
-   s.push ('   border-width:    2px 0px 2px 0px;');
-   s.push ('}');
-
-   s.push ('.qwizzled_target_hover {');
-   s.push ('   outline:         3px solid lightgray;');
-   s.push ('}');
-
-   s.push ('.qwizzled_label {');
-   s.push ('   z-index:         2;');
-   s.push ('   -webkit-user-select: none;');
-   s.push ('}');
-
-   s.push ('.qwizzled_highlight_label {');
-   s.push ('   cursor:          move;');
-   s.push ('   -webkit-user-select: none;');
-   s.push ('}');
-
-   s.push ('.qwizzled_label a {');
-   s.push ('   cursor:          move;');
-   s.push ('}');
-
-   s.push ('div.qwizzled_question_bottom_border_title {');
-   s.push ('   display:         none;');
-   s.push ('}');
-
-   // Summary also hidden.
-   s.push ('.summary {');
-   s.push ('   display:         none;');
-   s.push ('}');
-
-   // Starts out centered.
-   s.push ('.next_button {');
-   s.push ('   text-align:      center;');
-   s.push ('}');
-
-   s.push ('.qbutton {');
-   s.push ('   margin-bottom: 10px;');
-   s.push ('   border-top: 1px solid #96d1f8;');
-   s.push ('   background: #65a9d7;');
-   s.push ('   background: -webkit-gradient(linear, left top, left bottom, from(#3e779d), to(#65a9d7));');
-   s.push ('   background: -webkit-linear-gradient(top, #3e779d, #65a9d7);');
-   s.push ('   background: -moz-linear-gradient(top, #3e779d, #65a9d7);');
-   s.push ('   background: -ms-linear-gradient(top, #3e779d, #65a9d7);');
-   s.push ('   background: -o-linear-gradient(top, #3e779d, #65a9d7);');
-   s.push ('   padding: 5px 10px;');
-   s.push ('   -webkit-border-radius: 8px;');
-   s.push ('   -moz-border-radius: 8px;');
-   s.push ('   border-radius: 8px;');
-   s.push ('   -webkit-box-shadow: rgba(0,0,0,1) 0 1px 0;');
-   s.push ('   -moz-box-shadow: rgba(0,0,0,1) 0 1px 0;');
-   s.push ('   box-shadow: rgba(0,0,0,1) 0 1px 0;');
-   s.push ('   text-shadow: rgba(0,0,0,.4) 0 1px 0;');
-   s.push ('   color: white;');
-   s.push ('   font-size: 14px;');
-   s.push ('   font-weight: bold;');
-   s.push ('   font-family: arial, verdana, sans-serif;');
-   s.push ('   text-decoration: none;');
-   s.push ('   vertical-align: middle;');
-   s.push ('}');
-   s.push ('.qbutton:hover {');
-   s.push ('   border-top-color: #28597a;');
-   s.push ('   background: #28597a;');
-   s.push ('   color: #ccc;');
-   s.push ('}');
-   s.push ('.qbutton:active {');
-   s.push ('   border-top-color: #1b435e;');
-   s.push ('   background: #1b435e;');
-   s.push ('}');
-
-   s.push ('</style>');;
-
-   $ (s.join ('\n')).appendTo ('head');
-}
-
-
-// -----------------------------------------------------------------------------
-function process_qwiz_pair (htm) {
+function process_qwiz_pair (htm, i_qwiz) {
 
    // Data object for this qwiz.
    qwizdata.push ({});
@@ -862,6 +779,7 @@ function process_qwiz_pair (htm) {
    qwizdata[i_qwiz].n_incorrect = 0;
    qwizdata[i_qwiz].i_question  = -1;
    qwizdata[i_qwiz].initial_width = 500;
+   qwizdata[i_qwiz].qrecord_id = false;
 
    var qwiz_tag = htm.match (/\[qwiz[^\]]*\]/m)[0];
    if (debug[0]) {
@@ -873,11 +791,11 @@ function process_qwiz_pair (htm) {
    var no_intro_i_b = false;
 
    // Is qwiz encoded?  Decode if necessary.  Turns tag into plain '[qwiz]'.
-   htm = decode_qwiz (htm, qwiz_tag);
+   //htm = decode_qwiz (htm, qwiz_tag);
 
    // Capture any initial closing tags after [qwiz ...] -- will put them in
    // front of <div> that replaces [qwiz ...].
-   var m = htm.match (/\[qwiz[^\]]*\]((<\/[^>]*?>\s*)*)/m, '');
+   var m = htm.match (/\[qwiz[^\]]*\]((<\/[^>]+>\s*)*)/m, '');
    if (m) {
       var initial_closing_tags = m[1];
       new_htm += initial_closing_tags;
@@ -887,28 +805,45 @@ function process_qwiz_pair (htm) {
    }
 
    // Delete [qwiz], any initial closing tags.
-   htm = htm.replace (/\[qwiz[^\]]*\]((<\/[^>]*?>\s*)*)/m, '');
+   htm = htm.replace (/\[qwiz[^\]]*\]((<\/[^>]+>\s*)*)/m, '');
 
    // Delete any initial whitespace.
-   htm = trim (htm);
+   htm = qqc.trim (htm);
 
    // Make sure there's at least one question.
    if (htm.search (/\[(q|<code><\/code>q)([^\]]*)\]/m) == -1) {
       errmsgs.push (T ('Did not find question tags ("[q]") for') + ' qwiz ' + (i_qwiz + 1));
    } else {
 
+      // Look for [terms]...[/terms] and/or [add_terms]...[/add_terms] pairs.
+      // Parse, and delete.  Include opening tags in front and closing tags
+      // after.
+      htm = qqc.process_inline_textentry_terms (htm, 'terms', qwizdata, i_qwiz);
+      errmsgs = errmsgs.concat (qwizdata.additional_errmsgs);
+      htm = qqc.process_inline_textentry_terms (htm, 'add_terms', qwizdata, i_qwiz);
+      errmsgs = errmsgs.concat (qwizdata.additional_errmsgs);
+
+      // See if html up to first shortcode is just whitespace, including empty
+      // paragraphs.  Limit to first 2000 characters.
+      var whitespace = parse_html_block (htm.substr (0, 2000), ['^'], ['[h]', '[i]', '[q]', '[q '], 'return whitespace');
+      if (whitespace) {
+
+         // Yes, delete it.
+         htm = htm.replace (whitespace, '');
+      }
+
       // See if header.  Sets header_html global variable.
       htm = process_header (htm, i_qwiz, 0, true);
 
-      // See if intro.
-      var intro_html = parse_html_block (htm, ['[i]'], ['[q]', '[q ', '<div class="qwizzled_question">']);
+      // See if intro.  Limit to first 2000 characters.
+      var intro_html = parse_html_block (htm.substr (0, 2000), ['[i]'], ['[q]', '[q ', '<div class="qwizzled_question">']);
 
       // See if no [i].
       if (intro_html == 'NA') {
          
          // No [i] -- intro may be text before [q].  See if there is.  Add flag
          // to ignore &nbsp; (empty paragraph).
-         intro_html = parse_html_block (htm, ['^'], ['[q]', '[q ', '<div class="qwizzled_question">'], true);
+         intro_html = parse_html_block (htm.substr (0, 2000), ['^'], ['[q]', '[q ', '<div class="qwizzled_question">'], true);
       }
 
       // See if intro was just tags and whitespace.
@@ -933,19 +868,14 @@ function process_qwiz_pair (htm) {
 
       // Find topic attributes, if any, for each question.  First get array of
       // tags.
-      var question_tags = question_html.match (/\[(<code><\/code>)*?q([^\]]*)\]/gm);
+      var question_tags = question_html.match (/\[(<code><\/code>)*q([^\]]*)\]/gm);
       if (debug[4]) {
          console.log ('[process_qwiz_pair] question_tags: ', question_tags);
       }
-      n_questions = question_tags.length;
-      if (debug[0]) {
-         console.log ('[process_qwiz_pair] n_questions: ', n_questions);
-      }
-
       process_topics (i_qwiz, question_tags);
 
       // Capture any opening tags before each "[q...] tag.
-      var matches = htm.match (/(<[^\/][^>]*?>\s*)*?(\[q[ \]]|<div class="qwizzled_question">)/gm);
+      var matches = htm.match (/(<[^\/][^>]*>\s*)*?(\[q[ \]]|<div class="qwizzled_question">)/gm);
       var q_opening_tags = [];
       var n_q_opening_tags = matches.length;
       for (var i_tag=0; i_tag<n_q_opening_tags; i_tag++) {
@@ -960,11 +890,13 @@ function process_qwiz_pair (htm) {
 
       // Take off initial [q] or [q topic=...] or <div class="qwizzled_question">
       //                                          ----+----1----+----2----+----3-
-      if (question_html.substr (0, 2) == '[q') {
+      // Save flag for which.
+      var first_q_qwizzled_b = question_html.substr (0, 2) != '[q';
+      if (first_q_qwizzled_b) {
+         question_html = question_html.substr (31);
+      } else {
          var start = question_html.search (/\]/) + 1;
          question_html = question_html.substr (start);
-      } else {
-         question_html = question_html.substr (31);
       }
 
       // Take off closing "[/qwiz]".
@@ -986,26 +918,99 @@ function process_qwiz_pair (htm) {
          exit_html = '';
       }
 
-      // Split into individual items.  Include search for qwizzled_question
-      // divs.
-      var questions_html = question_html.split (/\[q [^\]]*\]|\[q\]|<div class="qwizzled_question">/);
+      // Split into individual items.  First split on qwizzled_question divs.
+      var qwizzled_pieces = question_html.split ('<div class="qwizzled_question">');
       if (debug[0]) {
-         console.log ('[process_qwiz_pair] questions_html:', questions_html.join ('//\n\n'));
+         console.log ('[process_qwiz_pair] qwizzled_pieces.length:', qwizzled_pieces.length);
+      }
+      questions_html = [];
+      if (qwizzled_pieces.length == 1) {
+
+         // No splits.  Split on [q].
+         var q_split = question_html.split (/\[q [^\]]*\]|\[<code><\/code>q [^\]]*\]|\[q\]|\[<code><\/code>q\]/);
+         var i_qbeg = 0;
+         if (first_q_qwizzled_b) {
+
+            // Put first and second qsplit pieces back together (with the q).
+            questions_html.push (q_split[0] + '[q]' + q_split[1]);
+            i_qbeg = 2;
+         }
+
+         // Regular questions, if any.
+         for (var i_q=i_qbeg; i_q<q_split.length; i_q++) {
+            questions_html.push (q_split[i_q]);
+         }
+      } else if (qwizzled_pieces.length > 1) {
+         if (first_q_qwizzled_b) {
+
+            // Split each piece on regular [q]s, including old-style (with
+            // <code></code>).  Put first and second pieces back together in
+            // each case.
+            for (var i_qwizzled=0; i_qwizzled<qwizzled_pieces.length; i_qwizzled++) {
+
+               // Note: regular expression /\[(<code><\/code)*q... didn't work --
+               // caused extra splits.
+               var q_split = qwizzled_pieces[i_qwizzled].split (/\[q [^\]]*\]|\[<code><\/code>q [^\]]*\]|\[q\]|\[<code><\/code>q\]/);
+               questions_html.push (q_split[0] + '[q]' + q_split[1]);
+
+               // Additional, if any.
+               for (var i_q=2; i_q<q_split.length; i_q++) {
+                  questions_html.push (q_split[i_q]);
+               }
+            }
+         } else {
+
+            // First piece before a qwizzled question is all regular questions.
+            var q_split =  qwizzled_pieces[0].split (/\[q [^\]]*\]|\[q\]/);
+            for (var i_q=0; i_q<q_split.length; i_q++) {
+               questions_html.push (q_split[i_q]);
+            }
+
+            // Split remaining pieces on regular [q]s.  Put first and second
+            // pieces back together in each case.
+            for (var i_qwizzled=1; i_qwizzled<qwizzled_pieces.length; i_qwizzled++) {
+               var q_split = qwizzled_pieces[i_qwizzled].split (/\[q [^\]]*\]|\[<code><\/code>q [^\]]*\]|\[q\]|\[<code><\/code>q\]/);
+               questions_html.push (q_split[0] + '[q]' + q_split[1]);
+
+               // Additional, if any.
+               for (var i_q=2; i_q<q_split.length; i_q++) {
+                  questions_html.push (q_split[i_q]);
+               }
+            }
+         }
+      }
+
+      //var questions_html = question_html.split (/\[q [^\]]*\]|\[q\]|<div class="qwizzled_question">/);
+      n_questions = questions_html.length;
+      if (debug[0]) {
+         console.log ('[process_qwiz_pair] n_questions:', n_questions);
+         console.log ('[process_qwiz_pair] questions_html:', questions_html.join ('\n================================================\n'));
       }
 
       // Create a div for each.
       var question_divs = [];
       for (var i_question=0; i_question<n_questions; i_question++) {
 
-         // See if multiple-choice question.
+         // See if multiple-choice question or free-form entry.
          var question_div;
          if (questions_html[i_question].search (/\[c\]|\[c\*\]/m) != -1) {
 
-            question_div = process_question (i_qwiz, i_question,
-                                             questions_html[i_question],
-                                             q_opening_tags[i_question]);
-         // See if labels.
+            // See if free-form entry.
+            if (questions_html[i_question].search (/\[textentry/m) != -1) {
+
+               question_div = process_textentry (i_qwiz, i_question,
+                                                questions_html[i_question],
+                                                q_opening_tags[i_question]);
+            } else {
+
+               // Regular multiple-choice question.
+               question_div = process_question (i_qwiz, i_question,
+                                                questions_html[i_question],
+                                                q_opening_tags[i_question]);
+            }
          } else if (questions_html[i_question].search (/\[l\]|<div class="qwizzled_label/m) != -1) {
+
+            // Labels.
             qwizzled_b = true;
             qwizdata[i_qwiz].qwizzled_b = true;
             question_div = process_qwizzled (i_qwiz, i_question,
@@ -1015,32 +1020,33 @@ function process_qwiz_pair (htm) {
          } else {
 
             // Error: didn't find choices or labels.
-            errmsgs.push (T ('Did not find choices ("[c]") or labels ("[l]") for') + ' qwiz ' + (i_qwiz + 1) + ', question ' + (i_question + 1));
+            errmsgs.push (T ('Did not find choices ("[c]") or labels ("[l]") for') + ' qwiz ' + (i_qwiz + 1) + ', ' + T ('question') + ' ' + (i_question + 1));
          }
          question_divs.push (question_div);
       }
       new_htm += question_divs.join ('\n');
 
-      if (debug[3]) {
-         console.log ('[process_qwiz_pair] new_htm: ', new_htm);
-      }
+      //if (debug[3]) {
+      //   console.log ('[process_qwiz_pair] new_htm: ', new_htm);
+      //}
    }
    no_intro_b.push (no_intro_i_b);
    qwizdata[i_qwiz].n_questions = n_questions;
 
    // First qwiz tag becomes opening div for box around qwiz.  Add additional
-   // div elements (progress, summary div, "next" button).
+   // div elements (progress, login div, summary div, "next" button).
    new_htm = create_qwiz_divs (i_qwiz, qwiz_tag, new_htm, exit_html);
 
-   if (debug[3]) {
-      console.log ('[process_qwiz_pair] new_htm: ', new_htm);
-   }
+   //if (debug[3]) {
+   //   console.log ('[process_qwiz_pair] new_htm: ', new_htm);
+   //}
 
    return new_htm;
 }
 
 
 // -----------------------------------------------------------------------------
+/*
 function decode_qwiz (htm, qwiz_tag) {
 
    // Get html after [qwiz] tag and before [/qwiz] tag.
@@ -1061,6 +1067,7 @@ function decode_qwiz (htm, qwiz_tag) {
 
    return htm;
 }
+*/
 
 
 // -----------------------------------------------------------------------------
@@ -1075,33 +1082,66 @@ function create_qwiz_divs (i_qwiz, qwiz_tag, htm, exit_html) {
    }
    
    // If non-default width set, set flag.
-   var non_default_width_b = attributes.search (/[\s;"\u201C\u201D]width/m) != -1;
+   attributes = qqc.replace_smart_quotes (attributes);
+   var non_default_width_b = attributes.search (/[\s;"]width/m) != -1;
+
+   // If "qrecord_id=..." present, parse out database ID.  Set flag indicating
+   // one or more quizzes subject to recording.
+   var qrecord_id = qqc.get_attr (attributes, 'qrecord_id');
+   if (qrecord_id) {
+      qrecord_b = true;
+   }
+
+   // If qrecord_id present -- quiz can be taken for credit, etc. -- and haven't
+   // checked already, see if user already logged in (get session id in cookie,
+   // see if still valid).
+   if (qrecord_id) {
+      qwizdata[i_qwiz].qrecord_id = qrecord_id;
+      if (typeof (document_qwiz_user_logged_in_b) == 'undefined'
+                                          || ! document_qwiz_user_logged_in_b) {
+         check_session_id (i_qwiz, qrecord_id);
+      }
+   }
+
 
    // If "repeat_incorrect=..." present, parse out true/false.
-   var repeat_incorrect_value = get_attr (attributes, 'repeat_incorrect');
+   var repeat_incorrect_value = qqc.get_attr (attributes, 'repeat_incorrect');
    qwizdata[i_qwiz].repeat_incorrect_b = repeat_incorrect_value != 'false';
    if (debug[0]) {
-      console.log ('[create_qwiz_divs] repeat_incorrect:', repeat_incorrect, ', repeat_incorrect_b:', qwizdata[i_qwiz].repeat_incorrect_b);
+      console.log ('[create_qwiz_divs] repeat_incorrect_value:', repeat_incorrect_value, ', repeat_incorrect_b:', qwizdata[i_qwiz].repeat_incorrect_b);
+   }
+
+
+   // If "random=..." present, parse out true/false.
+   var random = qqc.get_attr (attributes, 'random');
+   qwizdata[i_qwiz].random_b = random == 'true';
+   if (debug[0]) {
+      console.log ('[create_qwiz_divs] random:', random, ', random_b:', qwizdata[i_qwiz].random_b);
    }
 
    // Undisplayed version of qwiz div, so can measure default width if need to.
+   // Keep out of flow.  (Don't let margins, padding take up room.)
    var top_html = '';
    if (non_default_width_b) {
-      top_html = '<div id="xqwiz' + i_qwiz + '" class="xqwiz" ' + attributes + '></div>\n';
+      var xattributes = attributes.replace (/(style\s*=\s*"[^"]*)/, '$1; position: absolute;');
+
+      // Correct double ";;" if we've done that.
+      xattributes = xattributes.replace (/;\s*;/g, ';');
+      top_html = '<div id="xqwiz' + i_qwiz + '" class="xqwiz" ' + xattributes + '></div>\n';
    }
 
    // This qwiz opening div.
    top_html += '<div id="qwiz' + i_qwiz + '" class="qwiz" ' + attributes + '>\n';
 
    // Header div.  If no initial header, hide.
-   //var style = ' style="margin: 0px; padding: 5px;"';
-   style = '';
+   var style = '';
    if (header_html == '' || header_html == 'NA') {
       style = ' style="display: none;"';
    }
    top_html += '<div id="header-qwiz' + i_qwiz + '" class="qwiz-header"'
                + style + '>' + header_html + '</div>\n';
 
+   // ..........................................................................
    // Mode and progress divs.  (Set up in any case, in case single-question
    // qwiz consisting of a labeled diagram.)
    var progress_div_html = '<div>\n';
@@ -1116,13 +1156,84 @@ function create_qwiz_divs (i_qwiz, qwiz_tag, htm, exit_html) {
       mode = T ('Test');
       title = test_mode_title + ' ' + learn_mode_title;
    }
-   progress_div_html += '   <div id="mode-qwiz' + i_qwiz + '" class="qwiz-mode" title="' + title + '">\n';
-   progress_div_html += '      Mode: ' + mode + '\n';
-   progress_div_html += '   </div>\n';
-   progress_div_html += '   <div id="progress-qwiz' + i_qwiz + '" class="qwiz-progress">\n';
-   progress_div_html += '   </div>\n';
+   progress_div_html += '<div id="mode-qwiz' + i_qwiz + '" class="qwiz-mode" title="' + title + '">\n'
+                      +    'Mode: ' + mode + '\n'
+                      + '</div>\n';
+   if (qrecord_id) {
+
+      // Set up pull-down arrow for user menu login/logout, etc.  Right end of
+      // progress bar.  Add class if this quiz doesn't have an intro/start
+      // button.
+      var addclass = '';
+      if (no_intro_b[i_qwiz]) {
+         addclass = ' qwiz-usermenu_icon_no_intro';
+      }
+      progress_div_html +=   '<div id="usermenu_icon-qwiz' + i_qwiz + '" class="qwiz-usermenu_icon' + addclass + '" onmouseover="' + qname + '.show_usermenu (' + i_qwiz + ')">\n'
+                           +    '&#x25bc;'
+                           + '</div>\n';
+   }
+   progress_div_html +=    '<div id="progress-qwiz' + i_qwiz + '" class="qwiz-progress">\n'
+                      +    '</div>\n';
+   if (qrecord_id) {
+
+      // Add user menu div.  Don't populate until after start/login.
+      progress_div_html += '<div id="usermenu-qwiz' + i_qwiz + '" class="qwiz-usermenu">'
+                         + '</div>';
+   }
    progress_div_html += '</div>\n';
 
+   // ..........................................................................
+   // Login div, if quiz may be recorded.
+   var login_div_html = '';
+   if (qwizdata[i_qwiz].qrecord_id) {
+      var onfocus = 'onfocus="jQuery (\'#qwiz_login-qwiz' + i_qwiz + ' p.login_error\').hide ()"';
+
+      login_div_html =   '<div id="qwiz_login-qwiz' + i_qwiz + '" class="qwiz-login">\n'
+                       +    '<p>'
+                       +       '<strong>' + T ('Record score/credit?') + '</strong>'
+                       +    '</p>\n'
+                       +    '<table border="0" align="center">'
+                       +       '<tr>'
+                       +          '<td>'
+                       +             '<label>' + T ('User name')
+                       +          '</td>'
+                       +          '<td>'
+                       +             '<input type="text" id="qwiz_username-qwiz' + i_qwiz + '" ' + onfocus + ' /></label>'
+                       +          '</td>'
+                       +       '</tr>'
+                       +       '<tr>'
+                       +          '<td>'
+                       +             '<label>' + T ('Password')
+                       +          '</td>'
+                       +          '<td>'
+                       +             '<input type="password" id="qwiz_password-qwiz' + i_qwiz + '" ' + onfocus + ' /></label>'
+                       +          '</td>'
+                       +       '<tr>'
+                       +    '</table>\n'
+                       +    '<table border="0" align="center">'
+                       +       '<tr>'
+                       +          '<td class="qwiz-remember">'
+                       +             '<button class="qbutton" onclick="' + qname + '.login (' + i_qwiz + ')">'
+                       +                T ('Login')
+                       +             '</button>'
+                       +          '</td>'
+                       +          '<td class="qwiz-remember">'
+                       +             '<button class="qbutton" onclick="' + qname + '.no_login (' + i_qwiz + ')">'
+                       +                T ('No thanks')
+                       +             '</button>'
+                       +             '<br />'
+                       +             '<span class="qwiz-remember" title="' + T ('Skip login in the future') + '"><span><input type="checkbox" /></span> ' + T ('Remember') + '</span>'
+                       +          '</td>'
+                       +       '<tr>'
+                       +    '</table>\n'
+                       +    '<p class="login_error">'
+                       +       'Login incorrect.&nbsp; Please try again'
+                       +    '</p>\n'
+                       + '</div>\n';
+   }
+
+
+   // ..........................................................................
    var bottom_html = '';
    if (qwizdata[i_qwiz].n_questions > 1) {
 
@@ -1149,36 +1260,56 @@ function create_qwiz_divs (i_qwiz, qwiz_tag, htm, exit_html) {
       }
    }
 
-   // "Next" button.
+   // "Next" button.  Begins as "Start quiz" button.  If quiz may be recorded,
+   // and user not logged in, go to login rather than first question (if hasn't
+   // declined).
    bottom_html +=  '<div class="next_button" id="next_button-qwiz' + i_qwiz + '">\n'
-                 + '   <button class="qbutton" onclick="' + qname + '.next_question (' + i_qwiz + ')">'
+                 + '   <button class="qbutton" onclick="' + qname + '.start_quiz (' + i_qwiz + ')">'
                  +        '<span id="next_button_text-qwiz' + i_qwiz + '">'
                  +           T ('Start quiz')
                  +        '</span>'
                  +    '</button>\n'
                  + '</div>\n';
 
-   var icon_qwiz = get_qwiz_param ('icon_qwiz');
+   // "Check answer" and "Hint" buttons for [textentry] questions.  Check
+   // answer starts out gray (but not actually disabled, so can provide alert
+   // message).  Hint starts out hidden.
+   bottom_html +=  '<div class="textentry_check_answer_div" id="textentry_check_answer_div-qwiz' + i_qwiz + '">\n'
+                 + '   <button class="qbutton_disabled textentry_check_answer" title="' + Tcheck_answer_message + '" onclick="' + qname + '.textentry_check_answer (' + i_qwiz + ')">'
+                 +        T ('Check answer')
+                 +    '</button>\n'
+                 +    '&emsp;\n'
+                 +    '<button class="qbutton qwiz_textentry_hint" style="display: none; font-size: 11px; padding: 2px 2px; border-radius: 5px;" onclick="' + qname + '.textentry_hint (' + i_qwiz + ')" disabled>'
+                 +        T ('Hint')
+                 +    '</button>\n'
+                 + '</div>\n';
+
+
+   style = '';
+   if (qqc.get_qwiz_param ('beta')) {
+      style = 'style = "background: red;"';
+   }
+   bottom_html += '<div class="icon_qwiz" id="icon_qwiz' + i_qwiz + '" ' + style + '>';
+   var icon_qwiz = qqc.get_qwiz_param ('icon_qwiz');
    if (icon_qwiz != 'Not displayed') {
       var title = 'Qwiz - online quizzes and flashcards';
-      bottom_html += '<div class="icon_qwiz" id="icon_qwiz' + i_qwiz + '">';
       if (icon_qwiz != 'Icon only') {
          bottom_html += '<a href="//dkprojects.net/qwiz">';
       } else {
          title += ' - dkprojects.net/qwiz';
       }
-      bottom_html += '<img class="icon_qwiz" src="' + get_qwiz_param ('url', './') + 'images/icon_qwiz16x16.png" style="border: none;" title="' + title + '" />'
+      bottom_html += '<img class="icon_qwiz" style="border: none;" title="' + title + '" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAUCAIAAAALACogAAAABnRSTlMA/wD/AP83WBt9AAAACXBIWXMAAA7EAAAOxAGVKw4bAAABP0lEQVR4nGP8//8/AymAiSTV5GhgwSZ4rcRrxRooW3futlBnJDlGND/cXzXVccFLVP0oepiwqtZJyH2wrenBtogQBgYGhsv9q15j9cO1qTDVW8JEGRgYGBi0PJ0YGBgYrjzCpuH+qv1rGBgYGHQLoaoZGBgYlOTEGRgYGB68uY+h4fXuQy8ZGBgYnLSRvXjv0UsGBgYGBRFFdA1Prm+6x8DAwBBio4XsyO37GBgYGHTkEHaixYO4mszrWTl1CjmH7iMcKe5nhdAAi4cnL6/A3HbrHgMDw56pJ0QYIOHr5JgmgzASZoOFdggDAwPDy03HRCEhs6YJEne6c0uQHYkUcXt76pL3oTqQQbxqVjay8Sh+cC5pmuuEpkFMWQZNBCNpwMDrWTmT2+5hCCu54EqtomkVLjqYwgoiuGzACWifgQDhK2rq5bcX2gAAAABJRU5ErkJggg==" />';
       if (icon_qwiz != 'Icon only') {
          bottom_html += '</a>';
       }
-      bottom_html += '</div>';
    }
+   bottom_html += '</div>';
 
    // This qwiz closing div.
    bottom_html += '</div>\n';
 
    // Add opening and closing html.
-   htm = top_html + progress_div_html + htm + bottom_html;
+   htm = top_html + progress_div_html + login_div_html + htm + bottom_html;
 
    return htm;
 }
@@ -1214,12 +1345,13 @@ function process_topics (i_qwiz, question_tags) {
       var question_tag = question_tags[i_question];
 
       // Find attributes, if any.
-      var m = question_tag.match (/\[(<code><\/code>)*?q([^\]]*)\]/m);
+      var m = question_tag.match (/\[(<code><\/code>)*q([^\]]*)\]/m);
       var attributes = m[2];
       if (attributes) {
 
          // Look for "topic=" attribute.
-         var question_topics = get_attr (attributes, 'topic');
+         attributes = qqc.replace_smart_quotes (attributes);
+         var question_topics = qqc.get_attr (attributes, 'topic');
          if (question_topics) {
             if (debug[4]) {
                console.log ('[process_topics] question_topics: ', question_topics);
@@ -1301,6 +1433,26 @@ this.restart_quiz = function (i_qwiz) {
 
 
 // -----------------------------------------------------------------------------
+// "Start quiz" clicked.  If quiz may be recorded, and user not logged in, go
+// to login rather than first question (if hasn't declined).
+this.start_quiz = function (i_qwiz) {
+   if (qwizdata[i_qwiz].qrecord_id) {
+      var user_logged_in_b 
+         = typeof (document_qwiz_user_logged_in_b) != 'undefined'
+                                              && document_qwiz_user_logged_in_b;
+      if (user_logged_in_b || declined_login_b) {
+
+         q.next_question (i_qwiz);
+      } else {
+         q.display_login (i_qwiz);
+      }
+   } else {
+      q.next_question (i_qwiz);
+   }
+}
+
+
+// -----------------------------------------------------------------------------
 this.next_question = function (i_qwiz) {
 
    var i_question = qwizdata[i_qwiz].i_question;
@@ -1318,11 +1470,19 @@ this.next_question = function (i_qwiz) {
       qwizdata[i_qwiz].width_reset = false;
    }
 
-   // If was displaying intro, hide -- but show intro (if any) with the single
-   // question of a single-question quiz.
+   // If was displaying intro and more than one question -- came from
+   // "Start quiz" button...
    if (i_question == -1) {
       if (n_questions > 1) {
+
+         // Hide intro (intro -- if any -- shows with the question of a single-
+         // question quiz).
          $ ('#intro-' + qwiz_id).hide ();
+
+         // If intro was showing, can hide qwiz icon now.
+         if (! no_intro_b[i_qwiz]) {
+            $ ('div.qwiz div#icon_qwiz' + i_qwiz).hide ();
+         }
 
          // After "Start quiz", button is left-aligned.
          $ ('#next_button-qwiz' + i_qwiz).css ('text-align', 'left');
@@ -1331,12 +1491,6 @@ this.next_question = function (i_qwiz) {
          // question in quiz.
          display_progress (i_qwiz);
          $ ('#next_button_text-' + qwiz_id).html (T ('Next question'));
-
-         // If intro was showing, can hide qwiz icon now.
-         if (! no_intro_b[i_qwiz]) {
-            $ ('div.qwiz div#icon_qwiz' + i_qwiz).hide ();
-         }
-
       } else {
 
          // Don't show mode.
@@ -1351,7 +1505,12 @@ this.next_question = function (i_qwiz) {
    }
 
    // Hide "next" button until user makes a choice.
-   $ ('#next_button-' + qwiz_id).hide ();
+   if (! next_button_active_b) {
+      $ ('#next_button-' + qwiz_id).hide ();
+
+      // Record state.
+      qwizdata[i_qwiz].next_button_show_b = false;
+   }
 
    // Next question -- if repeating incorrect, keep running through questions
    // until all answered correctly.  If done, show summary/exit text.
@@ -1359,10 +1518,15 @@ this.next_question = function (i_qwiz) {
    if (! qwizdata[i_qwiz].repeat_incorrect_b) {
       n_done += qwizdata[i_qwiz].n_incorrect;
    }
-   //if (qwizdata[i_qwiz].repeat_incorrect_b) {
    if (n_done == n_questions) {
       display_summary_and_exit (i_qwiz);
    } else {
+
+      // If random order, start at random place to look for next not-yet-
+      // answered-correctly question.
+      if (qwizdata[i_qwiz].random_b) {
+         i_question = Math.floor (Math.random () * n_questions);
+      }
       while (true) {
          i_question++;
          if (i_question >= n_questions) {
@@ -1408,7 +1572,30 @@ function display_question (i_qwiz, i_question) {
       // Also, reset progress bar.
       qwizdata[i_qwiz].n_labels_correct = 0;
       qwizdata[i_qwiz].n_label_attempts = 0;
-      qwizdata[i_qwiz].n_labels = qwizq_obj.find ('div.qwizzled_label').length;
+
+      // This collects multiple spans if they're spread across a text target.
+      // If don't have qtarget_sib... just count, but de-dup sibs.
+      var n_label_targets = 0;
+      var target_count = {};
+      qwizq_obj.find ('div.qwizzled_target, span.qwizzled_target').each (function () {
+         var classes = $ (this).attr ('class');
+         var m = classes.match (/qtarget_sib-[0-9]*/);
+         if (m) {
+            var qwizzled_target_assoc_id = m[0];
+            target_count[qwizzled_target_assoc_id] = 1;
+         } else {
+
+            // Backwards compatibility.
+            m = classes.match (/qwizzled_target-[0-9]*/);
+            if (m) {
+               var qwizzled_target_assoc_id = m[0];
+               target_count[qwizzled_target_assoc_id] = 1;
+            } else {
+               n_label_targets++;
+            }
+         }
+      });
+      qwizdata[i_qwiz].n_label_targets = n_label_targets + Object.keys (target_count).length;
       display_qwizzled_progress (i_qwiz);
    }
 
@@ -1417,8 +1604,12 @@ function display_question (i_qwiz, i_question) {
    if (qwizzled_b) {
 
       // If layout table is wider than default qwiz width (defines border),
-      // set wider for now.  Get width of table.
-      var table_width = qwizq_obj.find ('table.qwizzled_table').outerWidth ();
+      // set wider for now.  Get width of table.  Add 10px for border and 
+      // padding of qwiz div.
+      var table_width = 10 + qwizq_obj.find ('table.qwizzled_table').outerWidth ();
+      if (debug[0]) {
+         console.log ('[display_question] table_width:', table_width, ', initial_width:', qwizdata[i_qwiz].initial_width);
+      }
       if (table_width > qwizdata[i_qwiz].initial_width) {
          $ ('#qwiz' + i_qwiz).css ('width', table_width + 'px');
 
@@ -1427,16 +1618,123 @@ function display_question (i_qwiz, i_question) {
       }
    } else {
 
-      // Enable radio clicks in case previously disabled for this question.
-      // Also, show radios unclicked.
-      $ ('input[name=' + qwizq_id + ']').removeAttr ('disabled').removeAttr ('checked');
+      // See if this is a [textentry] question.
+      if (qwizdata[i_qwiz].textentry && qwizdata[i_qwiz].textentry[i_question]) {
 
-      // Re-enable highlight choices on mouseover, cursor to indicate clickable.
-      $ ('.choices-' + qwizq_id).on ('mouseover', function () {
-         $ (this).css ({'cursor': 'pointer', 'color': '#045FB4'})
-      }).on ('mouseout', function () {;
-         $ (this).css ({'cursor': 'text', 'color': 'black'})
-      });
+         // ....................................................................
+         // [textentry] question.
+         // Use terms given with [terms]...[/terms] for this quiz; otherwise
+         // load default terms if haven't done so already.
+         if (qwizdata[i_qwiz].terms) {
+
+            // Only do this once per quiz.
+            if (! qwizdata[i_qwiz].textentry_terms_metaphones) {
+               qwizdata[i_qwiz].textentry_terms_metaphones = qqc.process_textentry_terms (qwizdata[i_qwiz].terms);
+            }
+         } else {
+            if (! default_textentry_terms_metaphones) {
+               var plugin_url = qqc.get_qwiz_param ('url', './');
+               var terms_data = qqc.get_textentry_terms (plugin_url + 'terms.txt', qwizdata);
+               default_textentry_terms_metaphones = qqc.process_textentry_terms (terms_data);
+            }
+         }
+
+         // Also need to process additional terms for this quiz, if any.
+         // Only do once per quiz.
+         if (qwizdata[i_qwiz].add_terms) {
+            if (! qwizdata[i_qwiz].add_textentry_terms_metaphones) {
+               qwizdata[i_qwiz].add_textentry_terms_metaphones = qqc.process_textentry_terms (qwizdata[i_qwiz].add_terms);
+            }
+         }
+
+         // Show "Check answer" and "Hint" buttons.  "Check answer" starts out
+         // gray (but not actually disabled, so click provides alert message).
+         // Hint starts out not visible.
+         var check_answer_obj = $ ('#textentry_check_answer_div-qwiz' + i_qwiz);
+         check_answer_obj.find ('button.textentry_check_answer').removeClass ('qbutton').addClass ('qbutton_disabled');
+         qwizdata[i_qwiz].check_answer_disabled_b = true;
+         check_answer_obj.find ('button.qwiz_textentry_hint').html ('Hint').hide ();
+         check_answer_obj.show ();
+
+         // Set focus to textentry box, if there is one.  Don't do if first
+         // question and no intro (avoid scrolling page to this quiz).
+         if (i_question != 0 || ! no_intro_b[i_qwiz]) {
+            $ ('#textentry-qwiz' + i_qwiz + '-q' + i_question).val ('').focus ();
+         }
+
+         qwizdata[i_qwiz].check_answer_disabled_b = true;
+         qwizdata[i_qwiz].textentry_n_hints = 0;
+
+         // Calculate metaphones of answers -- both correct and incorrect  --
+         // up to first blank following a non-blank.
+         textentry_answers[i_qwiz] = qwizdata[i_qwiz].textentry[i_question].answers;
+         textentry_answer_metaphones[i_qwiz]
+            = textentry_answers[i_qwiz].map (function (answer) {
+                                                answer = answer.replace (/\s*(\S+)\s.*/, '\$1');
+                                                return qqc.metaphone (answer);
+                                             })
+
+         // List of terms (term, metaphone pairs) for this question: (1) default
+         // or specific to this qwiz; plus (2) additional terms for this quiz,
+         // if any; and (3) answers (correct and incorrect) for this question.
+         // Singular or plural in each case.
+         var singular_plural;
+         if (qwizdata[i_qwiz].textentry[i_question].textentry_plural_b) {
+            singular_plural = 'plural';
+         } else {
+            singular_plural = 'singular';
+         }
+
+         // (1) Quiz-specific or default.
+         if (qwizdata[i_qwiz].terms) {
+            current_question_textentry_terms_metaphones[i_qwiz] = qwizdata[i_qwiz].textentry_terms_metaphones[singular_plural];
+         } else {
+            current_question_textentry_terms_metaphones[i_qwiz] = default_textentry_terms_metaphones[singular_plural];
+         }
+
+         // (2) Additional.
+         if (qwizdata[i_qwiz].add_terms) {
+            current_question_textentry_terms_metaphones[i_qwiz] = current_question_textentry_terms_metaphones[i_qwiz].concat (qwizdata[i_qwiz].add_textentry_terms_metaphones[singular_plural]);
+         }
+         // (3) Answers.
+         var textentry_answers_metaphones
+            = textentry_answers[i_qwiz].map (function (answer) {
+                                        return [answer, qqc.metaphone (answer)];
+                                     });
+         if (debug[5]) {
+            console.log ('[display_question] textentry_answers_metaphones: ', textentry_answers_metaphones);
+         }
+         current_question_textentry_terms_metaphones[i_qwiz] = current_question_textentry_terms_metaphones[i_qwiz].concat (textentry_answers_metaphones);
+
+         // Sort and de-dupe.
+         current_question_textentry_terms_metaphones[i_qwiz]
+            = qqc.sort_dedupe_terms_metaphones (current_question_textentry_terms_metaphones[i_qwiz]);
+
+         if (debug[5]) {
+            console.log ('[display_question] current_question_textentry_terms_metaphones[i_qwiz].length: ', current_question_textentry_terms_metaphones[i_qwiz].length);
+            console.log ('[display_question] current_question_textentry_terms_metaphones[i_qwiz].slice (0, 10): ', current_question_textentry_terms_metaphones[i_qwiz].slice (0, 10));
+            var i_start = current_question_textentry_terms_metaphones[i_qwiz].length - 10;
+            if (i_start > 0) {
+               console.log ('[display_question] current_question_textentry_terms_metaphones[i_qwiz].slice (' + i_start + '): ', current_question_textentry_terms_metaphones[i_qwiz].slice (i_start));
+            }
+         }
+
+      } else {
+
+         // ....................................................................
+         // Multiple-choice question.
+         // Enable radio clicks in case previously disabled for this question.
+         // Also, show radios unclicked.
+         $ ('input[name=' + qwizq_id + ']').removeAttr ('disabled').removeAttr ('checked');
+
+         // Re-enable highlight choices on mouseover, cursor to indicate
+         // clickable.
+         $ ('.choices-' + qwizq_id).on ('mouseover', function () {
+            $ (this).css ({'cursor': 'pointer', 'color': '#045FB4'})
+         }).on ('mouseout', function () {;
+            $ (this).css ({'cursor': 'text', 'color': 'black'})
+         });
+      }
    }
 }
 
@@ -1444,11 +1742,14 @@ function display_question (i_qwiz, i_question) {
 // -----------------------------------------------------------------------------
 function process_question (i_qwiz, i_question, htm, opening_tags) {
 
+   var new_htm;
+   var remaining_htm;
+
    // Span for default indented paragraph style for choices.  Want this ahead of
    // any opening tags user put in before first "[c]".
-   var span_pos = htm.search (/(<[^\/][^>]*?>\s*)*?\[c\*{0,1}\]/m);
+   var span_pos = htm.search (/(<[^\/][^>]*>\s*)*?\[c\*{0,1}\]/m);
    if (span_pos == -1) {
-      errmsgs.push (T ('Did not find choices ("[c]") for') + ' qwiz ' + (i_qwiz + 1) + ', question ' + (i_question + 1));
+      errmsgs.push (T ('Did not find choices ("[c]") for') + ' qwiz ' + (i_qwiz + 1) + ', ' + T ('question') + ' ' + (i_question + 1));
       new_htm = '';
       remaining_htm = '';
    } else {
@@ -1459,14 +1760,14 @@ function process_question (i_qwiz, i_question, htm, opening_tags) {
       }
 
       // Wrap in div for this qwiz and question.
-      var new_htm =   '<div id="qwiz' + i_qwiz + '-q' + i_question + '" class="qwizq">\n'
-                     +    opening_tags + question_htm;
+      new_htm =   '<div id="qwiz' + i_qwiz + '-q' + i_question + '" class="qwizq">\n'
+                 +    opening_tags + question_htm;
 
       if (debug[1]) {
          console.log ('[process_question] new_htm: ', new_htm);
       }
 
-      var remaining_htm = htm.substr (span_pos);
+      remaining_htm = htm.substr (span_pos);
 
       // Include paragraph-close -- without this, if there's a paragraph-close
       // within the choices that corresponds to a previous unclosed paragraph,
@@ -1487,21 +1788,98 @@ function process_question (i_qwiz, i_question, htm, opening_tags) {
       console.log ('[process_question] n_choices: ', n_choices);
    }
 
-   var qtags = ['[c]', '[c*]'];
-   var qnext_tags = ['[c]', '[c*]', '[f]'];
    var n_correct = 0;
+
+   var choice_start_tags = ['[c]', '[c*]'];
+   var choice_next_tags  = ['[c]', '[c*]', '[x]'];
+
+   var got_feedback_b = false;
+   var feedback_divs = [];
+   var i_choice_correct = 0;
    for (var i_choice=0; i_choice<n_choices; i_choice++) {
 
       // Find choice text -- from opening tags through [c] or [c*] up to
       // opening tags for next tag.  Delete it from remaining_htm.
-      var choice_html = parse_html_block (remaining_htm, qtags, qnext_tags);
+      var choice_html = parse_html_block (remaining_htm, choice_start_tags,
+                                          choice_next_tags);
       remaining_htm = remaining_htm.substr (choice_html.length);
+
+      // See if there's feedback within the choice html.
+      var r = process_feedback_item (choice_html, i_qwiz, i_question, i_choice);
+      choice_html  = r.choice_html;
+
+      if (r.feedback_div) {
+
+         // If this is the last choice, and didn't previously get feedback
+         // with choices, then may have all feedback items together following
+         // choice items (backwards compatibility).
+         if (i_choice == n_choices-1 && ! got_feedback_b && n_choices != 1) {
+
+            // Assume just got feedback for the first choice.  Create an empty
+            // div for the last choice.
+            feedback_divs[0] = r.feedback_div;
+            feedback_divs.push ('');
+
+            // Look for rest.
+            var n_feedback_items = 1;
+            for (var i_feedback=1; i_feedback<n_choices; i_feedback++) {
+               var r = process_feedback_item (choice_html, i_qwiz, i_question,
+                                              i_feedback);
+               choice_html  = r.choice_html;
+               if (! r.feedback_div) {
+                  break;
+               }
+               feedback_divs[i_feedback] = r.feedback_div;
+               n_feedback_items++;
+            }
+
+            // Either got just one feedback item (for last choice),
+            // or should get one item for each choice.
+            if (n_feedback_items == 1) {
+
+               // Move that item to the last choice.
+               feedback_divs[n_choices-1] = feedback_divs[0];
+               feedback_divs[0] = '';
+            } else {
+
+               // Check got them all.
+               if (n_feedback_items != n_choices) {
+                  errmsgs.push (T ('Number of feedback items does not match number of choices') + ': qwiz ' + (1 + i_qwiz) + ', ' + T('question') + ' ' + (1 + i_question));
+               } else {
+
+                  // First feedback item needs to have ID updated to indicate
+                  // really belongs to first choice.
+                  feedback_divs[0] = feedback_divs[0].replace (/(qwiz[0-9]+-q[0-9]+-a)[0-9]+/, '\$10');
+               }
+            }
+         } else {
+
+            // Create a div for the feedback we just processed.
+            got_feedback_b = true;
+            feedback_divs.push (r.feedback_div);
+
+            // Check that there's not more than one feedback item accompanying
+            // this (not-last) choice.
+            var r = process_feedback_item (choice_html, i_qwiz, i_question,
+                                           i_feedback);
+            if (r.feedback_div) {
+               errmsgs.push (T ('More than one feedback shortcode [f] given with choice') + ': qwiz ' + (1 + i_qwiz) + ', ' + T ('question') + ' ' + (1 + i_question) + ', ' + T ('choice') + ' ' + (1 + i_choice));
+            }
+         }
+      } else {
+
+         // No feedback given for this choice.  Record with empty "div".
+         feedback_divs.push ('');
+      }
 
       if (n_choices > 1) {
 
          // Replace [c] or [c*] with radio button.
          var radio_button_html = create_radio_button_html (i_qwiz, i_question, i_choice, choice_tags[i_choice]);
-         n_correct += radio_button_html[0];
+         if (radio_button_html[0]) {
+            n_correct++;
+            i_choice_correct = i_choice;
+         }
          choice_html = choice_html.replace (/\[c\*{0,1}\]/m, radio_button_html[1]);
 
          // Assemble with span to make choice clickable and highlight on
@@ -1526,10 +1904,16 @@ function process_question (i_qwiz, i_question, htm, opening_tags) {
                     + choice_html + '</span>';
       } else {
 
-         // Only one choice - do as regular button rather than radio.
+         // Only one choice - do as regular button rather than radio.  Left
+         // margin to clear Qwiz icon on first page.
          choice_html = choice_html.replace (/\[c\*{0,1}\]/m, '');
          n_correct = 1;
-         new_htm += '<button class="qbutton" onclick="' + qname + '.process_choice (\'qwiz' + i_qwiz + '-q' + i_question + '-a' + i_choice + '\')">' + choice_html + '</button>\n'
+         new_htm += '<button class="qbutton" style="margin-left: 20px;" onclick="' + qname + '.process_choice (\'qwiz' + i_qwiz + '-q' + i_question + '-a' + i_choice + '\')">' + choice_html + '</button>\n';
+
+         // Require feedback for "Show-the-answer" type question.
+         if (! feedback_divs[0]) {
+            errmsgs.push (T ('Feedback [f] is required for a one-choice question') + ': qwiz ' + (1 + i_qwiz) + ', ' + T ('question') + ' ' + (1 + i_question));
+         }
       }
    }
 
@@ -1546,77 +1930,258 @@ function process_question (i_qwiz, i_question, htm, opening_tags) {
 
    // Check that one and only one choice is marked correct.
    if (n_correct == 0) {
-      errmsgs.push (T ('No choice was marked correct') + ': qwiz ' + (1 + i_qwiz) + ', question ' + (1 + i_question));
+      errmsgs.push (T ('No choice was marked correct') + ': qwiz ' + (1 + i_qwiz) + ', ' + T ('question') + ' ' + (1 + i_question));
    } else if (n_correct > 1) {
-      errmsgs.push (T ('More than one choice was marked correct') + ': qwiz ' + (1 + i_qwiz) + ', question ' + (1 + i_question));
+      errmsgs.push (T ('More than one choice was marked correct') + ': qwiz ' + (1 + i_qwiz) + ', ' + T ('question') + ' ' + (1 + i_question));
    }
 
-   // . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
-   // Find feedback alternatives for this question, make into alternative divs.
-   // Feedback html -- from opening tags before first [f] through end.
-   var m = remaining_htm.match (/(<[^\/][^>]*?>\s*)*?\[f\][\s\S]*/m);
-   var feedback_html = m[0];
+   // ..........................................................................
+   // Create canned feedback for any empty feedback items
+   for (var i_choice=0; i_choice<n_choices; i_choice++) {
+      if (! feedback_divs[i_choice]) {
+         var response = canned_feedback (i_choice == i_choice_correct);
+         feedback_divs[i_choice] = create_feedback_div_html (i_qwiz, i_question,
+                                                             i_choice, response);
+      }
+   }
+
+   // Add feedback divs to html string.
+   new_htm += feedback_divs.join ('\n');
    if (debug[2]) {
-      console.log ('[process_question] feedback_html: ', feedback_html);
-   }
-
-   if (! feedback_html) {
-      errmsgs.push (T ('Did not find feedback ("[f]") for') + ' qwiz ' + (i_qwiz + 1) + ', question ' + (i_question + 1));
-      feedback_html = '';
-   } else {
-
-      // Parse into individual items.
-      var feedback_divs = [];
-      var feedback_start_tags = ['[f]'];
-      var feedback_next_tags = ['[f]', '[x]'];
-      var i_item = 0;
-      while (true) {
-         var feedback_item_html 
-                          = parse_html_block (feedback_html, feedback_start_tags,
-                                              feedback_next_tags);
-         if (feedback_item_html == 'NA') {
-            break;
-         }
-
-         // Take item out of remaining html.
-         feedback_html = feedback_html.replace (feedback_item_html, '');
-
-         // Delete [f].
-         feedback_item_html = feedback_item_html.replace (/\[f\]/, '');
-
-         if (debug[2]) {
-            console.log ('[process_question] feedback_item_html: ', feedback_item_html);
-         }
-
-         // Create a div for each 
-         feedback_divs.push (
-               create_feedback_div_html (i_qwiz, i_question, i_item,
-                                         feedback_item_html)
-         );
-         i_item++;
-      }
-
-      var n_feedback_items = feedback_divs.length;
-
-      if (debug[2]) {
-         console.log ('[process_question] n_feedback_items: ', n_feedback_items);
-      }
-
-      // Check that number of feedback items matches number of choices.
-      if (n_choices != n_feedback_items) {
-         errmsgs.push (T ('Number of feedback items does not match number of choices') + ': qwiz ' + (1 + i_qwiz) + ', question ' + (1 + i_question));
-      }
-
-      new_htm += feedback_divs.join ('\n');
-      if (debug[2]) {
-         console.log ('[process_question] new_htm: ', new_htm)
-      }
+      console.log ('[process_question] new_htm: ', new_htm);
    }
 
    // Close question div.
    new_htm += '</div>\n';
 
    return new_htm;
+}
+
+
+// -----------------------------------------------------------------------------
+function process_textentry (i_qwiz, i_question, htm, opening_tags) {
+
+   // If this is first textentry question for this quiz, create data object.
+   // Also set flag that there is [textentry] on this page.
+   if (! qwizdata[i_qwiz].textentry) {
+      qwizdata[i_qwiz].textentry = {};
+      textentry_b = true;
+   }
+
+   // Wrap in div for this qwiz and question.
+   var new_htm =   '<div id="qwiz' + i_qwiz + '-q' + i_question + '" class="qwizq">\n'
+                 +    opening_tags + htm;
+
+   // See if plurals specified.  Any attributes?
+   var textentry_plural_b = false;
+   var m = new_htm.match (/\[textentry([^\]]*)\]/m);
+   if (m) {
+      var attributes = m[1];
+      if (attributes) {
+
+         // Look for "plural=" attribute.  Match regular double-quote, or
+         // left- or right-double-quote.
+         attributes = qqc.replace_smart_quotes (attributes);
+         textentry_plural_b = qqc.get_attr (attributes, 'plural') == 'true';
+      }
+   }
+
+   // Replace [textentry] with input textbox.
+   new_htm = new_htm.replace (/\[textentry([^\]]*)\]/, '<input type="text" id="textentry-qwiz' + i_qwiz + '-q' + i_question + '" class="qwiz_textentry" placeholder="' + T ('Type chars, then select from list') + '" onfocus="' + qname + '.set_textentry_i_qwiz (this)" />');
+
+   // Look for choices and feedback (interleaved only, feedback optional).
+   // Save as data, delete here.
+   var n_correct = 0;
+
+   var choice_start_tags = ['[c]', '[c*]'];
+   var choice_next_tags  = ['[c]', '[c*]', '[x]'];
+
+   var got_feedback_b = false;
+   var feedback_divs = [];
+
+   // Look for first [c], including any opening tags.
+   var c_pos = new_htm.search (/\s*(<[^\/][^>]*\s*)*?\[c\*{0,1}\]/m); 
+
+   // Start with [c]s.
+   var remaining_htm = new_htm.substr (c_pos);
+
+   // Up to first [c].
+   new_htm = new_htm.substr (0, c_pos);
+   var i_choice = 0;
+   var default_choice_given_b = false;
+
+   // Object for this question set to array of choices.
+   qwizdata[i_qwiz].textentry[i_question] = {};
+   qwizdata[i_qwiz].textentry[i_question].choices = [];
+   qwizdata[i_qwiz].textentry[i_question].textentry_plural_b = textentry_plural_b;
+   qwizdata[i_qwiz].textentry[i_question].choices_correct = [];
+   qwizdata[i_qwiz].textentry[i_question].answers = [];
+   qwizdata[i_qwiz].textentry[i_question].first_correct_answer = '';
+   qwizdata[i_qwiz].check_answer_disabled_b = true;
+
+   // Loop over [c]s.
+   while (true) {
+      var choice_html = parse_html_block (remaining_htm, choice_start_tags,
+                                          choice_next_tags);
+      if (choice_html == 'NA') {
+         break;
+      }
+      remaining_htm = remaining_htm.substr (choice_html.length);
+
+      // See if there's feedback within the choice html.
+      var r = process_feedback_item (choice_html, i_qwiz, i_question, i_choice);
+      choice_html  = r.choice_html;
+
+      if (r.feedback_div) {
+         got_feedback_b = true;
+
+         feedback_divs.push (r.feedback_div);
+
+         // Check that there's not more than one feedback item accompanying
+         // this choice.
+         var r = process_feedback_item (choice_html, i_qwiz, i_question,
+                                        i_choice);
+         if (r.feedback_div) {
+            errmsgs.push (T ('More than one feedback shortcode [f] given with choice') + ': qwiz ' + (1 + i_qwiz) + ', ' + T ('question') + ' ' + (1 + i_question) + ', ' + T ('choice') + ' ' + (1 + i_choice));
+         }
+      } else {
+
+         // No feedback given for this choice.  Record with empty "div".
+         feedback_divs.push ('');
+      }
+
+      // Parse choice data.  [c] or [c*] followed by semicolon-separated list
+      // of potential answers.
+      var correct_b = choice_html.search (/\[c\*\]/) != -1;
+      if (correct_b) {
+         n_correct++;
+      }
+
+      // Delete up through [c] or [c*].
+      choice_html = choice_html.replace (/.*\[c\*{0,1}\]/m, '');
+
+      // Delete any tags and EOLs and non-breaking spaces.
+      choice_html = choice_html.replace (/<[^>]+>|\n|&nbsp;/g, '');
+
+      // Error if just blanks and semicolons.
+      if (choice_html.replace (';', '').search (/\S/) == -1) {
+         errmsgs.push (T ('No text given for [textentry] choice') + ' - qwiz ' + (i_qwiz + 1) + ', ' + T ('question') + ' ' + (1 + i_question) + ', ' + T ('choice') + ' ' + (1 + i_choice));
+      }
+
+      // Split on semicolons.
+      var alts = choice_html.split (/\s*;\s*/);
+
+      // Eliminate any blank entries.
+      var nonblank_alts = [];
+      for (var i=0; i<alts.length; i++) {
+         if (alts[i].search (/\S/) != -1) {
+            nonblank_alts.push (qqc.trim (alts[i]));
+         }
+      }
+
+      // If default choice/feedback ("*" entered), set indicator.
+      if (nonblank_alts[0] == '*') {
+         default_choice_given_b = true;
+         if (correct_b) {
+            errmsgs.push (T ('For [textentry] question, wildcard choice ("*", for any other user entry) cannot be marked correct "[c*]"'));
+         }
+         if (feedback_divs[i_choice] == '') {
+            errmsgs.push (T ('For [textentry] question, wildcard choice ("*", for any other user entry) must be accompanied by feedback "[f]"'));
+         }
+      }
+
+      // Save these, associated with this choice.
+      qwizdata[i_qwiz].textentry[i_question].choices.push (nonblank_alts);
+      qwizdata[i_qwiz].textentry[i_question].choices_correct.push (correct_b);
+
+      // Save first correct answer -- for hint.
+      if (correct_b) {
+         if (qwizdata[i_qwiz].textentry[i_question].first_correct_answer == '') {
+            qwizdata[i_qwiz].textentry[i_question].first_correct_answer = nonblank_alts[0];
+         }
+      }
+
+      // Also save as simple array for this question.  Make sure no duplicates
+      // (wouldn't want same answer to be both correct and incorrect!).
+      var n_alts = nonblank_alts.length;
+      for (var i=0; i<n_alts; i++) {
+         if (qwizdata[i_qwiz].textentry[i_question].answers.indexOf (nonblank_alts[i]) != -1) {
+            errmsgs.push (T ('Answer given in more than one choice') + ': ' + nonblank_alts[i] + ' - qwiz ' + (i_qwiz + 1) + ', ' + T ('question') + ' ' + (1 + i_question) + ', ' + T ('choice') + ' ' + (1 + i_choice));
+         }
+      }
+      qwizdata[i_qwiz].textentry[i_question].answers
+                 = qwizdata[i_qwiz].textentry[i_question].answers.concat (nonblank_alts);
+      i_choice++;
+   }
+
+   // If default choice not given, add it.
+   if (! default_choice_given_b) {
+      qwizdata[i_qwiz].textentry[i_question].choices.push (['*']);
+      qwizdata[i_qwiz].textentry[i_question].choices_correct.push (false);
+      i_choice++;
+   }
+   var n_choices = i_choice;
+
+   // Include clearing div in case image floating left or right (needed to
+   // expand parent div and its border).
+   new_htm += '<div style="clear: both;"></div>\n';
+
+   // Check that got at least one correct choice.
+   if (n_correct == 0) {
+      errmsgs.push (T ('No choice was marked correct') + ': qwiz ' + (1 + i_qwiz) + ', ' + T ('question') + ' ' + (1 + i_question));
+   }
+
+   // ..........................................................................
+   // Create canned feedback for any empty feedback items
+   for (var i_choice=0; i_choice<n_choices; i_choice++) {
+      if (! feedback_divs[i_choice]) {
+         var response = canned_feedback (qwizdata[i_qwiz].textentry[i_question].choices_correct[i_choice]);
+         feedback_divs[i_choice] = create_feedback_div_html (i_qwiz, i_question,
+                                                             i_choice, response);
+      }
+   }
+
+   // Add feedback divs to html string.
+   new_htm += feedback_divs.join ('\n');
+   if (debug[2]) {
+      console.log ('[process_textentry] new_htm: ', new_htm);
+   }
+
+   // Close question div.
+   new_htm += '</div>\n';
+
+   return new_htm;
+}
+
+
+// -----------------------------------------------------------------------------
+function process_feedback_item (choice_html, i_qwiz, i_question, i_choice) {
+
+   var feedback_start_tags = ['[f]'];
+   var feedback_next_tags  = ['[f]', '[x]'];
+
+   var feedback_item_html = parse_html_block (choice_html, feedback_start_tags,
+                                              feedback_next_tags);
+   var feedback_div = '';
+   if (feedback_item_html != 'NA') {
+
+      // Yes.  Take out of the choice html.
+      choice_html = choice_html.replace (feedback_item_html, '');
+
+      // Delete [f].
+      feedback_item_html = feedback_item_html.replace (/\[f\]/, '');
+      if (debug[2]) {
+         console.log ('[process_feedback_item] feedback_item_html: ', feedback_item_html);
+      }
+      feedback_div = create_feedback_div_html (i_qwiz, i_question, i_choice,
+                                               feedback_item_html)
+   }
+   if (debug[2]) {
+      console.log ('[process_feedback_item] feedback_div:', feedback_div);
+      console.log ('[process_feedback_item] choice_html:', choice_html);
+   }
+
+   return {'feedback_div': feedback_div, 'choice_html': choice_html};
 }
 
 
@@ -1637,14 +2202,15 @@ function process_qwizzled (i_qwiz, i_question, question_htm, opening_tags,
    // See if labels placement specified by "attribute", e.g., [q labels="top"].
    // Default is "right".  Find attributes, if any.
    var labels_position = '';
-   var m = question_tag.match (/\[<code><\/code>q([^\]]*)\]/m);
+   var m = question_tag.match (/\[(<code><\/code>)*q([^\]]*)\]/m);
    if (m) {
-      var attributes = m[1];
+      var attributes = m[2];
       if (attributes) {
 
          // Look for "labels=" attribute.  Match regular double-quote, or
          // left- or right-double-quote.
-         labels_position = get_attr (attributes, 'labels');
+         attributes = qqc.replace_smart_quotes (attributes);
+         labels_position = qqc.get_attr (attributes, 'labels');
          labels_position = labels_position.toLowerCase ();
          if (debug[0]) {
             console.log ('[process_qwizzled] labels_position:', labels_position);
@@ -1666,7 +2232,7 @@ function process_qwizzled (i_qwiz, i_question, question_htm, opening_tags,
    // Turn "canvas" div into table cell.  Find extent of div.
    var canvas_div_pos = new_htm.search ('<div class="qwizzled_canvas">');
    if (canvas_div_pos == -1) {
-      errmsgs.push (T ('Did not find target "drop-zones" for labels.  Please check that all labels and target "drop zones" were correctly processed and saved during the edit of this page.'));
+      errmsgs.push (T ('Did not find target "drop-zones" for labels.  Please check that all labels and target "drop zones" were correctly processed and saved during the edit of this page.') + '  qwiz ' + (i_qwiz + 1) + ', ' + T ('question') + ' ' + (i_question + 1));
       return '';
    }
    var div_html = find_matching_block (new_htm.substr (canvas_div_pos));
@@ -1726,8 +2292,8 @@ function process_qwizzled (i_qwiz, i_question, question_htm, opening_tags,
 
    new_htm = new_htm.replace (div_html, table_html);
 
-   // Take out the ("encoded") [q].
-   new_htm = new_htm.replace (/\[<code><\/code>q[^\]]*\]/, '');
+   // Take out the (possibly "encoded", if old style) [q].
+   new_htm = new_htm.replace (/\[(<code><\/code>)*q[^\]]*\]/, '');
 
    if (debug[0]) {
       console.log ('[process_qwizzled] new_htm:', new_htm);
@@ -1737,8 +2303,8 @@ function process_qwizzled (i_qwiz, i_question, question_htm, opening_tags,
    // . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
    // Process labels and feedback -- feedback is optional, but must immediately
    // follow label, if given.  Do label by label -- look for feedback associated
-   // with each.  First take out [<code></code>l].
-   remaining_htm = remaining_htm.replace (/\[<code><\/code>l\]/gm, '');
+   // with each.  First take out [<code></code>l] (old style) or [l].
+   remaining_htm = remaining_htm.replace (/\[(<code><\/code>)*l\]/gm, '');
    var label_divs = [];
    var i_label = 0;
    while (true) {
@@ -1759,7 +2325,6 @@ function process_qwizzled (i_qwiz, i_question, question_htm, opening_tags,
       console.log ('[process_qwizzled] label_divs:', label_divs.join ('\n'));
       console.log ('[process_qwizzled] remaining_htm:', remaining_htm);
    }
-   var n_labels = label_divs.length;
 
    // Put labels in labels area.
    var label_head = '<p class="qwizzled_label_head">Move each item to its correct <span class="qwizzled_target_border">place</span></p>';
@@ -1777,7 +2342,7 @@ function process_qwizzled (i_qwiz, i_question, question_htm, opening_tags,
    var feedback_html = remaining_htm;
    var feedback_divs = [];
    var feedback_start_tags = ['[f*]', '[fx]'];
-   var feedback_next_tags = ['[f*]', '[fx]', '[hint]', '[x]'];
+   var feedback_next_tags = ['[f*]', '[fx]', '[x]'];
    var i_item = 0;
    while (true) {
       var feedback_item_html 
@@ -1805,7 +2370,7 @@ function process_qwizzled (i_qwiz, i_question, question_htm, opening_tags,
          console.log ('[process_qwizzled] feedback_item_html: ', feedback_item_html);
       }
 
-      // Create a div for each 
+      // Create a div for each.
       feedback_divs.push (
             create_feedback_div_html (i_qwiz, i_question, parseInt (i_item/2),
                                       feedback_item_html, c_x)
@@ -1819,6 +2384,7 @@ function process_qwizzled (i_qwiz, i_question, question_htm, opening_tags,
    feedback_divs[n_feedback_items - 1] = feedback_divs[n_feedback_items - 1].replace (/<\/div>\s*/m, '')
 
    // Check that number of feedback items corresponds to number of labels.
+   var n_labels = label_divs.length;
    if (n_labels*2 != n_feedback_items) {
       errmsgs.push (T ('Number of feedback items') + ' (' + n_feedback_items + ') ' + T ('does not match number of labels') + ' (' + n_labels + '): qwiz ' + (1 + i_qwiz) + ', question ' + (1 + i_question) + ' labeled diagram' + '\n'
                     + '(' + T ('There should be two feedback items -- correct and incorrect -- for each label') + ')');
@@ -1858,7 +2424,7 @@ this.init_drag_and_drop = function (qwizq_elm) {
          console.log ('                       parents (\'.qwizq\':', $ (this).parents ('.qwizq'));
       }
       $ (this).draggable ({
-         //containment:   $ (this).parents ('.qwizq'),
+         containment:   $ (this).parents ('table.qwizzled_table'),
          start:         function (event, ui) {
 
                            // If label previously incorrectly placed, reset
@@ -1963,6 +2529,10 @@ function parse_html_block (htm, qtags, qnext_tags, ignore_nbsp_b) {
       console.log ('[parse_html_block] qtags: ', qtags, ', htm: ', htm);
    }
 
+   // String is presumably "return whitespace".  Flag to do so only if is all
+   // whitespace (including empty paragraphs).
+   var return_whitespace_b = typeof (ignore_nbsp_b) == 'string';
+
    // Add a default "end" shortcode that will always be found.
    var ZendZ = '[ZendZ]';
    htm += ZendZ;
@@ -1971,8 +2541,7 @@ function parse_html_block (htm, qtags, qnext_tags, ignore_nbsp_b) {
    // Include opening tags before the qwiz/qcard tags in each case.
    // -- a series of opening tags with possible whitespace in between, but
    // nothing else.
-   var opening_pat = '(\\s*(<[^/][^>]*?>\\s*)*?)'; 
-
+   var opening_pat = '(\\s*(<[^/][^>]*>\\s*)*?)'; 
    var tags_pat = opening_pat + tags_to_pat (qtags);
    var next_tags_pat = opening_pat + tags_to_pat (qnext_tags);
 
@@ -2002,10 +2571,13 @@ function parse_html_block (htm, qtags, qnext_tags, ignore_nbsp_b) {
 
       // If flag set, also ignore &nbsp;
       if (ignore_nbsp_b != undefined) {
-         htm_wo_tags = htm_wo_tags.replace (/&nbsp;/g, '');
+         htm_wo_tags = htm_wo_tags.replace (/&nbsp;/gm, '');
       }
-      if (htm_wo_tags.search (/\S/) == -1) {
-         htm_block = '';
+      var is_whitespace_b = htm_wo_tags.search (/\S/) == -1;
+      if (is_whitespace_b) {
+         if (! return_whitespace_b) {
+            htm_block = '';
+         }
       /*
       } else {
          var i_qnext_tag = 7 + qtags.length;
@@ -2019,6 +2591,12 @@ function parse_html_block (htm, qtags, qnext_tags, ignore_nbsp_b) {
             htm_block += closing_tags;
          }
       */
+      }
+
+      // If returning only whitespace, and not all whitespace, return empty
+      // string.
+      if (return_whitespace_b && ! is_whitespace_b) {
+         htm_block = '';
       }
    } else {
 
@@ -2044,8 +2622,8 @@ function process_header (htm, i_qwiz, i_question, intro_b) {
       qnext_tags.push ('[i]');
    }
 
-   // Global variable.
-   header_html = parse_html_block (htm, qtags, qnext_tags);
+   // Global variable.  Limit to first 1000 characters.
+   header_html = parse_html_block (htm.substr (0, 1000), qtags, qnext_tags);
    if (header_html != 'NA' && header_html != '') {
 
       // Error if text before [h].
@@ -2080,15 +2658,15 @@ function display_summary_and_exit (i_qwiz) {
    if (qwizdata[i_qwiz].repeat_incorrect_b) {
       report_html.push ('<p><b>Congratulations, you\'re done!</b></p>');
       if (n_incorrect == 0) {
-         report_html.push ('<p>In this ' + number_to_word (n_questions) + '-question quiz, you answered every question correctly on the first try!</p>');
+         report_html.push ('<p>In this ' + qqc.number_to_word (n_questions) + '-question quiz, you answered every question correctly on the first try!</p>');
       } else {
-         report_html.push ('<p>In finishing this ' + number_to_word (n_questions) + '-question quiz, you entered ' + number_to_word (n_incorrect) + ' incorrect ' + plural ('answer', 'answers', n_incorrect) + '.</p>');
+         report_html.push ('<p>In finishing this ' + qqc.number_to_word (n_questions) + '-question quiz, you entered ' + qqc.number_to_word (n_incorrect) + ' incorrect ' + Tplural ('answer', 'answers', n_incorrect) + '.</p>');
       }
    } else {
       if (n_incorrect == 0) {
          report_html.push ('<p>' + T ('Congratulations, you answered all questions correctly') + '.</p>');
       } else {
-         report_html.push ('<p>' + T ('Your score is') + ' ' + number_to_word (n_correct) + ' ' + T ('out of') + ' ' + number_to_word (n_questions) + ' ' + T ('questions') + '.</p>');
+         report_html.push ('<p>' + T ('Your score is') + ' ' + qqc.number_to_word (n_correct) + ' ' + T ('out of') + ' ' + qqc.number_to_word (n_questions) + ' ' + T ('questions') + '.</p>');
       }
    }
 
@@ -2099,9 +2677,9 @@ function display_summary_and_exit (i_qwiz) {
       if (n_questions == 2) {
          all_both_n = T ('Both');
       } else {
-         all_both_n = T ('All') + ' '+ number_to_word (n_questions);
+         all_both_n = T ('All') + ' '+ qqc.number_to_word (n_questions);
       }
-      report_html.push ('<p>' + all_both_n + ' ' + plural ('question', 'questions', n_questions) + ' were about topic &ldquo;' + topic + '.&rdquo;</p>');
+      report_html.push ('<p>' + all_both_n + ' ' + Tplural ('question', 'questions', n_questions) + ' were about topic &ldquo;' + topic + '.&rdquo;</p>');
    } else if (n_topics > 1) {
 
       // By topic.
@@ -2113,7 +2691,7 @@ function display_summary_and_exit (i_qwiz) {
          var n_topic_items = n_topic_correct + n_topic_incorrect;
          if (n_topic_items > 0) {
             var topic_html = '<li>';
-            topic_html += T ('For topic') + ' &ldquo;' + topic + '&rdquo; ' + plural ('there was', 'there were', n_topic_items) + ' ' + number_to_word (n_topic_items) + ' ' + plural ('question', 'questions', n_topic_items) + '.&nbsp;';
+            topic_html += T ('For topic') + ' &ldquo;' + topic + '&rdquo; ' + Tplural ('there was', 'there were', n_topic_items) + ' ' + qqc.number_to_word (n_topic_items) + ' ' + Tplural ('question', 'questions', n_topic_items) + '.&nbsp;';
             if (n_topic_incorrect == 0) {
                if (n_topic_items > 2) {
                   topic_html += T ('You answered all of these questions correctly');
@@ -2130,12 +2708,12 @@ function display_summary_and_exit (i_qwiz) {
             } else {
                if (qwizdata[i_qwiz].repeat_incorrect_b) {
                   var n_tries = n_topic_items + n_topic_incorrect;
-                  topic_html += plural ('It took you one try', 'It took you %s tries', n_tries) + ' ' + plural ('to answer this question correctly', 'to answer these questions correctly', n_topic_items) + '.';
-                  topic_html = topic_html.replace ('%s', number_to_word (n_tries));
+                  topic_html += Tplural ('It took you one try', 'It took you %s tries', n_tries) + ' ' + Tplural ('to answer this question correctly', 'to answer these questions correctly', n_topic_items) + '.';
+                  topic_html = topic_html.replace ('%s', qqc.number_to_word (n_tries));
                } else {
                   topic_html += T ('Your score is %s correct out of %s') + '.';
-                  topic_html = topic_html.replace ('%s', number_to_word (n_topic_correct));
-                  topic_html = topic_html.replace ('%s', number_to_word (n_topic_items));
+                  topic_html = topic_html.replace ('%s', qqc.number_to_word (n_topic_correct));
+                  topic_html = topic_html.replace ('%s', qqc.number_to_word (n_topic_items));
                }
             }
             topic_html += '</li>';
@@ -2170,7 +2748,6 @@ function check_qwiz_tag_pairs (htm) {
 
          // Check proper pairs.
          for (var i=0; i<n_tags; i++) {
-            var tag = matches[i];
             if (i % 2 == 0) {
                if (matches[i] != '[qwiz') {
                   error_b = true;
@@ -2219,7 +2796,7 @@ function create_radio_button_html (i_qwiz, i_question, i_choice, choice_tag) {
       data_correct = 'data-correct="1" ';
       correct = 1;
    }
-   htm += '<input type="radio" id="radio-qwiz' + i_qwiz + '-q' + i_question + '-a' + i_choice + '" name="qwiz' + i_qwiz + '-q' + i_question + '" ' + data_correct + ' onclick="' + qname + '.process_choice (\'qwiz' + i_qwiz + '-q' + i_question + '-a' + i_choice + '\')" />\n';
+   htm += '<input type="radio" id="radio-qwiz' + i_qwiz + '-q' + i_question + '-a' + i_choice + '" name="qwiz' + i_qwiz + '-q' + i_question + '" ' + data_correct + ' style="border: none;" onclick="' + qname + '.process_choice (\'qwiz' + i_qwiz + '-q' + i_question + '-a' + i_choice + '\')" />\n';
 
    if (debug[1]) {
       console.log ('[create_radio_button_html] htm: ', htm);
@@ -2337,6 +2914,9 @@ function update_progress_show_next (i_qwiz) {
          $ ('#next_button_text-qwiz' + i_qwiz).html (T ('View summary report'));
       }
       $ ('#next_button-qwiz' + i_qwiz).show ();
+
+      // Record state.
+      qwizdata[i_qwiz].next_button_show_b = true;
    }
 }
 
@@ -2353,9 +2933,9 @@ function display_progress (i_qwiz) {
    var n_to_go = qwizdata[i_qwiz].n_questions - n_done;
 
    if (n_attempts == 0) {
-      progress_html = 'Questions in this quiz: ' + n_to_go;
+      progress_html = T ('Questions in this quiz:') + ' ' + n_to_go;
    } else {
-      progress_html = qwizdata[i_qwiz].n_questions + ' questions, ' + n_attempts + ' ' + plural ('response', 'responses', n_attempts) + ', ' + qwizdata[i_qwiz].n_correct + ' correct, ' + qwizdata[i_qwiz].n_incorrect + ' incorrect, ' + n_to_go + ' to go';
+      progress_html = qwizdata[i_qwiz].n_questions + ' ' + T ('questions') + ', ' + n_attempts + ' ' + Tplural ('response', 'responses', n_attempts) + ', ' + qwizdata[i_qwiz].n_correct + ' ' + T ('correct') + ', ' + qwizdata[i_qwiz].n_incorrect + ' ' + T ('incorrect') + ', ' + n_to_go + ' ' + T ('to go');
    }
    $ ('#progress-qwiz' + i_qwiz).html (progress_html);
 }
@@ -2364,8 +2944,11 @@ function display_progress (i_qwiz) {
 // -----------------------------------------------------------------------------
 function display_qwizzled_progress (i_qwiz) {
 
-   // Show in case single-question qwiz.
-   var progress_html = 'Correctly labeled ' + qwizdata[i_qwiz].n_labels_correct + ' out of ' + qwizdata[i_qwiz].n_labels + ' items';
+   var i_question  = qwizdata[i_qwiz].i_question + 1;
+   var n_questions = qwizdata[i_qwiz].n_questions;
+   var progress_html = 'Q #' + i_question + '/' + n_questions + '; Correctly labeled ' + qwizdata[i_qwiz].n_labels_correct + ' out of ' + qwizdata[i_qwiz].n_label_targets + ' items';
+
+   // Do show () in case single-question qwiz.
    $ ('#progress-qwiz' + i_qwiz).html (progress_html).show ();
 }
 
@@ -2414,103 +2997,527 @@ function create_feedback_div_html (i_qwiz, i_question, i_item, item, c_x) {
 
 
 // -----------------------------------------------------------------------------
-function get_attr (htm, attr_name) {
+function canned_feedback (correct_b) {
 
-   var attr_value = '';
-
-   var attr_re = new RegExp (attr_name + '\\s*?=\\s*?["\\u201C\\u201D]([^"\u201C\u201D]+)["\\u201C\\u201D]', 'm');
-   var attr_match = htm.match (attr_re);
-   if (attr_match) {
-      attr_value = trim (attr_match[1]);
+   var response;
+   if (correct_b) {
+      var i = Math.floor (Math.random () * correct.length);
+      response = correct[i];
+   } else {
+      var i = Math.floor (Math.random () * incorrect.length);
+      response = incorrect[i];
    }
+   response = '<p><strong>' + response + '</strong></p>';
 
-   return attr_value;
+   if (debug[0]) {
+      console.log ('[canned_feedback] response:', response);
+   }
+   return response;
 }
 
 
 // -----------------------------------------------------------------------------
-var number_word = [T ('zero'), T ('one'), T ('two'), T ('three'), T ('four'), T ('five'), T ('six'), T ('seven'), T ('eight'), T ('nine'), T ('ten')];
+var find_matching_terms = function (request, response) {
 
-function number_to_word (number) {
-   var word;
-   if (number > 9) {
-      word = number;
-   } else {
-      word = number_word[number];
+   // If no separate intro page, and this is first question, hide qwiz icon.
+   if (qwizdata[textentry_i_qwiz].i_question == 0 
+                         && (no_intro_b[textentry_i_qwiz] 
+                             || qwizdata[textentry_i_qwiz].n_questions == 1)) {
+      $ ('div.qwiz div#icon_qwiz' + textentry_i_qwiz).hide ();
    }
 
-   return word;
+   var entry = request.term.toLowerCase ();
+   var entry_metaphone = qqc.metaphone (entry);
+   if (debug[5]) {
+      console.log ('[find_matching_terms] entry_metaphone; ', entry_metaphone);
+   }
+
+   // See if first character of entry metaphone matches first character of any
+   // answer metaphone.  If so, determine shortest answer metaphone that
+   // matches.
+   var required_entry_length = 100;
+   var required_metaphone_length = 100;
+   for (var i=0; i<textentry_answer_metaphones[textentry_i_qwiz].length; i++) {
+      if (entry[0] == textentry_answers[textentry_i_qwiz][i][0].toLowerCase ()) {
+         required_entry_length = Math.min (required_entry_length, textentry_answers[textentry_i_qwiz][i].length);
+         if (debug[5]) {
+            console.log ('[find_matching_terms] entry[0]:', entry[0], ', textentry_answers[textentry_i_qwiz][i][0]:', textentry_answers[textentry_i_qwiz][i][0]);
+         }
+      }
+      if (entry_metaphone[0] == textentry_answer_metaphones[textentry_i_qwiz][i][0]) {
+         required_metaphone_length = Math.min (required_metaphone_length, textentry_answer_metaphones[textentry_i_qwiz][i].length);
+         if (debug[5]) {
+            console.log ('[find_matching_terms] textentry_answer_metaphones[textentry_i_qwiz][i]:', textentry_answer_metaphones[textentry_i_qwiz][i], ', required_metaphone_length:', required_metaphone_length);
+         }
+      }
+   }
+   if (required_entry_length != 100) {
+      required_entry_length -= 2;
+      required_entry_length = Math.min (5, required_entry_length);
+   }
+
+   if (required_metaphone_length != 100) {
+      required_metaphone_length--;
+      if (required_metaphone_length < 2) {
+         required_metaphone_length = 2;
+      } else if (required_metaphone_length > 4) {
+         required_metaphone_length = 4;
+      }
+   }
+   if (debug[5]) {
+      console.log ('[find_matching_terms] required_entry_length:', required_entry_length, ', required_metaphone_length:', required_metaphone_length);
+   }
+
+   // Entry consisting of repeated single character doesn't count as "long".
+   // Replace any three or more of same character in a row with just one.
+   var deduped_entry = entry.replace (/(.)\1{2,}/gi, '\$1');
+   if (deduped_entry.length < required_entry_length && entry_metaphone.length < required_metaphone_length) {
+      textentry_matches[textentry_i_qwiz] = [];
+      lc_textentry_matches[textentry_i_qwiz] = [];
+
+   } else {
+      if (debug[5]) {
+         console.log ('[find_matching_terms] request.term:', request.term, entry_metaphone, entry_metaphone.length);
+      }
+      textentry_matches[textentry_i_qwiz] = $.map (current_question_textentry_terms_metaphones[textentry_i_qwiz], function (term_i) {
+         if (term_i[1].indexOf (entry_metaphone) === 0 || term_i[0].toLowerCase ().indexOf (entry) === 0) {
+            if (debug[5]) {
+               console.log ('[find_matching_terms] term_i:', term_i);
+            }
+            return term_i[0];
+         }
+      });
+      lc_textentry_matches[textentry_i_qwiz] 
+         = textentry_matches[textentry_i_qwiz].map (function (item) {
+                                                       return item.toLowerCase ();
+                                                    });
+      if (debug[5]) {
+         console.log ('[find_matching_terms] textentry_matches[textentry_i_qwiz]:', textentry_matches[textentry_i_qwiz]);
+      }
+   }
+
+   // If entry length five or more, and matches list does not include first
+   // correct answer, and haven't used up hints, enable hint.
+   if (debug[5]) {
+      console.log ('[find_matching_terms] deduped_entry.length: ', deduped_entry.length, ', textentry_matches[textentry_i_qwiz].length: ', textentry_matches[textentry_i_qwiz].length, ', qwizdata[textentry_i_qwiz].textentry_n_hints: ', qwizdata[textentry_i_qwiz].textentry_n_hints);
+   }
+   if (deduped_entry.length >= 5 && qwizdata[textentry_i_qwiz].textentry_n_hints < 5) {
+      var i_question = qwizdata[textentry_i_qwiz].i_question;
+      var lc_first_correct_answer = qwizdata[textentry_i_qwiz].textentry[i_question].first_correct_answer.toLowerCase ();
+      if (lc_textentry_matches[textentry_i_qwiz].indexOf (lc_first_correct_answer) == -1) {
+         $ ('#textentry_check_answer_div-qwiz' + textentry_i_qwiz + ' button.qwiz_textentry_hint').removeAttr ('disabled').removeClass ('qbutton_disabled').addClass ('qbutton').show ();
+      }
+   }
+   response (textentry_matches[textentry_i_qwiz]);
 }
 
 
 // -----------------------------------------------------------------------------
-function plural (word, plural_word, n) {
-   var new_word;
-   if (n == 1) {
-      new_word = word;
+// When menu closed: if current entry doesn't fully match anything on the last
+// set of matches, disable "Check answer".
+function menu_closed (e) {
+
+   // Do only if "Check answer" not already disabled.
+   if (! qwizdata[textentry_i_qwiz].check_answer_disabled_b) {
+      var lc_entry = e.target.value.toLowerCase ();
+      if (debug[5]) {
+         console.log ('[menu_closed] textentry_matches[textentry_i_qwiz]: ', textentry_matches[textentry_i_qwiz]);
+      }
+      if (lc_textentry_matches[textentry_i_qwiz].indexOf (lc_entry) == -1) {
+         $ ('#textentry_check_answer_div-qwiz' + textentry_i_qwiz + ' button.textentry_check_answer').removeClass ('qbutton').addClass ('qbutton_disabled');
+         qwizdata[textentry_i_qwiz].check_answer_disabled_b = true;
+      }
+   }
+}
+
+
+// -----------------------------------------------------------------------------
+// When suggestion menu shown: (1) if the matches list shown includes the first
+// correct answer, then set flag that hint not needed; (2) if current entry
+// _fully_ matches anything on the matches list shown, then enable "Check
+// answer"; otherwise disable "Check answer".
+function menu_shown (e) {
+
+   // Lowercase entry and matches list.
+   var lc_entry = e.target.value.toLowerCase ();
+
+   // Does matches list include first correct answer?
+   var i_question = qwizdata[textentry_i_qwiz].i_question;
+   var lc_first_correct_answer = qwizdata[textentry_i_qwiz].textentry[i_question].first_correct_answer.toLowerCase ();
+   if (lc_textentry_matches[textentry_i_qwiz].indexOf (lc_first_correct_answer) != -1) {
+      $ ('#textentry_check_answer_div-qwiz' + textentry_i_qwiz + ' button.qwiz_textentry_hint').attr ('disabled', true).removeClass ('qbutton').addClass ('qbutton_disabled');
+   }
+   if (lc_textentry_matches[textentry_i_qwiz].indexOf (lc_entry) != -1) {
+      $ ('#textentry_check_answer_div-qwiz' + textentry_i_qwiz + ' button.textentry_check_answer').removeClass ('qbutton_disabled').addClass ('qbutton');
+      qwizdata[textentry_i_qwiz].check_answer_disabled_b = false;
    } else {
-      new_word = plural_word;
+      $ ('#textentry_check_answer_div-qwiz' + textentry_i_qwiz + ' button.textentry_check_answer').removeClass ('qbutton').addClass ('qbutton_disabled');
+      qwizdata[textentry_i_qwiz].check_answer_disabled_b = true;
+   }
+}
+
+
+// -----------------------------------------------------------------------------
+this.textentry_check_answer = function (i_qwiz) {
+
+   if (qwizdata[i_qwiz].check_answer_disabled_b) {
+      alert (Tcheck_answer_message);
+      return;
    }
 
-   return T (new_word);
+   // Hide "Check answer" button div.
+   $ ('#textentry_check_answer_div-qwiz' + i_qwiz).hide ();
+
+   var i_question = qwizdata[i_qwiz].i_question;
+   var entry = $ ('#textentry-qwiz' + i_qwiz + '-q' + i_question).val ().toLowerCase ();
+
+   // See if entry among choices; identify default choice ("*").
+   var i_choice = -1;
+   var correct_b = false;
+   var n_choices = qwizdata[i_qwiz].textentry[i_question].choices.length;
+   var i_default_choice;
+   for (var i=0; i<n_choices; i++) {
+      var alts = qwizdata[i_qwiz].textentry[i_question].choices[i];
+      if (alts[0] == '*') {
+         i_default_choice = i;
+      } else {
+         var lc_alts = alts.map (function (item) {
+                                    return item.toLowerCase ();
+                                 });
+         if (lc_alts.indexOf (entry) != -1) {
+
+            // Yes, this one.  Correct?
+            correct_b = qwizdata[i_qwiz].textentry[i_question].choices_correct[i];
+            i_choice = i;
+            break;
+         }
+      }
+   }
+   if (i_choice == -1) {
+      i_choice = i_default_choice;
+   }
+   $ ('#qwiz' + i_qwiz + '-q' + i_question + '-a' + i_choice).show ();
+
+   // Update statistics.
+   if (correct_b) {
+      qwizdata[i_qwiz].n_correct++;
+      $ ('#qwiz' + i_qwiz + '-q' + i_question).data ('answered_correctly', 1);
+   } else {
+
+      // Record number of incorrect responses.
+      qwizdata[i_qwiz].n_incorrect++;
+      $ ('#qwiz' + i_qwiz + '-q' + i_question).data ('answered_correctly', 0);
+   }
+   update_topic_statistics (i_qwiz, i_question, correct_b);
+
+   // Update progress and show next button -- only if more than one question.
+   update_progress_show_next (i_qwiz);
+}
+
+
+// -----------------------------------------------------------------------------
+// Provide first letters of first correct answer as hint, up to five letters.
+this.textentry_hint = function (i_qwiz) {
+   qwizdata[i_qwiz].textentry_n_hints++;
+
+   var i_question = qwizdata[i_qwiz].i_question;
+   var textentry_hint_val = qwizdata[i_qwiz].textentry[i_question].first_correct_answer.substr (0, qwizdata[i_qwiz].textentry_n_hints);
+   $ ('#textentry-qwiz' + i_qwiz + '-q' + i_question).val (textentry_hint_val).focus ();
+
+   // Disable hint button, reset label.
+   $ ('#textentry_check_answer_div-qwiz' + i_qwiz + ' button.qwiz_textentry_hint').attr ('disabled', true).removeClass ('qbutton').addClass ('qbutton_disabled').html ('Add. hint');
+}
+
+
+// -----------------------------------------------------------------------------
+this.set_textentry_i_qwiz = function (input_el) {
+
+   // See which quiz this is.  Save in global (private) variable.
+   // id looks like textentry-qwiz0-q0
+   var id = input_el.id;
+   textentry_i_qwiz = id.match (/[0-9]+/)[0];
+   if (debug[5]) {
+      console.log ('[set_textentry_i_qwiz] textentry_i_qwiz: ', textentry_i_qwiz);
+   }
+}
+
+
+// -----------------------------------------------------------------------------
+// When item selected, enable check answer.
+function item_selected () {
+   $ ('#textentry_check_answer_div-qwiz' + textentry_i_qwiz + ' button.textentry_check_answer').removeClass ('qbutton_disabled').addClass ('qbutton');
+   qwizdata[textentry_i_qwiz].check_answer_disabled_b = false;
+}
+
+
+// -----------------------------------------------------------------------------
+this.keep_next_button_active = function () {
+   next_button_active_b = true;
+   $ ('.next_button').show ();
+}
+
+
+// -----------------------------------------------------------------------------
+this.display_login = function (i_qwiz) {
+
+   // Close menu in case came from there.
+   $ ('#usermenu-qwiz' + i_qwiz).hide ();
+
+   if (qwizdata[i_qwiz].i_question == -1) {
+
+      // Hide intro (intro -- if any -- shows with the question of a single-
+      // question quiz).
+      $ ('#intro-qwiz' + i_qwiz).hide ();
+
+      // If intro was showing, can hide qwiz icon now.
+      if (! no_intro_b[i_qwiz]) {
+         $ ('div.qwiz div#icon_qwiz' + i_qwiz).hide ();
+      }
+   } else {
+
+      // Hide current question.
+      $ ('#qwiz' + i_qwiz + '-q' + qwizdata[i_qwiz].i_question).hide ();
+   }
+
+   // Don't show next button.
+   $ ('#next_button-qwiz' + i_qwiz).hide ();
+
+   $ ('#qwiz_login-qwiz' + i_qwiz).show ();
+
+   $ ('#qwiz_username-qwiz' + i_qwiz).focus ();
+}
+
+
+// -----------------------------------------------------------------------------
+function check_session_id (i_qwiz, qrecord_id) {
+
+   // Get cookie, check if still valid (server call).
+   var qwiz_session_id = $.cookie ('qwiz_session_id');
+
+   var data = {qwiz_session_id: qwiz_session_id};
+   qqc.jjax (qname, i_qwiz, qrecord_id, '', 'check_session_id', data);
+}
+
+
+// -----------------------------------------------------------------------------
+this.login = function (i_qwiz) {
+
+   // If previously declined login option, unset cookie and local flag.
+   $.removeCookie ('qwiz_declined_login', {path: '/'});
+   declined_login_b = false;
+
+   // Have we got username and password?
+   var username_obj = $ ('#qwiz_username-qwiz' + i_qwiz);
+   var username = username_obj.val ();
+   if (! username ) {
+      alert (T ('Please enter User name'));
+      username_obj.focus ();
+      return;
+   }
+   document_qwiz_username = username;
+
+   var password_obj = $ ('#qwiz_password-qwiz' + i_qwiz);
+   var password = password_obj.val ();
+   if (! password) {
+      alert (T ('Please enter Password'));
+      password_obj.focus ();
+      return;
+   }
+
+   // Do jjax call.  First disable login button, show spinner.
+   // ...
+   var data = {username: username, password: password};
+   qqc.jjax (qname, i_qwiz, qwizdata[i_qwiz].qrecord_id, '', 'login', data);
+}
+
+
+// -----------------------------------------------------------------------------
+this.login_ok = function (i_qwiz, session_id) {
+
+   // Success.  Create session cookie.  Valid just for this session, good for
+   // whole site.  Value set by server.
+   $.cookie ('qwiz_session_id', session_id, {path: '/'});
+
+   // Set flag.
+   document_qwiz_user_logged_in_b = true;
+
+   // Set user menus.
+   q.set_user_menus_and_icons ();
+
+   // Hide login.
+   $ ('#qwiz_login-qwiz' + i_qwiz).hide ();
+
+   if (qwizdata[i_qwiz].i_question == -1) {
+
+      // Go to first question.
+      q.next_question (i_qwiz);
+   } else {
+
+      // Re-display current question.
+      $ ('#qwiz' + i_qwiz + '-q' + qwizdata[i_qwiz].i_question).show ();
+
+      // Show next button if was showing.
+      if (qwizdata[i_qwiz].next_button_show_b) {
+         $ ('#next_button-qwiz' + i_qwiz).show ();
+      }
+   }
+}
+
+
+// -----------------------------------------------------------------------------
+this.login_not_ok = function (i_qwiz) {
+
+   // Invalid login.  Error message.
+   $ ('#qwiz_login-qwiz' + i_qwiz + ' p.login_error').show ();
+   if (debug[0]) {
+      console.log ('[login_not_ok] $ (\'#qwiz_login-qwiz' + i_qwiz + ' p.login_error\'):', $ ('#qwiz_login-qwiz' + i_qwiz + ' p.login_error'));
+   }
+}
+
+
+// -----------------------------------------------------------------------------
+this.no_login = function (i_qwiz) {
+
+   // Skip login.  Hide login, go to first question.  If checkbox checked, set
+   // cookie and local flag to skip in the future.
+   if ($ ('div.qwiz-login input[type="checkbox"]').prop('checked')) {
+      $.cookie ('qwiz_declined_login', 1, {path: '/'});
+      declined_login_b = true;
+   }
+   $ ('#qwiz_login-qwiz' + i_qwiz).hide ();
+   q.next_question (i_qwiz);
+}
+
+
+// -----------------------------------------------------------------------------
+this.icon_no_login = function (i_qwiz) {
+
+   // Stop icon from bouncing.  If checkbox checked, set cookie and local flag
+   // to skip bouncing/login in the future.
+   /* DKTMP
+   if ($ ('div.qwiz-login input[type="checkbox"]').prop('checked')) {
+      $.cookie ('qwiz_declined_login', 1, {path: '/'});
+      declined_login_b = true;
+   }
+   */
+   $ ('div.qwiz-usermenu_icon_no_intro').removeClass ('qwiz-icon-bounce');
+
+   // Close menu.
+   $ ('#usermenu-qwiz' + i_qwiz).hide ();
+}
+
+
+// -----------------------------------------------------------------------------
+this.show_usermenu = function (i_qwiz) {
+   $ ('#usermenu-qwiz' + i_qwiz).show ().mouseleave (function () {
+                                                        $ (this).hide ();
+                                                     });
+}
+
+
+// -----------------------------------------------------------------------------
+this.set_user_menus_and_icons = function () {
+   var htm = '';
+   var icon_color;
+
+   // See if logged in.
+   if (typeof (document_qwiz_user_logged_in_b) != 'undefined'
+                                            && document_qwiz_user_logged_in_b) {
+
+      // Yes.  Show login name.
+      htm +=    '<div>'
+             +     T ('Logged in as') + ' <strong>' + document_qwiz_username + '</strong>'
+             +  '</div>';
+
+      // Menu item for records.
+      htm +=    '<div>'
+             +      T ('My scores')
+             +  '</div>';
+
+      // Menu item for logout.
+      htm +=    '<div>'
+             +      T ('Not') + ' ' + document_qwiz_username + '? '
+             +     '<a href="javascript: ' + qname + '.sign_out ()">'
+             +         T ('Sign out')
+             +     '</a>'
+             +  '</div>';
+
+      icon_color = 'green';
+
+      // Logged in.  No animation for no-intro quizzes icon.
+      $ ('div.qwiz-usermenu_icon_no_intro').removeClass ('qwiz-icon-bounce');
+   } else {
+
+      // Not logged in: login menu item.
+      htm +=    '<div  onclick="' + qname + '.display_login (i_qwiz)">'
+             +     '<a href="javascript: ' + qname + '.display_login (i_qwiz)">'
+             +        '<strong>' + T ('Log in') + '</strong> ' + T ('to record/get credit')
+             +     '</a>'
+             +  '</div>';
+
+      // "No thanks" item.
+      htm +=    '<div>'
+             +     '<a href="javascript: ' + qname + '.icon_no_login (i_qwiz)">'
+             +        '<strong>' + T ('No thanks') + '</strong>'
+             +     '</a>'
+             +     ' &nbsp;<span class="qwiz-remember" title="' + T ('Skip login in the future') + '"><span><input type="checkbox" /></span> ' + T ('Remember') + '</span>'
+             +  '</div>';
+
+      icon_color = 'black';
+
+      // Not logged in.  No-intro quizzes get animated icon.
+      $ ('div.qwiz-usermenu_icon_no_intro').addClass ('qwiz-icon-bounce');
+   }
+
+   // All user menus (every quiz with qrecord_id).
+   $ ('div.qwiz-usermenu').each (function () {
+                                    // Get qwiz number from id - looks like
+                                    // usermenu-qwiz0.
+                                    // 0----+----1---
+                                    var id = $ (this).attr ('id');
+                                    var i_qwiz = id.substr (13);
+                                    $ (this).html (htm.replace (/i_qwiz/g, i_qwiz));
+                                 });
+
+   // Also set icons visible, color based on login state.
+   $ ('div.qwiz-usermenu_icon').css ({visibility: 'visible', color: icon_color});
+}
+
+
+// -----------------------------------------------------------------------------
+this.sign_out = function () {
+
+   // Delete cookie, unset flag.
+   $.removeCookie ('qwiz_session_id', {path: '/'});
+   document_qwiz_user_logged_in_b = false;
+
+   // Reset menus to reflect current (logged-out) state.
+   q.set_user_menus_and_icons ();
 }
 
 
 // -----------------------------------------------------------------------------
 function T (string) {
-
-   var t_string = '';
-
-   // Translation, if available.
-   if (typeof (qwiz_params) != 'undefined') {
-      if (typeof (qwiz_params.T) != 'undefined') {
-         if (typeof (qwiz_params.T[string]) != 'undefined') {
-            t_string = qwiz_params.T[string];
-         }
-      }
-   }
-   if (t_string == '') {
-
-      // Translation not available.  Just use default string.
-      t_string = string;
-   }
-
-   return t_string;
+   return qqc.T (string);
 }
 
 
 // -----------------------------------------------------------------------------
-function get_qwiz_param (key, default_value) {
-
-   var value = '';
-   if (typeof (qwiz_params) != 'undefined') {
-      if (typeof (qwiz_params[key]) != 'undefined') {
-         value = qwiz_params[key];
-      }
-   }
-   if (value == '') {
-
-      // qwiz_params object or key not present.  Return default value, if 
-      // given, or ''.
-      if (default_value != undefined) {
-         value = default_value;
-      }
-   }
-
-   return value;
+function Tplural (word, plural_word, n) {
+   return qqc.Tplural (word, plural_word, n);
 }
 
 
 // -----------------------------------------------------------------------------
-// IE 8 does not have trim () method for strings.
-function trim (s) {
-   if ('a'.trim) {
-      s = s.trim ();
-   } else {
-      s = s.replace (/^\s+|\s+$/g, '');
+function inarray0 (array_of_arrays, query) {
+   var len = array_of_arrays.length;
+   for (var i=0; i<len; i++) {
+      if (array_of_arrays[i][0] == query) {
+         return true;
+      }
    }
 
-   return s;
+   return false;
 }
 
 

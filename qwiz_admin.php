@@ -59,7 +59,7 @@ function qwiz_admin_init () {
    // do_settings_sections () call).
    add_settings_section ('qwiz-translate_strings-section', 
                          'Customize button labels, etc.',
-                         'translate_strings_text', 'qwiz-options-page');
+                         'qwiz_translate_strings_text', 'qwiz-options-page');
 
    // Args 1: ID for field.  2: title.  3: function to display field input.
    // 4: page name.  5: ID of section (first arg to add_settings_section ()).
@@ -68,7 +68,7 @@ function qwiz_admin_init () {
             . '<br /><br /><br />'
             . '<input name="Submit" type="submit" value="Save changes" />';
    add_settings_field ('qwiz-translate_strings-field', $title,
-                       'translate_strings_field_input', 'qwiz-options-page', 
+                       'qwiz_translate_strings_field_input', 'qwiz-options-page', 
                        'qwiz-translate_strings-section');
 
    // ........................................................................
@@ -78,19 +78,48 @@ function qwiz_admin_init () {
    // do_settings_sections () call).
    add_settings_section ('qwiz-content-section', 
                          'HTML element that contains quiz and flashcard content (shortcodes, etc.)',
-                         'content_text', 'qwiz-options-page');
+                         'qwiz_content_text', 'qwiz-options-page');
 
    // Args 1: ID for field.  2: title.  3: function to display field input.
    // 4: page name.  5: ID of section (first arg to add_settings_section ()).
    add_settings_field ('qwiz-content-field', 'Qwiz-content HTML<br />element(s)', 
-                       'content_field_input', 'qwiz-options-page', 
+                       'qwiz_content_field_input', 'qwiz-options-page', 
                        'qwiz-content-section');
+
+   // ........................................................................
+   // Use beta version.
+   add_settings_section ('qwiz-use_beta-section',
+                         'Test or deploy beta version of Qwiz plugin',
+                         'qwiz_use_beta_text', 'qwiz-options-page');
+
+   add_settings_field ('qwiz-use_beta-field', 'Test or deploy beta, or use installed release',
+                       'qwiz_use_beta_field_input', 'qwiz-options-page',
+                       'qwiz-use_beta-section');
+
+   // ........................................................................
+   // Download current beta version.
+   add_settings_section ('qwiz-download_beta-section',
+                         'Download beta version of Qwiz plugin',
+                         'qwiz_download_beta_text', 'qwiz-options-page');
+
+   add_settings_field ('qwiz-download_beta-field', 'Download',
+                       'qwiz_download_beta_field_input', 'qwiz-options-page',
+                       'qwiz-download_beta-section');
+
+   // ........................................................................
+   // Revert version.
+   add_settings_section ('qwiz-revert-section',
+                         'Revert to an earlier version',
+                         'qwiz_revert_text', 'qwiz-options-page');
+
+   add_settings_field ('qwiz-revert-field', 'Version',
+                       'qwiz_revert_field_input', 'qwiz-options-page',
+                       'qwiz-revert-section');
 }
 
 
+// -----------------------------------------------------------------------------
 function qwiz_options_validate ($options) {
-
-   global $qwiz_T;
 
    // ............................................
    // Check icon_qwiz option.
@@ -105,26 +134,15 @@ function qwiz_options_validate ($options) {
    $options['icon_qwiz'] = $new_icon_qwiz;
 
    // ............................................
-   // Check "content" HTML element.
-   $new_content = trim ($options['content']);
-   if ($new_content == '') {
-
-      // Reset to default.
-      $new_content = 'div.entry-content, div.post-entry, div.container';
-
-      // Error feedback.  Args: 1: Id of the setting.  2:  Id for error.
-      // 3: message.
-      add_settings_error ('qwiz-content-section', 'qwiz-content-errmsg',
-                          'All-blank Qwiz-content HTML element(s) not allowed.  Resetting to default...');
-   }
-   $options['content'] = $new_content;
-
-   // ............................................
    // Check "translate_strings".
-   $errmsg = '';
    $translate_strings = trim ($options['translate_strings']);
    $new_translate_strings = array ();
    if ($translate_strings != '') {
+
+      // Set qwiz_T as array of strings.  (Do over again so sure to have it
+      // here, appropriately with beta version.)
+      $qwiz_T = array ();
+      include beta_subdir () . "languages/strings_to_translate.php";
 
       // Split into lines, loop over lines.
       $lines = explode ("\n", $translate_strings);
@@ -143,7 +161,7 @@ function qwiz_options_validate ($options) {
 
             // Error feedback.  Args: 1: Id of the setting.  2:  Id for error.
             // 3: message.
-            add_settings_error ('qwiz-content-section', 'qwiz-strings_to_translate-errmsg1',
+            add_settings_error ('qwiz-translate_strings-section', 'qwiz-translate_strings-errmsg1',
                                 'Custom labels line' . ($i + 1) . ': didn\'t get two strings separated by semi-colon.');
             // Set for sake of correction after error message.
             $new_translate_strings[] = $line;
@@ -151,16 +169,18 @@ function qwiz_options_validate ($options) {
             $old_string = trim ($strings[0]);
             $new_string = trim ($strings[1]);
             if (strlen ($old_string) == 0 || strlen ($new_string) == 0 ) {
-               add_settings_error ('qwiz-content-section', 'qwiz-strings_to_translate-errmsg2',
+               add_settings_error ('qwiz-content-section', 'qwiz-translate_strings-errmsg2',
                                    'Custom labels line' . ($i + 1) . ': null string before or after semicolon not allowed.');
 
                // Set for sake of correction after error message.
                $new_translate_strings[] = $old_string . '; ' . $new_string;
             } else {
 
-               // Check if string exists in list.
-               if (! array_key_exists ($old_string, $qwiz_T)) {
-                  add_settings_error ('qwiz-content-section', 'qwiz-strings_to_translate-errmsg3',
+               // Check if string exists in list.  Translation of "Flip" to
+               // "Check answer" is default.  Allow "Check answer" to be
+               // translated.
+               if ($old_string != "Check answer" && ! array_key_exists ($old_string, $qwiz_T)) {
+                  add_settings_error ('qwiz-content-section', 'qwiz-translate_strings-errmsg3',
                                       'Custom labels line' . ($i + 1) . ': could not find current string ("' . $old_string . '") in list of strings.  Either incorrectly entered or missing from list (see languages/strings_to_translate.php in the Qwiz plugin directory).');
                }
 
@@ -171,12 +191,213 @@ function qwiz_options_validate ($options) {
          }
       }
    }
-
    // Join into new-line separated string.
    $options['translate_strings'] = implode ("\n", $new_translate_strings);
 
+
+   // ............................................
+   // Check "content" HTML element.
+   $new_content = trim ($options['content']);
+   if ($new_content == '') {
+
+      // Reset to default.
+      $new_content = 'div.entry-content, div.post-entry, div.container';
+
+      // Error feedback.  Args: 1: Id of the setting.  2:  Id for error.
+      // 3: message.
+      add_settings_error ('qwiz-content-section', 'qwiz-content-errmsg',
+                          'All-blank Qwiz-content HTML element(s) not allowed.  Resetting to default...');
+   }
+   $options['content'] = $new_content;
+
+   // ............................................
+   // Use beta version -- use this as opportunity to do setting.
+   $qwiz_beta = $options['qwiz_beta'];
+   //error_log ("[qwiz_options_validate] qwiz_beta: $qwiz_beta");
+   if ($qwiz_beta == 'test_beta') {
+
+      // Start session if not started; set session var; turn off beta
+      // deployment in case was on.
+      qwiz_start_session ();
+      $_SESSION['qwiz_beta'] = 1;
+      $options['deploy_beta'] = '';
+   } else {
+
+      // Not testing beta.  Turn off session (no session var).
+      qwiz_end_session ();
+
+      // See if deploying beta.
+      if ($qwiz_beta == 'deploy_beta') {
+         $options['deploy_beta'] =  1;
+      } else {
+
+         // Turn off beta_deployment in case was on.
+         $options['deploy_beta'] = '';
+      }
+   }
+
+   // qwiz_beta options element just for transfer from input form -- don't
+   // store anything in options.
+   $options['qwiz_beta'] = '';
+
+   // ............................................
+   // Download beta version: if checkbox set, do now.
+   $qwiz_download_beta = $options['qwiz_download_beta'];
+   if ($qwiz_download_beta) {
+      qwiz_download_unzip_beta ();
+   }
+
+   // Don't leave set (although checkbox defaults to not checked).
+   $options['qwiz_download_beta'] = '';
+
+   // ............................................
+   // Revert to earlier version: if version number entered, do now.
+   $qwiz_revert_version = $options['qwiz_revert_version'];
+   if ($qwiz_revert_version) {
+      qwiz_download_unzip_version ($qwiz_revert_version);
+   }
+
+   // Don't leave set (one-time download!).
+   $options['qwiz_revert_version'] = '';
+
+   // ............................................
    return $options;
 }
+
+
+// -----------------------------------------------------------------------------
+function qwiz_download_unzip_beta () {
+
+   $beta_zip_file = 'http://downloads.wordpress.org/plugin/qwiz-online-quizzes-and-flashcards.0.00.zip';
+   $get_response = file_get_contents ($beta_zip_file);
+   if ($get_response === false) {
+      add_settings_error ('qwiz-download_beta-section', 'qwiz-download_beta-errmsg1',
+                          "Unable to download beta zip file: $beta_zip_file");
+   } else {
+
+      $plugin_dir = plugin_dir_path (__FILE__);
+      $beta_zip_filepath = $plugin_dir . 'beta.zip';
+      $put_response = file_put_contents ($beta_zip_filepath, print_r ($get_response, true));
+      if ($put_response === false) {
+         add_settings_error ('qwiz-download_beta-section', 'qwiz-download_beta-errmsg3',
+                             "Unable to write beta zip file: $beta_zip_filepath");
+      }
+
+      // For mode of extracted files.
+      umask (0);
+      $zip = new ZipArchive;
+      if ($zip->open ($beta_zip_filepath) === true) {
+         $beta_dir = $plugin_dir . 'beta';
+         if (file_exists ($beta_dir)) {
+
+            // Not sure about updating files/file permissions, so delete all
+            // first.
+            if (file_exists ($plugin_dir . BETA_SUBDIR)) {
+               qwiz_rrm ($plugin_dir . BETA_SUBDIR);
+            }
+         } else {
+            wp_mkdir_p ($beta_dir);
+         }
+         if ($zip->extractTo ($beta_dir) === true) {
+            $zip->close ();
+         } else {
+            add_settings_error ('qwiz-download_beta-section', 'qwiz-download_beta-errmsg4',
+                                "Unable to extract files from: $beta_zip_filepath to: $beta_dir..");
+         }
+      } else {
+         add_settings_error ('qwiz-download_beta-section', 'qwiz-download_beta-errmsg2',
+                             "Unable to open beta zip file: $beta_zip_filepath");
+      }
+
+      // Cleanup.  Remove zip file.
+      unlink ($beta_zip_filepath);
+   }
+}
+
+
+// -----------------------------------------------------------------------------
+function qwiz_download_unzip_version ($qwiz_revert_version) {
+
+   $version_zip_file = "http://downloads.wordpress.org/plugin/qwiz-online-quizzes-and-flashcards.$qwiz_revert_version.zip";
+   $get_response = file_get_contents ($version_zip_file);
+   if ($get_response === false) {
+      $errmsg = "Unable to download zip file: $version_zip_file";
+      if (preg_match ('/^[0-9]\.[0-9][0-9]$/', $qwiz_revert_version) == 0) {
+         $errmsg .= ". Note: version number (\"$qwiz_revert_version\") not in standard form (\"n.nn\")";
+      }
+      add_settings_error ('qwiz-revert-section', 'qwiz-revert-errmsg1', $errmsg);
+   } else {
+
+      $plugin_dir = plugin_dir_path (__FILE__);
+      $version_zip_filepath = $plugin_dir . "$qwiz_revert_version.zip";
+      $put_response = file_put_contents ($version_zip_filepath, print_r ($get_response, true));
+      if ($put_response === false) {
+         add_settings_error ('qwiz-revert-section', 'qwiz-revert-errmsg3',
+                             "Unable to write zip file: $version_zip_filepath");
+      }
+
+      // For mode of extracted files.
+      umask (0);
+      $zip = new ZipArchive;
+      if ($zip->open ($version_zip_filepath) === true) {
+         if ($zip->extractTo ($plugin_dir) === true) {
+            $zip->close ();
+
+            // Extracted to subdirectory of plugin directory (with same name).
+            // Now copy files.
+            $version_dir = $plugin_dir . PLUGIN_DIR;
+            qwiz_cp_R ($version_dir, $plugin_dir);
+
+            // Cleanup.  Remove subdirectory.
+            qwiz_rrm ($version_dir);
+         } else {
+            add_settings_error ('qwiz-revert-section', 'qwiz-revert-errmsg4',
+                                "Unable to extract files from: $version_zip_filepath to: $version_dir");
+         }
+      } else {
+         add_settings_error ('qwiz-revert-section', 'qwiz-revert-errmsg2',
+                             "Unable to open zip file: $version_zip_filepath");
+      }
+
+      // Cleanup.  Remove zip file.
+      unlink ($version_zip_filepath);
+   }
+}
+
+
+// -----------------------------------------------------------------------------
+// Recursive remove dir.
+function qwiz_rrm ($dir) {
+   $files = array_diff (scandir($dir), array('.','..'));
+   foreach ($files as $file) {
+      if (is_dir ("$dir/$file") && ! is_link ($dir)) {
+         qwiz_rrm ("$dir/$file");
+      } else {
+         unlink ("$dir/$file");
+      }
+   }
+
+   return rmdir ($dir);
+} 
+
+
+// -----------------------------------------------------------------------------
+// Recursive copy files and subdirectories (copies files in source_dir to
+// dest_dir; does not copy source_dir itself).
+function qwiz_cp_R ($source_dir, $dest_dir) {
+   @mkdir ("$dest_dir", 0777, true);
+   $files = array_diff (scandir($source_dir), array('.','..'));
+   foreach ($files as $file) {
+      //error_log ("[qwiz_cp_R] doing $source_dir/$file to $dest_dir/$file");
+      if (is_dir ("$source_dir/$file")) {
+         qwiz_cp_R ("$source_dir/$file", "$dest_dir/$file");
+      } else {
+         copy ("$source_dir/$file", "$dest_dir/$file");
+      }
+   }
+
+   return '';
+} 
 
 
 // -----------------------------------------------------------------------------
@@ -219,7 +440,7 @@ function icon_qwiz_field_input () {
 
 
 // -----------------------------------------------------------------------------
-function translate_strings_text () {
+function qwiz_translate_strings_text () {
    print '<p>';
    print 'You can change the labels that are currently displayed on buttons or ';
    print 'in headers (or just about anywhere else for that matter).';
@@ -246,7 +467,7 @@ function translate_strings_text () {
 }
 
 
-function translate_strings_field_input () {
+function qwiz_translate_strings_field_input () {
 
    // Get the options array from the WordPress database.
    $options = get_option ('qwiz_options');
@@ -264,7 +485,7 @@ function translate_strings_field_input () {
 
 
 // -----------------------------------------------------------------------------
-function content_text () {
+function qwiz_content_text () {
    print '<p>';
    print 'The Qwiz "content" HTML element identifies the "container" for quiz ';
    print 'and flashcard deck shortcodes, etc.  In WordPress, this is where ';
@@ -288,7 +509,7 @@ function content_text () {
    print '</p>';
 }
 
-function content_field_input () {
+function qwiz_content_field_input () {
 
    // Get the options array from the WordPress database.
    $options = get_option ('qwiz_options');
@@ -305,6 +526,122 @@ function content_field_input () {
          . 'style="width: 30rem;" value="' . $content . '" />' . "\n";
 }
 
+// -----------------------------------------------------------------------------
+function qwiz_use_beta_text () {
+
+   // Nothing needed?
+}
+
+function qwiz_use_beta_field_input () {
+   global $current_version;
+
+   // See if/what beta version currently available (already downloaded).
+   $beta_plugin_file = plugin_dir_path (__FILE__) . BETA_SUBDIR . PLUGIN_FILE;
+   $current_beta_version = '(Unknown)';
+   if (file_exists ($beta_plugin_file)) {
+
+      $beta_plugin_data = get_plugin_data ($beta_plugin_file);
+      if ($beta_plugin_data['Version']) {
+         $current_beta_version = $beta_plugin_data['Version'];
+      }
+      $current_beta_note = '';
+   } else {
+      $current_beta_note = '<p><strong>Note: beta version not downloaded.</strong></p>';
+   }
+
+   // Find current version of plugin.
+   $plugin_file = plugin_dir_path (__FILE__) . PLUGIN_FILE;
+   $plugin_data = get_plugin_data ($plugin_file);
+   $current_version = $plugin_data['Version'];
+
+   // For testing beta version, use a session variable -- just this (admin)
+   // user, only while stays logged in.  For deploy beta, use option setting.
+   $qwiz_beta = isset ($_SESSION['qwiz_beta']);
+   $options = get_option ('qwiz_options');
+   $deploy_beta = $options['deploy_beta'];
+
+   print '<input id="qwiz_test_beta" name="qwiz_options[qwiz_beta]" type="radio"' 
+         . 'value="test_beta" ' . ($qwiz_beta ? 'checked' : '') . ' />' . "\n";
+   print "Test <strong>$current_beta_version</strong> &emsp; (this login session only)";
+   print '<br />';
+
+   print '<input id="qwiz_deploy_beta" name="qwiz_options[qwiz_beta]" type="radio"' 
+         . 'value="deploy_beta" ' . ($deploy_beta ? 'checked' : '') . ' />' . "\n";
+   print "Deploy <strong>$current_beta_version</strong> &emsp; (all users)";
+   print '<br />';
+
+   print '<input id="qwiz_use_current_install" name="qwiz_options[qwiz_beta]" type="radio"' 
+         . 'value="use_current_install" ' . (($deploy_beta || $qwiz_beta) ? '' : 'checked') . ' />' . "\n";
+   print "Use current installed release <strong>$current_version</strong> &emsp; (all users)";
+
+   print $current_beta_note;
+}
+
+// -----------------------------------------------------------------------------
+function qwiz_download_beta_text () {
+
+   // Nothing needed?
+}
+
+function qwiz_download_beta_field_input () {
+
+   // Note if URLs cannot be opened.
+   if (! ini_get ('allow_url_fopen')) {
+      print  '<span style="font-weight: bold; color: red;">Note: php file downloads not enabled on this system. allow_url_fopen needs to be set in ' . php_ini_loaded_file () . '</span><br />';
+   }
+
+   print '<input id="qwiz_download_beta" name="qwiz_options[qwiz_download_beta]" '
+         . 'type="checkbox" />' . "\n";
+   print 'Check this box to do download when click "Save changes"';
+}
+
+
+// -----------------------------------------------------------------------------
+function qwiz_revert_text () {
+
+   print 'Switch back to an earlier version of the Qwiz plugin';
+}
+
+function qwiz_revert_field_input () {
+   global $current_version;
+
+   // Note if URLs cannot be opened.
+   if (! ini_get ('allow_url_fopen')) {
+      print  '<span style="font-weight: bold; color: red;">Note: php file downloads not enabled on this system. allow_url_fopen needs to be set in ' . php_ini_loaded_file () . '</span><br />';
+   }
+
+   print '<table border="0">';
+   print '   <tr>';
+   print '      <td style="padding: 0px;">';
+   print '         <input id="qwiz_revert" name="qwiz_options[qwiz_revert_version]" type="text" style="width: 5rem;" />';
+   print '      </td>';
+   print '      <td style="padding: 0px;">';
+   print '         Input version number (n.nn) to download when click "Save changes".&nbsp; ';
+   print '         <br />';
+   print "         (Leave blank to keep current version = $current_version.)";
+   print '      </td>';
+   print '   </tr>';
+   print '</table>';
+}
+
+
+// -----------------------------------------------------------------------------
+function qwiz_start_session () {
+   if (! session_id ()) {
+      session_start ();
+   }
+}
+
+function qwiz_end_session () {
+   session_destroy ();
+}
+
+
+// =============================================================================
 add_action ('admin_menu', 'qwiz_admin');
+
+add_action ('init', 'qwiz_start_session', 1);
+add_action ('wp_logout', 'qwiz_end_session');
+add_action ('wp_login', 'qwiz_end_session');
 
 add_action ('admin_init', 'qwiz_admin_init');

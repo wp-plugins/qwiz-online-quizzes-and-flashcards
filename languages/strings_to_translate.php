@@ -37,17 +37,30 @@
       /* Translators: as in "there are three cards in total" */
       'cards total' => __ ('cards total', $q),
 
+      'Check answer' => __ ('Check answer', $q),
       'Congratulations, you answered all questions correctly' => __ ('Congratulations, you answered all questions correctly', $q),
+      'correct' => __ ('correct', $q),
+      'Correct!' => __ ('Correct!', $q),
+      'Excellent!' => __ ('Excellent!', $q),
       'Flip' => __ ('Flip', $q),
+
+      /* Translators: as in "Flip back to the front side" */
+      'Flip back' => __ ('Flip back', $q),
 
       /* Translators: as in "For topic Biology..." */
       'For topic' => __ ('For topic', $q),
 
+      'Good!' => __ ('Good!', $q),
       'Got it!' => __ ('Got it!', $q),
+      'Great!' => __ ('Great!', $q),
+      'Hint' => __ ('Hint', $q),
 
       /*'Translators: as in In this %s-flashcard stack, you clicked "Got it!" on the first try for every card. */
       'In this %s-flashcard stack, you clicked' => __ ('In this %s-flashcard stack, you clicked', $q),
       'on the first try for every card' => __ ('on the first try for every card', $q),
+
+      /* Translators: as in "Five answers were incorrect" */
+      'incorrect' => __ ('incorrect', $q),
 
       'It took you one try' => __ ('It took you one try', $q),
       'It took you one try' => __ ('It took you one try', $q),
@@ -64,14 +77,18 @@
       /* Translators: as in "Click here to go to the next question" */
       'Next question' => __ ('Next question', $q),
 
+      'No.' => __ ('No.', $q),
+      'No, that\'s not correct.' => __ ('No, that\'s not correct.', $q),
       'on the first try' => __ ('on the first try', $q),
 
       /* Translators: as in "three out of four" */
       'out of' => __ ('out of', $q),
 
+      'Please try again' => __ ('Please try again', $q),
       'Put this card at the bottom of stack, show the next card' => __ ('Put this card at the bottom of stack, show the next card', $q),
       'question' => __ ('question', $q),
       'questions' => __ ('questions', $q),
+      'Questions in this quiz:' => __ ('Questions in this quiz:', $q),
       'Randomly shuffle the remaining cards' => __ ('Randomly shuffle the remaining cards', $q),
       'Remove this card from the stack' => __ ('Remove this card from the stack', $q),
 
@@ -85,6 +102,8 @@
 
       /* Translators: as in "Shuffle the deck of cards" */
       'Shuffle' => __ ('Shuffle', $q),
+
+      'Sorry, that\'s not correct.' => __ ('Sorry, that\'s not correct.', $q),
 
       /* Translators: as in "Click here to start quiz" */
       'Start quiz' => __ ('Start quiz', $q),
@@ -118,11 +137,13 @@
         The following strings are the second set.
         These are part of the labeled diagram editing function
         that is only seen by quiz creators.  */
-      '' => __ ('', $q),
+      'A new question shortcode [q] has been placed inside an existing question.  Please move it outside and try again.' => __ ('A new question shortcode [q] has been placed inside an existing question.  Please move it outside and try again.', $q),
       'Create a target "drop zone" for a label - click here, then click label' => __ ('Create a target "drop zone" for a label - click here, then click label', $q),
       'Could not find editing window.  You need to be editing a page or post in Visual mode.' => __ ('Could not find editing window.  You need to be editing a page or post in Visual mode.', $q),
+      'Could not read terms file' => __ ('Could not read terms file', $q),
       'Did not find [qwiz]...[/qwiz] shortcodes' => __ ('Did not find [qwiz]...[/qwiz] shortcodes', $q),
       'End of labeled-diagram question' => __ ('End of labeled-diagram question', $q),
+      'Error' => __ ('Error', $q),
       'Error: no text selected' => __ ('Error: no text selected', $q),
       'labeled diagram editing menu' => __ ('labeled diagram editing menu', $q),
       'Please select "Visual" mode to create a target/drop zone' => __ ('Please select "Visual" mode to create a target/drop zone', $q),
@@ -132,6 +153,10 @@
 
       /* Translators: The remaining strings are error messages - not normally
          seen by the user -- only by the quiz/flashcard creator.  */
+
+      /* Translators: as in "choice number one" */
+      'choice' => __ ('choice', $q),
+
       'Did not find answer ("[a]") -- card back -- for' => __ ('Did not find answer ("[a]") -- card back -- for', $q),
       'Did not find any labels [l] within [qwiz]...[/qwiz] shortcode pairs' => __ ('Did not find any labels [l] within [qwiz]...[/qwiz] shortcode pairs', $q),
       'Did not find any questions [q] within [qwiz]...[/qwiz] shortcode pairs' => __ ('Did not find any questions [q] within [qwiz]...[/qwiz] shortcode pairs', $q),
@@ -141,13 +166,19 @@
       'Did not find feedback ("[f]") for' => __ ('Did not find feedback ("[f]") for', $q),
       'Did not find question tags ("[q]") for' => __ ('Did not find question tags ("[q]") for', $q),
       'Did not find target "drop-zones" for labels.  Please check that all labels and target "drop zones" were correctly processed and saved during the edit of this page' => __ ('Did not find target "drop-zones" for labels.  Please check that all labels and target "drop zones" were correctly processed and saved during the edit of this page', $q),
+      'Did not find [terms]...[/terms] shortcode pair in file' => __ ('Did not find [terms]...[/terms] shortcode pair in file', $q),
       'does not match number of labels' => __ ('does not match number of labels', $q),
       'Error found' => __ ('Error found', $q),
       'Errors found' => __ ('Errors found', $q),
       '(exit text) must be last' => __ ('(exit text) must be last', $q),
+      'Feedback [f] is required for a one-choice question' => __ ('Feedback [f] is required for a one-choice question', $q),
+      'For [textentry] question, wildcard choice ("*", for any other user entry) cannot be marked correct "[c*]"' => __ ('For [textentry] question, wildcard choice ("*", for any other user entry) cannot be marked correct "[c*]"', $q),
+      'For [textentry] question, wildcard choice ("*", for any other user entry) must be accompanied by feedback "[f]"' => __ ('For [textentry] question, wildcard choice ("*", for any other user entry) must be accompanied by feedback "[f]"', $q),
       'Got more than one answer ("[a]") -- card back -- for' => __ ('Got more than one answer ("[a]") -- card back -- for', $q),
       'More than one choice was marked correct' => __ ('More than one choice was marked correct', $q),
+      'More than one feedback shortcode [f] given with choice' => __ ('More than one feedback shortcode [f] given with choice', $q),
       'No choice was marked correct' => __ ('No choice was marked correct', $q),
+      'No text given for [textentry] choice' => __ ('No text given for [textentry] choice', $q),
       'Number of feedback items does not match number of choices' => __ ('Number of feedback items does not match number of choices', $q),
       'Number of feedback items' => __ ('Number of feedback items', $q),
       'Please fix and try again' => __ ('Please fix and try again', $q),

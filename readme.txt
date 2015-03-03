@@ -1,8 +1,8 @@
 === Qwiz - online quizzes and flashcards ===
 Contributors: dan_kirshner
 Tags: interactive quiz, quiz, flashcards, labeled diagrams
-Tested up to: 4.0
-Stable tag: 2.17
+Tested up to: 4.1
+Stable tag: 2.27
 License: GPL2
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
@@ -11,6 +11,7 @@ Qwiz lets you create quizzes and flashcard decks using simple shortcodes (such a
 
 == Description ==
 Easy online quizzes and flashcards for WordPress - use simple shortcodes (such as "[q]" for a question) in your page or post.  See http://dkprojects.net/qwiz
+Note: Version 2.20 fixed a problem with custom widths, borders, etc. of quizzes and flashcard decks that WordPress 4.01 introduced with at least one theme (Magazine Basic).
 
 == Installation ==
 Upload 'qwiz-online-qwizzes-wp-plugin.php' to your plugins directory ('.../wp-content/plugins').
@@ -20,9 +21,84 @@ Activate the plugin through the 'Plugins' menu in WordPress
 
 == Changelog ==
 
+= 2.28 =
+2015-01-??
+Resize flashcard front/back to larger of two (including alternate textentry backs).
+Remove resizing handles in labeled diagrams (now have images that would show).
+Free-form input ([textentry]) with suggestions/hints for quizzes and flashcards.
+Create qwiz_qcards_common.js to hold common code.
+random="true" option for quizzes.
+
+= 2.27 =
+2015-01-05
+Make sure labeled-diagram questions contain matching opening/closing divs.
+Just count targets, not labels.
+Toolbar option - keep "next" button active.
+Check for allow_url_fopen, check version number.
+Don't increment number of cards reviewed until "Check answer"/flip.
+Feedback interleaved with choices, optional.
+
+= 2.26 =
+2014-12-21
+Avoid clobbering other plugins' events - WP content filter creates divs for each qwiz/qdeck - rewrite only those divs.
+On back side of card, "Flip"/"Check answer" -> "Flip back".
+Gray-out/disable "Need more practice" and "Got it!" until user clicks "Check answer".
+Take xqwiz sizing div out of flow.
+
+
+= 2.25 =
+2014-12-16
+Fix search for any [qwiz] or [qdeck] shortcodes.
+Reorder flashcard buttons, default translation: "Flip" -> "Check answer".
+
+= 2.24 =
+2014-12-15
+Alternate edit-area iframe id: wpb_tinymce_content_ifr.
+Make $ (= jQuery) private.
+Use jQuery rather than $ in qwizscripts.js.
+
+= 2.23 =
+2014-12-13
+Explicit visible/hidden for card front/back. (Chrome backface-visibility?)
+
+= 2.22 =
+2014-12-07
+Multiple targets for a single label.
+Accommodate image resizing (resize wrapper, reposition targets).
+Tolerate whitespace before [h].
+Fix check for paragraph with header plus something else -- don't delete.
+Qwiz icon within <td> - keep the icon inside the border.
+Reinstate containment for labels -- by table size.
+qtarget_sibs-... instead of text_target_wrapper (except for backwards compatibility).
+Don't allow draggable labels to be "underneath" already-placed labels.
+Keep [!] comments at end of labeled-diagram question outside the question div.
+Fix: made headers into labels.
+
+= 2.21 =
+2014-12-02
+Workaround for Firefox 33.1 problem with long regular expression and long
+string in intro parse.
+
+= 2.20 =
+2014-11-20
+Handle "smart quotes" in attributes.
+
+= 2.19 =
+2014-11-19
+Hide shortcodes until finished processing.
+Option to deploy beta.
+Add "Q #1/4" to labeled diagram progress.
+
+
+= 2.18 =
+2014-11-16
+Admin/settings: beta capability, revert capability.
+More backwards compatibility fixes (labeled diagrams assoc_id).
+Move comments ([!] ... [/!] after labels, delete trailing whitespace in labels.
+
 = 2.17 =
 2014-11-13
-Bug fix: "text before intro"
+Bug fix - "text before intro"
 
 = 2.16 =
 2014-11-12

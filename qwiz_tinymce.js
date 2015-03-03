@@ -1,4 +1,5 @@
 (function() {
+
      /* Register the button. */
      tinymce.create('tinymce.plugins.qwiz_tinymce', {
           init : function(ed, url) {
