@@ -8,79 +8,11 @@ var $ = jQuery;
 var qqc = this;
 
 var number_word;
-var jjax_script_no = 0;
-var head;
-
-var debug = [];
-debug.push (true);    // 0 - general.
-
 
 // -----------------------------------------------------------------------------
 $ (document).ready (function () {
    number_word = [qqc.T ('zero'), qqc.T ('one'), qqc.T ('two'), qqc.T ('three'), qqc.T ('four'), qqc.T ('five'), qqc.T ('six'), qqc.T ('seven'), qqc.T ('eight'), qqc.T ('nine'), qqc.T ('ten')];
-
-   head = document.getElementsByTagName ('head')[0];
 });
-
-
-// -----------------------------------------------------------------------------
-this.jjax = function (qname, i_qwiz, qrecord_id, user_id, dest, data) {
-
-   // Add script to this page -- sends/receives via src=.
-   // Several different script IDs, in case calls in too-quick succession.
-   jjax_script_no++;
-   jjax_script_no = jjax_script_no % 5;
-
-   // Delete previous script with same ID, if there.
-   var script_id = 'jjax' + jjax_script_no;
-   var script = document.getElementById (script_id);
-   if (script) {
-      try {
-         if (head) {
-            head.removeChild (script);
-         } else {
-            document.body.removeChild (script);
-         }
-      } catch (e) {
-         console.log ('[jjax] script_id:', script_id, ', script:', script);
-      }
-   }
-   var script = document.createElement ('script');
-   script.id = script_id;
-   script.setAttribute ('charset', 'utf-8');
-
-   // Always send qname, i_qwiz and qwiz database id.
-   var send_data = '?';
-   if (data) {
-      send_data = '?';
-      for (var property in data) {
-         send_data += property + '=' + encodeURIComponent (data[property]) + '&'
-      }
-   }
-   send_data += 'qname=' + qname + '&i_qwiz=' + i_qwiz + '&qrecord_id=' + qrecord_id;
-
-   // Add something unique each time, so IE will re-retrieve javascript!
-   dNow = new Date();
-   var msec = dNow.getTime();
-   send_data += '&msec=' + msec;
-
-   // Send user id, if set.
-   if (user_id) {
-      send_data += '&user_id=' + user_id;
-   }
-
-   var server_dest = qqc.get_qwiz_param ('server_loc', '//localhost/qwiz/server') + '/' + dest + '.php';
-   script.src = server_dest + send_data;
-   if (debug[0]) {
-      console.log ( '[jjax] script.src:', script.src );
-   }
-
-   if (head) {
-      head.appendChild (script);
-   } else {
-      document.body.appendChild (script);
-   }
-}
 
 
 // -----------------------------------------------------------------------------
@@ -307,9 +239,7 @@ this.get_attr = function (htm, attr_name) {
 
    var attr_value = '';
 
-   // get_attr () is always preceded by replace_smart_quotes (), so can just
-   // handle regular quotes.
-   var attr_re = new RegExp (attr_name + '\\s*=\\s*"([^"]+)"', 'm');
+   var attr_re = new RegExp (attr_name + '\\s*?=\\s*?["\\u201C\\u201D]([^"\u201C\u201D]+)["\\u201C\\u201D]', 'm');
    var attr_match = htm.match (attr_re);
    if (attr_match) {
       attr_value = qqc.trim (attr_match[1]);
@@ -321,7 +251,7 @@ this.get_attr = function (htm, attr_name) {
 
 // -----------------------------------------------------------------------------
 this.replace_smart_quotes = function (string) {
-   var new_string = string.replace (/[\u201C\u201D\u2033]/gm, '"');
+   var new_string = string.replace (/[\u201C\u201D]/gm, '"');
 
    return new_string;
 }
@@ -395,7 +325,7 @@ this.get_qwiz_param = function (key, default_value) {
    }
    if (value == '') {
 
-      // qwiz_params object or key not present.  Return default value, if
+      // qwiz_params object or key not present.  Return default value, if 
       // given, or ''.
       if (default_value != undefined) {
          value = default_value;
@@ -785,124 +715,4 @@ this.metaphone = function (word, max_phonemes) {
 
 // -----------------------------------------------------------------------------
 qwiz_qcards_common_f.call (qwiz_qcards_common);
-
-
-// =============================================================================
-/*!
- * jQuery Cookie Plugin v1.4.1
- * https://github.com/carhartl/jquery-cookie
- *
- * Copyright 2013 Klaus Hartl
- * Released under the MIT license
- */
-(function (factory) {
-	if (typeof define === 'function' && define.amd) {
-		// AMD
-		define(['jquery'], factory);
-	} else if (typeof exports === 'object') {
-		// CommonJS
-		factory(require('jquery'));
-	} else {
-		// Browser globals
-		factory(jQuery);
-	}
-}(function ($) {
-
-	var pluses = /\+/g;
-
-	function encode(s) {
-		return config.raw ? s : encodeURIComponent(s);
-	}
-
-	function decode(s) {
-		return config.raw ? s : decodeURIComponent(s);
-	}
-
-	function stringifyCookieValue(value) {
-		return encode(config.json ? JSON.stringify(value) : String(value));
-	}
-
-	function parseCookieValue(s) {
-		if (s.indexOf('"') === 0) {
-			// This is a quoted cookie as according to RFC2068, unescape...
-			s = s.slice(1, -1).replace(/\\"/g, '"').replace(/\\\\/g, '\\');
-		}
-
-		try {
-			// Replace server-side written pluses with spaces.
-			// If we can't decode the cookie, ignore it, it's unusable.
-			// If we can't parse the cookie, ignore it, it's unusable.
-			s = decodeURIComponent(s.replace(pluses, ' '));
-			return config.json ? JSON.parse(s) : s;
-		} catch(e) {}
-	}
-
-	function read(s, converter) {
-		var value = config.raw ? s : parseCookieValue(s);
-		return $.isFunction(converter) ? converter(value) : value;
-	}
-
-	var config = $.cookie = function (key, value, options) {
-
-		// Write
-
-		if (value !== undefined && !$.isFunction(value)) {
-			options = $.extend({}, config.defaults, options);
-
-			if (typeof options.expires === 'number') {
-				var days = options.expires, t = options.expires = new Date();
-				t.setTime(+t + days * 864e+5);
-			}
-
-			return (document.cookie = [
-				encode(key), '=', stringifyCookieValue(value),
-				options.expires ? '; expires=' + options.expires.toUTCString() : '', // use expires attribute, max-age is not supported by IE
-				options.path    ? '; path=' + options.path : '',
-				options.domain  ? '; domain=' + options.domain : '',
-				options.secure  ? '; secure' : ''
-			].join(''));
-		}
-
-		// Read
-
-		var result = key ? undefined : {};
-
-		// To prevent the for loop in the first place assign an empty array
-		// in case there are no cookies at all. Also prevents odd result when
-		// calling $.cookie().
-		var cookies = document.cookie ? document.cookie.split('; ') : [];
-
-		for (var i = 0, l = cookies.length; i < l; i++) {
-			var parts = cookies[i].split('=');
-			var name = decode(parts.shift());
-			var cookie = parts.join('=');
-
-			if (key && key === name) {
-				// If second argument (value) is a function it's a converter...
-				result = read(cookie, value);
-				break;
-			}
-
-			// Prevent storing a cookie that we couldn't decode.
-			if (!key && (cookie = read(cookie)) !== undefined) {
-				result[name] = cookie;
-			}
-		}
-
-		return result;
-	};
-
-	config.defaults = {};
-
-	$.removeCookie = function (key, options) {
-		if ($.cookie(key) === undefined) {
-			return false;
-		}
-
-		// Must not alter options, thus extending a fresh object...
-		$.cookie(key, '', $.extend({}, options, { expires: -1 }));
-		return !$.cookie(key);
-	};
-
-}));
 
