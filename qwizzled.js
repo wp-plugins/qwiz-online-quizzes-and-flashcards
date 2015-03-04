@@ -1,4 +1,7 @@
 /*
+ * Version beta2 for 2.29 2015-03-04
+ * "Create another target for the same label"
+ *
  * Version 2.27 2015-01-05
  * Make sure labeled-diagram questions contain matching opening/closing divs.
  *
@@ -94,7 +97,7 @@ var waiting_for_label_click_b = false;
 var label_will_have_multiple_targets_b = false;
 var waiting_for_target_select_b = false;
 var qwizzled_question_obj;
-var el_label_div;
+var el_label_div = null;
 var label_border_class;
 var assoc_id;
 
@@ -196,8 +199,18 @@ this.show_main_menu = function (ed, qwiz_button_b) {
    mm.push ('           <img src="' + qwizzled_plugin.url + 'images/spinner16x16.gif" border="0" />');
    mm.push ('         </span>');
    mm.push ('      </div>');
-   mm.push ('      <div class="qwizzled_main_menu_item" onclick="qwizzled.create_target1 (1)" title="The same label may be correctply placed in more than one target &ldquo;drop zone&rdquo;">');
-   mm.push ('         Create another target for a label');
+   mm.push ('      <div id="create_another_target_same_label" class="qwizzled_main_menu_item_disabled" onclick="qwizzled.create_target_for_same_label ()" title="The previously-selected label may be correctly placed in more than one target &ldquo;drop zone&rdquo;">');
+   mm.push ('         Create another target for the <b>same</b> label');
+   mm.push ('         <span id="create_another_target_spinner_same" class="menu_spinner">');
+   mm.push ('           <img src="' + qwizzled_plugin.url + 'images/spinner16x16.gif" border="0" />');
+   mm.push ('         </span>');
+   mm.push ('      </div>');
+   mm.push ('      <div class="qwizzled_main_menu_item" onclick="qwizzled.create_target1 (1)" title="Select a label that may be correctly placed in more than one target &ldquo;drop zone&rdquo;">');
+   mm.push ('         Create another target for a');
+   mm.push ('         <span id="main_menu_different_label">');
+   mm.push ('            <b>different</b>');
+   mm.push ('         </span>');
+   mm.push ('         label');
    mm.push ('         <span id="create_another_target_spinner" class="menu_spinner">');
    mm.push ('           <img src="' + qwizzled_plugin.url + 'images/spinner16x16.gif" border="0" />');
    mm.push ('         </span>');
@@ -363,6 +376,15 @@ function add_style () {
 
    s.push ('.qwizzled_main_menu_item {');
    s.push ('   border:          1px solid white;');
+   s.push ('}');
+
+   s.push ('.qwizzled_main_menu_item_disabled {');
+   s.push ('   border:          1px solid white;');
+   s.push ('   color:           gray;');
+   s.push ('}');
+
+   s.push ('#main_menu_different_label {');
+   s.push ('   display:         none;');
    s.push ('}');
 
    s.push ('.menu_spinner {');
@@ -736,6 +758,22 @@ this.exit_click_on_a_label = function () {
    waiting_for_label_click_b = false;
    label_will_have_multiple_targets_b = false;
 }
+
+
+// -----------------------------------------------------------------------------
+this.create_target_for_same_label = function () {
+
+   // Set up as if label clicked, but pass global variable containing
+   // previously-selected label element.  Emulate "disabled" if no label
+   // selected already.
+   if (! el_label_div) {
+      return false;
+   }
+   label_will_have_multiple_targets_b = true;
+   waiting_for_label_click_b = true;
+   q.label_clicked (el_label_div);
+}
+
 
 // -----------------------------------------------------------------------------
 // Create a target for a label -- part 2 -- clicked on label.  Check that
@@ -1147,6 +1185,13 @@ this.target_text_selected = function (e) {
       // Cancel feedback.
       qwizzled_main_menu_feedback.hide ();
    }
+
+   // Now that finished creating target for a label, since a label had been
+   // selected, can enable "Create another target for same label"
+   $ ('#create_another_target_same_label').removeClass ('qwizzled_main_menu_item_disabled').addClass ('qwizzled_main_menu_item');
+
+   // Also, add "different" to "Create another target for a label".
+   $ ('#main_menu_different_label').show ();
 }
 
 
