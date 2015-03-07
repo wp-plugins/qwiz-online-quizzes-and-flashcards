@@ -1158,7 +1158,6 @@ this.target_text_selected = function (e) {
       var img_wrapper = '';
       if ($ (el_img).parents ().hasClass ('qwizzled_image')) {
          img_wrapper = $ (el_img).parents ('[class*="qwizzled_image"]');
-         n_labels_w_targets--;
          if (debug[0]) {
             console.log ('Found img_wrapper:', img_wrapper);
          }
