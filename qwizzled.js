@@ -1,6 +1,7 @@
 /*
- * Version beta2 for 2.29 2015-03-04
+ * Version beta 3 for 2.29 2015-03-07
  * "Create another target for the same label"
+ * "Delete a target".
  *
  * Version 2.27 2015-01-05
  * Make sure labeled-diagram questions contain matching opening/closing divs.
@@ -96,13 +97,14 @@ var tinymce_ed;
 var waiting_for_label_click_b = false;
 var label_will_have_multiple_targets_b = false;
 var waiting_for_target_select_b = false;
+var waiting_for_target_to_delete_click_b = false;
 var qwizzled_question_obj;
 var el_label_div = null;
 var label_border_class;
 var assoc_id;
 
 var bstyles = ['dotted', 'dashed', 'solid'];
-var bcolors = ['red', 'magenta', 'blue', 'aqua'];
+var bcolors = ['red', 'magenta', 'blue', 'aqua', 'black', 'silver'];
 
 horizontal_margin_adjust = 4;
 vertical_margin_adjust   = 4;
@@ -201,9 +203,6 @@ this.show_main_menu = function (ed, qwiz_button_b) {
    mm.push ('      </div>');
    mm.push ('      <div id="create_another_target_same_label" class="qwizzled_main_menu_item_disabled" onclick="qwizzled.create_target_for_same_label ()" title="The previously-selected label may be correctly placed in more than one target &ldquo;drop zone&rdquo;">');
    mm.push ('         Create another target for the <b>same</b> label');
-   mm.push ('         <span id="create_another_target_spinner_same" class="menu_spinner">');
-   mm.push ('           <img src="' + qwizzled_plugin.url + 'images/spinner16x16.gif" border="0" />');
-   mm.push ('         </span>');
    mm.push ('      </div>');
    mm.push ('      <div class="qwizzled_main_menu_item" onclick="qwizzled.create_target1 (1)" title="Select a label that may be correctly placed in more than one target &ldquo;drop zone&rdquo;">');
    mm.push ('         Create another target for a');
@@ -214,6 +213,9 @@ this.show_main_menu = function (ed, qwiz_button_b) {
    mm.push ('         <span id="create_another_target_spinner" class="menu_spinner">');
    mm.push ('           <img src="' + qwizzled_plugin.url + 'images/spinner16x16.gif" border="0" />');
    mm.push ('         </span>');
+   mm.push ('      </div>');
+   mm.push ('      <div class="qwizzled_main_menu_item" onclick="qwizzled.delete_target ()" title="Delete a target &ldquo;drop zone&rdquo; &ndash; though not its content or underlying image.">');
+   mm.push ('         Delete a target');
    mm.push ('      </div>');
    mm.push ('   </div>');
    mm.push ('   <div class="qwizzled_main_menu_feedback"></div>');
@@ -375,12 +377,18 @@ function add_style () {
    s.push ('}');
 
    s.push ('.qwizzled_main_menu_item {');
-   s.push ('   border:          1px solid white;');
+   s.push ('   border:                 1px solid white;');
+   s.push ('   -moz-user-select:       none;');
+   s.push ('   -webkit-user-select:    none;');
+   s.push ('   -ms-user-select:        none;');
    s.push ('}');
 
    s.push ('.qwizzled_main_menu_item_disabled {');
-   s.push ('   border:          1px solid white;');
-   s.push ('   color:           gray;');
+   s.push ('   border:                 1px solid white;');
+   s.push ('   color:                  gray;');
+   s.push ('   -moz-user-select:       none;');
+   s.push ('   -webkit-user-select:    none;');
+   s.push ('   -ms-user-select:        none;');
    s.push ('}');
 
    s.push ('#main_menu_different_label {');
@@ -406,7 +414,7 @@ function add_style () {
    s.push ('   background:      #FFFF77;');
    s.push ('}');
 
-   s.push ('img.click_on_a_label_exit {');
+   s.push ('img.click_on____exit {');
    s.push ('   float:           right;');
    s.push ('   margin-top:      2px;');
    s.push ('   margin-right:    2px;');
@@ -505,6 +513,14 @@ function add_style_edit_area () {
    s.push ('   border-color:    aqua;');
    s.push ('}');
 
+   s.push ('.qwizzled_border_class_black {');
+   s.push ('   border-color:    black;');
+   s.push ('}');
+
+   s.push ('.qwizzled_border_class_silver {');
+   s.push ('   border-color:    silver;');
+   s.push ('}');
+
    s.push ('.qwizzled_border_class_dotted {');
    s.push ('   border-style:    dotted;');
    s.push ('}');
@@ -554,6 +570,11 @@ this.create_target1 = function (multiple_targets_f) {
 
 // -----------------------------------------------------------------------------
 this.create_target2 = function (multiple_targets_f) {
+
+   // If was waiting for click on a target to delete, cancel.
+   if (waiting_for_target_to_delete_click_b) {
+      q.exit_click_on_a_target ();
+   }
 
    // Preliminary check 1: Look for already-wrapped labels -- label divs --  and
    // make sure no new [l] shortcodes have been added inside.  If so, move out.
@@ -738,7 +759,7 @@ this.create_target2 = function (multiple_targets_f) {
                           + '<span class="qwizzled_highlight_label_border" style="' + style + '">'
                           +    'label'
                           + '</span>'
-                          + '<img src="' + qwizzled_plugin.url + 'images/icon_exit_bw.jpg" class="click_on_a_label_exit" onclick="qwizzled.exit_click_on_a_label ()" />';
+                          + '<img src="' + qwizzled_plugin.url + 'images/icon_exit_bw.jpg" class="click_on____exit" onclick="qwizzled.exit_click_on_a_label ()" />';
 
    // First cancel any previous action (fadeout of "You can position..."
    // instruction).  Set opacity back to 1.0 in case gets stuck.
@@ -761,7 +782,27 @@ this.exit_click_on_a_label = function () {
 
 
 // -----------------------------------------------------------------------------
+this.exit_click_on_a_target = function () {
+
+   if (debug[2]) {
+      console.log ('[exit_click_on_a_target] qwizzled_main_menu_feedback:', qwizzled_main_menu_feedback);
+   }
+
+   // Cancel clickability.
+   edit_area.find ('.qwizzled_target').off ('click');
+
+   qwizzled_main_menu_feedback.hide ();
+   waiting_for_target_to_delete_click_b = false;
+}
+
+
+// -----------------------------------------------------------------------------
 this.create_target_for_same_label = function () {
+
+   // If was waiting for click on a target to delete, cancel.
+   if (waiting_for_target_to_delete_click_b) {
+      q.exit_click_on_a_target ();
+   }
 
    // Set up as if label clicked, but pass global variable containing
    // previously-selected label element.  Emulate "disabled" if no label
@@ -829,18 +870,7 @@ this.label_clicked = function (local_el_label_div) {
 
             // If it's a div -- a rectangle on an image -- delete it.  If it's a
             // span or spans, replace the <span> with its content.
-            var div_span_obj = qwizzled_question_obj.find ('.qwizzled_target-' + assoc_id);
-            if (div_span_obj.length) {
-               if (div_span_obj[0].tagName.toLowerCase () == 'div') {
-                  div_span_obj.remove ();
-               } else {
-
-                  // Remove wrapper if there (backwards compatibility), remove
-                  // qwizzled_target spans (keeping content).
-                  div_span_obj.parents ('span.text_target_wrapper').contents ().unwrap ();
-                  div_span_obj.contents ().unwrap ();
-               }
-            }
+            remove_target (qwizzled_question_obj, assoc_id);
 
             // Get the label's current border colors/style classes -- re-use for new
             // target.
@@ -878,6 +908,129 @@ this.label_clicked = function (local_el_label_div) {
 
 
 // -----------------------------------------------------------------------------
+this.delete_target = function () {
+
+   // Are there targets?
+   var target_objs = edit_area.find ('.qwizzled_target');
+   if (! target_objs.length) {
+      alert (T ('Did not find any targets'));
+      return false;
+   }
+
+   // Prompt to select target.
+   var feedback = T ('Click on the target you want to delete')
+                  + '<img src="' + qwizzled_plugin.url + 'images/icon_exit_bw.jpg" class="click_on____exit" onclick="qwizzled.exit_click_on_a_target ()" />';
+   qwizzled_main_menu_feedback.html (feedback).show ();
+
+   // Make all targets clickable.
+   target_objs.click (function () {
+      parent.qwizzled.target_to_delete_clicked (this); 
+   });
+
+   // Set flag.
+   waiting_for_target_to_delete_click_b = true;
+}
+
+
+// -----------------------------------------------------------------------------
+this.target_to_delete_clicked = function (target_el) {
+
+   // Hide feedback, cancel clickability.
+   qwizzled_main_menu_feedback.hide ();
+   edit_area.find ('.qwizzled_target').off ('click');
+   waiting_for_target_to_delete_click_b = false;
+
+   var target_div_span_obj = $ (target_el);
+
+   // Find label associated with this target.  If only associated with this
+   // one target (not multiple targets) delete label associations -- if user
+   // wants to proceed.  If multiple targets, decrement number (class 
+   // qwizzled_n_targetsN).
+   var classes = $ (target_div_span_obj).attr ('class');
+   var m = classes.match (/qwizzled_target-([0-9]*)/);
+   var delete_label_b = false;
+   if (m) { 
+      var assoc_id = m[1];
+      var label_obj = edit_area.find ('div.qtarget_assoc' + assoc_id + ', div.qwizzled_label[data-label_target_id="' + assoc_id + '"]');
+      if (debug[0]) {
+         console.log ('[target_to_delete_clicked] label_obj:', label_obj);
+         console.log ('[target_to_delete_clicked] label_obj.length:', label_obj.length);
+      }
+      if (label_obj.length) {
+
+         // See if label associated with multiple targets.
+         classes = label_obj.attr ('class');
+         m = classes.match (/qwizzled_n_targets([0-9]*)/);
+         if (m) {
+
+            // Decrement by 1, or delete class.
+            var n_targets = m[1];
+            if (n_targets == 2) {
+               label_obj.removeClass ('qwizzled_n_targets2');
+            } else {
+               n_targets--;
+               label_obj.removeClass (m[0]).addClass ('qwizzled_n_targets' + n_targets);
+            }
+         } else {
+
+            // See if user wants to proceed.
+            if (confirm (T ('Note: the label for this target will no longer be associated with any target'))) {
+               delete_label_b = true;
+            } else {
+               return false;
+            }
+         }
+      }
+   }
+   if (target_div_span_obj[0].tagName.toLowerCase () == 'div') {
+      target_div_span_obj.remove ();
+   } else {
+
+      // Remove wrapper if there (backwards compatibility), remove
+      // qwizzled_target spans (keeping content).
+      target_div_span_obj.parents ('span.text_target_wrapper').contents ().unwrap ();
+      target_div_span_obj.contents ().unwrap ();
+   }
+   if (delete_label_b) {
+
+      // Unwrap span.qwizzled_highlight_label.
+      if (debug[0]) {
+         console.log ('[target_to_delete_clicked] label_obj.contents ():', label_obj.contents ());
+      }
+      var label_contents_obj = label_obj.contents ();
+      label_contents_obj.find ('span.qwizzled_highlight_label').contents ().unwrap ();
+
+      // If old-style <code></code> is there, delete.
+      var htm = label_contents_obj.html ();
+      if (htm.search ('<code></code>') != -1) {
+         htm = htm.replace ('<code></code>', '');
+         label_contents_obj.html (htm);
+      }
+
+      // And unwrap div.qwizzled_label.
+      label_contents_obj.unwrap ();
+   }
+}
+
+
+// -----------------------------------------------------------------------------
+function remove_target (qwizzled_question_obj, assoc_id) {
+   var div_span_obj = qwizzled_question_obj.find ('.qwizzled_target-' + assoc_id);
+   if (div_span_obj.length) {
+      if (div_span_obj[0].tagName.toLowerCase () == 'div') {
+         div_span_obj.remove ();
+      } else {
+
+         // Remove wrapper if there (backwards compatibility), remove
+         // qwizzled_target spans (keeping content).
+         div_span_obj.parents ('span.text_target_wrapper').contents ().unwrap ();
+         div_span_obj.contents ().unwrap ();
+      }
+   }
+}
+
+
+// -----------------------------------------------------------------------------
 this.target_text_selected = function (e) {
 
    var selected_text = tinymce_ed.selection.getContent ();
@@ -905,6 +1058,18 @@ this.target_text_selected = function (e) {
    }
    waiting_for_target_select_b = false;
 
+   // If selection already is a target, error.
+   var target_obj = node_obj.parents ('[class*="qwizzled_target"]');
+   var classes = node_obj.attr ('class');
+   if (target_obj.length || (classes && classes.search ('qwizzled_target') != -1)) {
+      alert (T ('Selection already is a target'));
+
+      // Cancel feedback.
+      qwizzled_main_menu_feedback.hide ();
+
+      return false;
+   }
+
    // If doesn't exist, create association ID between label and target.  Use
    // time (in seconds) as unique ID.  We'll also use it to identify image
    // wrapper.
@@ -912,21 +1077,65 @@ this.target_text_selected = function (e) {
       assoc_id = time_id ();
    }
 
-   // Pick border color and style for this label-target pair.  Count how many
-   // labels in this question already associated with a target.  Count old-
-   // style, too (backwards compatibility).
-   // Don't do if re-using current label border (new or additional target for an
-   // existing label).
+   // Pick border color and style for this label-target pair.  Look for a not-
+   // yet-used combination.  Don't do if re-using current label border (new or
+   // additional target for an existing label).
+   var ok_b = false;
+   var bcolor;
+   var bcolor = '';
+
    if (label_border_class == '') {
-      var labels_w_targets = qwizzled_question_obj.find ('div.qwizzled_label[class*="qtarget_assoc"], div.qwizzled_label[data-label_target_id]');
-      var n_labels_w_targets = labels_w_targets.length;
-      if (debug[0]) {
-         console.log ('n_labels_w_targets:', n_labels_w_targets);
+      var n_bcolors = bcolors.length;
+      var n_bstyles = bstyles.length;
+      for (var i_bcolor=0; i_bcolor<n_bcolors; i_bcolor++) {
+         bcolor = bcolors[i_bcolor];
+
+         // Any with this border color?
+         var label_objs = qwizzled_question_obj.find ('span.qwizzled_border_class_' + bcolor);
+         if (debug[0]) {
+            console.log ('[target_text_selected] bcolor:', bcolor, ', label_objs.length:', label_objs.length);
+         }
+         if (label_objs.length == 0) {
+
+            // No.  Can use first style.
+            bstyle = bstyles[0];
+            break;
+
+         } else {
+
+            // Some or all used.  Create list that marks styles already used.
+            var bstyles_used = new Array (n_bstyles+1).join ('0').split ('');
+            label_objs.each (function () {
+                                var classes = $ (this).attr ('class');
+                                for (var i_bstyle=0; i_bstyle<n_bstyles; i_bstyle++) {
+                                   var bstyle_i = bstyles[i_bstyle];
+                                   if (classes.search (bstyle_i) != -1) {
+                                      bstyles_used[i_bstyle] = '1';
+                                      break;
+                                   }
+                                }
+                             });
+
+            // See if any unused styles this color.
+            var i_bstyle = bstyles_used.indexOf ('0');
+            if (debug[0]) {
+               console.log ('[target_text_selected] bstyles_used:', bstyles_used, ', i_bstyle:', i_bstyle);
+            }
+            if (i_bstyle == -1) {
+
+               // No.  Continue to next color.
+               continue;
+            } else {
+
+               // Return first unused style.
+               bstyle = bstyles[i_bstyle];
+               break;
+            }
+         }
       }
-      var i_bstyle = parseInt (n_labels_w_targets / bcolors.length);
-      var bstyle = bstyles[i_bstyle];
-      var i_bcolor = n_labels_w_targets % bcolors.length;
-      var bcolor = bcolors[i_bcolor];
+      if (debug[0]) {
+         console.log ('[target_text_selected] bcolor:', bcolor, ', bstyle:', bstyle);
+      }
    }
 
    // See if an image and only an image.
