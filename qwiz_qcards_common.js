@@ -188,8 +188,9 @@ function extract_delete_shortcode_content (htm, shortcode, multiple_b, qdata) {
 this.sort_dedupe_terms_metaphones = function (terms_metaphones) {
 
    // Sort on terms (zeroth element of each pair).
+   var locale = window.navigator.userLanguage || window.navigator.language;
    terms_metaphones.sort (function (a, b) {
-      return a[0].toLowerCase ().localeCompare (b[0].toLowerCase ());
+      return a[0].toLowerCase ().localeCompare (b[0].toLowerCase (), locale, {numeric: true});
    });
 
    // De-dupe.
