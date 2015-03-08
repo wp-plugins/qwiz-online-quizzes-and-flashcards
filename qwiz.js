@@ -1,7 +1,8 @@
 /*
- * Version beta 1 for 2.29 2015-03-02
+ * Version beta 4 for 2.29 2015-03-08
  * Fix bug -- hint required matching first character.
- * word-wrap: normal
+ * word-wrap: normal.
+ * textentry minlength= option.
  *
  * Version 2.28 2015-02-03
  * Hide Qwiz icon when autocomplete starts.
@@ -1903,6 +1904,10 @@ function display_question (i_qwiz, i_question) {
             }
          }
 
+         // Set minlength for autocomplete suggestions for this question.
+         var minlength = qwizdata[i_qwiz].textentry[i_question].textentry_minlength;
+         $ ('#textentry-qwiz' + i_qwiz + '-q' + i_question).autocomplete ('option', 'minLength', minlength);
+
       } else {
 
          // ....................................................................
@@ -2156,8 +2161,9 @@ function process_textentry (i_qwiz, i_question, htm, opening_tags) {
    var new_htm =   '<div id="qwiz' + i_qwiz + '-q' + i_question + '" class="qwizq">\n'
                  +    opening_tags + htm;
 
-   // See if plurals specified.  Any attributes?
+   // See if plurals specified or minlength specified.  Any attributes?
    var textentry_plural_b = false;
+   var textentry_minlength = 3;
    var m = new_htm.match (/\[textentry([^\]]*)\]/m);
    if (m) {
       var attributes = m[1];
@@ -2167,6 +2173,9 @@ function process_textentry (i_qwiz, i_question, htm, opening_tags) {
          // left- or right-double-quote.
          attributes = qqc.replace_smart_quotes (attributes);
          textentry_plural_b = qqc.get_attr (attributes, 'plural') == 'true';
+
+         // "minlength=" attribute.
+         textentry_minlength = qqc.get_attr (attributes, 'minlength');
       }
    }
 
@@ -2198,6 +2207,7 @@ function process_textentry (i_qwiz, i_question, htm, opening_tags) {
    qwizdata[i_qwiz].textentry[i_question] = {};
    qwizdata[i_qwiz].textentry[i_question].choices = [];
    qwizdata[i_qwiz].textentry[i_question].textentry_plural_b = textentry_plural_b;
+   qwizdata[i_qwiz].textentry[i_question].textentry_minlength = textentry_minlength;
    qwizdata[i_qwiz].textentry[i_question].choices_correct = [];
    qwizdata[i_qwiz].textentry[i_question].answers = [];
    qwizdata[i_qwiz].textentry[i_question].first_correct_answer = '';
