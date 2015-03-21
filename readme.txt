@@ -2,7 +2,7 @@
 Contributors: dan_kirshner
 Tags: interactive quiz, quiz, flashcards, labeled diagrams
 Tested up to: 4.1
-Stable tag: 2.28
+Stable tag: 3.00
 License: GPL2
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
@@ -11,7 +11,6 @@ Qwiz lets you create quizzes and flashcard decks using simple shortcodes (such a
 
 == Description ==
 Easy online quizzes and flashcards for WordPress - use simple shortcodes (such as "[q]" for a question) in your page or post.  See http://dkprojects.net/qwiz
-Note: Version 2.20 fixed a problem with custom widths, borders, etc. of quizzes and flashcard decks that WordPress 4.01 introduced with at least one theme (Magazine Basic).
 
 == Installation ==
 Upload 'qwiz-online-qwizzes-wp-plugin.php' to your plugins directory ('.../wp-content/plugins').
@@ -20,6 +19,14 @@ Activate the plugin through the 'Plugins' menu in WordPress
 == Screenshots ==
 
 == Changelog ==
+
+= 3.00 =
+Word-wrap normal for labels (problem in Firefox).
+Don't use <code></code> for already-wrapped [q] and [l].
+Fix bug -- hint required matching first character.
+textentry minlength= option.
+Sort numeric for textentry suggestions.
+Login/recording capabilities.
 
 = 2.28 =
 2015-02-03
