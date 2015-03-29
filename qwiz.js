@@ -1347,7 +1347,7 @@ function create_qwiz_divs (i_qwiz, qwiz_tag, htm, exit_html) {
                             =  '<div id="finished_diagram-qwiz' + i_qwiz + '">\n'
                              +    exit_html
                              + '</div>\n';
-      } else {
+      } else if (! qwizdata[i_qwiz].qrecord_id) {
          progress_div_html = '';
       }
    }
@@ -1470,7 +1470,7 @@ function process_topics (i_qwiz, question_tags) {
 
       // If any topics given, every question must have at least one topic.
       if (n_questions_w_topics != n_questions) {
-         errmsgs.push (T ('Topic(s) were given for at least one question, but at least one question doesn\'t have a topic.'));
+         errmsgs.push (T ('A topic was given for at least one question, but at least one question doesn\'t have a topic in quiz.') + ' ' + (i_qwiz + 1));
       }
       if (debug[4]) {
          console.log ('[process_topics] topics: ' + qwizdata[i_qwiz].topics.join ('; '));
@@ -2799,6 +2799,7 @@ function display_summary_and_exit (i_qwiz) {
       }
    }
 
+   // By topic.
    var n_topics = qwizdata[i_qwiz].topics.length;
    if (n_topics == 1) {
       var topic = qwizdata[i_qwiz].topics[0];

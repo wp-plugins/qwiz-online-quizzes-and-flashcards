@@ -76,8 +76,7 @@ this.jjax = function (qname, i_qwiz, qrecord_id, dest, data) {
    send_data += 'qname=' + qname + '&i_qwiz=' + i_qwiz + '&qrecord_id=' + encodeURIComponent (qrecord_id);
 
    // Add something unique each time, so IE will re-retrieve javascript!
-   dNow = new Date();
-   var msec = dNow.getTime();
+   var msec = new Date ().getTime();
    send_data += '&msec=' + msec;
 
    // Send session id, if set.
@@ -85,7 +84,7 @@ this.jjax = function (qname, i_qwiz, qrecord_id, dest, data) {
       send_data += '&qwiz_session_id=' + encodeURIComponent (document_qwiz_session_id);
    }
 
-   var server_dest = qqc.get_qwiz_param ('server_loc', '//localhost/qwiz/server') + '/' + dest + '.php';
+   var server_dest = qqc.get_qwiz_param ('server_loc', '//localhost/qwiz/admin') + '/' + dest + '.php';
    script.src = server_dest + send_data;
    if (debug[0]) {
       console.log ('[jjax] data:', data);

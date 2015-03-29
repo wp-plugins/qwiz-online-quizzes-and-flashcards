@@ -1,4 +1,7 @@
 /*
+ * Version 3.00 2015-04-??
+ * topic= implemented.
+ *
  * Version 2.28 2015-02-03
  * Don't do container set on one-card deck.
  * Resize card front/back to larger of two (including alternate textentry backs).
@@ -128,7 +131,6 @@ var no_intro_b = [];
 var deck_id;
 var deckdata = [];
 
-var card_reviewed_b = false;
 var next_button_active_b  = false;
 
 var textentry_i_deck;
@@ -151,18 +153,6 @@ var textentry_matches = {};
 var lc_textentry_matches = {};
 
 var Tcheck_answer_message;
-
-// ----------------------
-// Array of topics (will check that individual card entries are in this list).
-// Short names.
-var topics = [];
-var n_topics;
-
-// Topic description for summary report.
-var topic_descriptions = {};
-
-// Statistics by topic.
-var topic_statistics = {};
 
 // -----------------------------------------------------------------------------
 $(document).ready (function () {
@@ -553,12 +543,6 @@ function process_qdeck_pair (htm, i_deck) {
       if (debug[0]) {
          console.log ('[process_qdeck_pair] n_cards: ', n_cards);
       }
-
-      // Topic or topics each card.
-      deckdata[i_deck].card_topics = new Array (n_cards);
-
-      // List of all topics.
-      deckdata[i_deck].topics = [];
 
       process_topics (i_deck, card_tags);
 
@@ -1205,6 +1189,12 @@ function create_qdeck_divs (i_deck, qdeck_tag) {
 // -----------------------------------------------------------------------------
 function process_topics (i_deck, card_tags) {
 
+   // Topic or topics each card, if any.
+   deckdata[i_deck].card_topics = new Array (n_cards);
+
+   // List of all topics.
+   deckdata[i_deck].topics = [];
+
    // Loop over tags.
    var n_cards_w_topics = 0;
    var n_cards = card_tags.length;
@@ -1215,6 +1205,8 @@ function process_topics (i_deck, card_tags) {
       var matches = card_tag.match (/\[q +([^\]]*)\]/);
       if (matches) {
          var attributes = matches[1];
+
+         // Look for "topic=" attribute.
          attributes = qqc.replace_smart_quotes (attributes);
          var card_topics = qqc.get_attr (attributes, 'topic');
          if (card_topics) {
@@ -1238,15 +1230,18 @@ function process_topics (i_deck, card_tags) {
          }
       }
    }
+   if (debug[4]) {
+      console.log ('[process_topics] deckdata[i_deck].card_topics:', deckdata[i_deck].card_topics);
+   }
 
    if (n_cards_w_topics > 0) {
 
       // If any topics given, every card must have at least one topic.
       if (n_cards_w_topics != n_cards) {
-         errmsgs.push (T ('Topic(s) were given for at least one card, but at least one card doesn\'t have a topic'));
+         errmsgs.push (T ('A topic was given for at least one card, but at least one card doesn\'t have a topic in deck') + ' ' + (i_deck + 1));
       }
       if (debug[4]) {
-         console.log ('[process_topics] topics: ' + deckdata[i_deck].topics.join ('; '));
+         console.log ('[process_topics] topics: ' + deckdata[i_deck].topics);
       }
 
       // Set up statistics by topic.  Object of objects (list of lists).
@@ -1255,8 +1250,23 @@ function process_topics (i_deck, card_tags) {
       for (var i_topic=0; i_topic<n_topics; i_topic++) {
          var topic = deckdata[i_deck].topics[i_topic];
          deckdata[i_deck].topic_statistics[topic] = {};
-         deckdata[i_deck].topic_statistics[topic].n_correct = 0;
-         deckdata[i_deck].topic_statistics[topic].n_incorrect = 0;
+         deckdata[i_deck].topic_statistics[topic].n_cards = 0;
+         deckdata[i_deck].topic_statistics[topic].n_reviewed = 0;
+      }
+
+      // Count how many cards with each topic.
+      for (var i_card=0; i_card<n_cards; i_card++) {
+         var card_topics = deckdata[i_deck].card_topics[i_card];
+         if (card_topics) {
+            if (debug[4]) {
+               console.log ('[process_topics] i_card:', i_card, ', card_topics: ' + card_topics);
+            }
+            var n_topics = card_topics.length;
+            for (var i_topic=0; i_topic<n_topics; i_topic++) {
+               var topic = card_topics[i_topic];
+               deckdata[i_deck].topic_statistics[topic].n_cards++;
+            }
+         }
       }
    }
 }
@@ -1277,9 +1287,10 @@ this.start_deck = function (i_deck) {
       deckdata[i_deck].cards[ii_card].got_it = false;
    }
 
+   var n_topics = deckdata[i_deck].topics.length;
    for (var i_topic=0; i_topic<n_topics; i_topic++) {
       var topic = deckdata[i_deck].topics[i_topic];
-      deckdata[i_deck].topic_statistics[topic].n_got_it = 0;
+      deckdata[i_deck].topic_statistics[topic].n_reviewed = 0;
    }
 
    init_card_order (i_deck);
@@ -1383,41 +1394,6 @@ function card_back_textentry_html (htm, i_deck) {
 
 
 // -----------------------------------------------------------------------------
-function check_and_init_topics () {
-
-   var errmsg = [];
-
-   // Collect topics from cards, see if we have a topic description.
-   for (var ii_card=0; ii_card<n_cards; ii_card++) {
-      var card_topics = cards[ii_card].topics;
-      for (var ii=0; ii<card_topics.length; ii++) {
-         topic = card_topics[ii];
-         if (topics.indexOf (topic) == -1) {
-
-            // Add to list.
-            topics.push (topic);
-         }
-
-         // Did we get a topic description?
-         if (! topic_descriptions.hasOwnProperty (topic)) {
-            errmsg.push ('Did not get topic/description for topic ' + topic);
-         }
-      }
-   }
-   n_topics = topics.length;
-
-   // Set up statistics by topic.  Object of objects (list of lists).
-   for (var i_topic=0; i_topic<n_topics; i_topic++) {
-      var topic = topics[i_topic];
-      topic_statistics[topic] = {};
-      topic_statistics[topic].n_got_it = 0;
-   }
-
-   return errmsg;
-}
-
-
-// -----------------------------------------------------------------------------
 function init_element_pointers (i_deck) {
 
    // jQuery element objects for this deck.
@@ -1505,13 +1481,18 @@ this.process_card = function (i_deck) {
 
             // Display card - not "reviewed" until "Check answer"/flip.  "Need
             // more practice" and "Got it!" buttons start out disabled, gray.
-            card_reviewed_b = false;
+            deckdata[i_deck].card_reviewed_b = false;
+            if (deckdata[i_deck].qrecord_id) {
+               deckdata[i_deck].current_first_flip_sec = 0;
+               deckdata[i_deck].n_flips = 0;
+               deckdata[i_deck].current_first_textentry_sec = 0;
+            }
             if (! next_button_active_b) {
                $ ('button.got_it-qdeck' + i_deck + ', button.next_card-qdeck' + i_deck).attr ('disabled', true).removeClass ('qbutton').addClass ('qbutton_disabled');
             }
 
-            // If only one to go, disable and gray out
-            // more practice/next card and shuffle buttons.
+            // If only one to go, disable and gray out more practice/next card
+            // and shuffle buttons.
             if (deckdata[i_deck].n_to_go == 1) {
                $ ('button.next_card-qdeck' + i_deck + ', button.shuffle-qdeck' + i_deck).attr ('disabled', true).removeClass ('qbutton').addClass ('qbutton_disabled');
             }
@@ -1544,16 +1525,60 @@ function done (i_deck) {
 
    // Overall.
    var overall;
-   if (deckdata[i_deck].n_reviewed == deckdata[i_deck].n_cards) {
-      overall = T ('In this %s-flashcard stack, you clicked') + ' "' + T ('Got it!') + '" ' + T ('on the first try for every card') + '.';
-      overall = overall.replace ('%s', qqc.number_to_word (deckdata[i_deck].n_cards));
+   var n_cards = deckdata[i_deck].n_cards;
+   var n_reviewed = deckdata[i_deck].n_reviewed;
+   if (n_reviewed == n_cards) {
+      overall = T ('In this %s-flashcard stack, you clicked') + ' &ldquo;' + T ('Got it!') + '&rdquo; ' + T ('on the first try for every card') + '.';
    } else {
-      overall = T('This flashcard stack had %s cards.  It took you %s tries until you felt comfortable enough to click') + ' "' + T ('Got it!') + '" ' + T ('for each card') + '.';
-      overall = overall.replace ('%s', qqc.number_to_word (deckdata[i_deck].n_cards));
-      overall = overall.replace ('%s', qqc.number_to_word (deckdata[i_deck].n_reviewed));
+      overall = T('This flashcard stack had %s cards.') + ' ';
+      overall += T ('It took you') + ' ' + qqc.number_to_word (n_reviewed) + ' ' + Tplural ('try', 'tries', n_reviewed) + ' ' + T ('until you felt comfortable enough to click') + ' &ldquo;' + T ('Got it!') + '&rdquo; ' + Tplural ('for this card', 'for each card', i_topic_n_cards) + '.';
    }
+   overall = overall.replace ('%s', qqc.number_to_word (n_cards));
    report_html.push ('<p>' + overall + '</p>');
 
+   // By topic.
+   var n_topics = deckdata[i_deck].topics.length;
+   if (n_topics == 1) {
+      var topic = deckdata[i_deck].topics[0];
+      var all_both_n;
+      if (n_cards == 2) {
+         all_both_n = T ('Both');
+      } else {
+         all_both_n = T ('All') + ' '+ qqc.number_to_word (n_cards);
+      }
+      report_html.push ('<p>' + all_both_n + ' ' + Tplural ('card', 'cards', n_cards) + ' were about topic &ldquo;' + topic + '.&rdquo;</p>');
+   } else if (n_topics > 1) {
+
+      report_html.push ('<ul style="text-align: left; margin-left: 1em; margin-right: 1em;">');
+      for (var i_topic=0; i_topic<n_topics; i_topic++) {
+         var topic = deckdata[i_deck].topics[i_topic];
+         var i_topic_n_cards = deckdata[i_deck].topic_statistics[topic].n_cards;
+         var i_topic_n_reviewed = deckdata[i_deck].topic_statistics[topic].n_reviewed;
+         if (debug[4]) {
+            console.log ('[done] topic:', topic, ', i_topic_n_cards:', i_topic_n_cards, ', i_topic_n_reviewed:', i_topic_n_reviewed);
+         }
+         if (i_topic_n_cards > 0) {
+            var topic_html = '<li>';
+            topic_html += T ('For topic') + ' &ldquo;' + topic + '&rdquo; ' + Tplural ('there was', 'there were', i_topic_n_cards) + ' ' + qqc.number_to_word (i_topic_n_cards) + ' ' + Tplural ('card', 'cards', i_topic_n_cards) + '.&nbsp;';
+            if (n_reviewed > n_cards) {
+               if (i_topic_n_reviewed == i_topic_n_cards) {
+                  if (i_topic_n_cards > 2) {
+                     topic_html += T ('You clicked') + ' &ldquo;' + T ('Got it!') + '&rdquo; ' + T ('on the first try for every card') + '.';
+                  } else if (i_topic_n_cards == 2) {
+                     topic_html += T ('You clicked') + ' &ldquo;' + T ('Got it!') + '&rdquo; ' + T ('on the first try for both cards') + '.';
+                  } else {
+                     topic_html += T ('You clicked') + ' &ldquo;' + T ('Got it!') + '&rdquo; ' + T ('on the first try for this card') + '.';
+                  }
+               } else {
+                  topic_html += T ('It took you') + ' ' + qqc.number_to_word (i_topic_n_reviewed) + ' ' + Tplural ('try', 'tries', n_reviewed) + ' ' + T ('until you felt comfortable enough to click') + ' &ldquo;' + T ('Got it!') + '&rdquo; ' + Tplural ('for this card', 'for each card', i_topic_n_cards) + '.';
+               }
+            }
+            topic_html += '</li>';
+            report_html.push (topic_html);
+         }
+      }
+      report_html.push ('</ul>');
+   }
    // Show exit text.
    report_html.push (deckdata[i_deck].exit_html);
 
@@ -1580,22 +1605,28 @@ this.flip = function (i_deck) {
       return;
    }
 
-   var el_textentry = $ ('#textentry-qdeck' + i_deck);
-   var el_front = $ ('#qcard_card-qdeck' + i_deck + ' div.front');
+   var textentry_obj = $ ('#textentry-qdeck' + i_deck);
+   var front_obj = $ ('#qcard_card-qdeck' + i_deck + ' div.front');
 
    var set_front_back;
    if (deckdata[i_deck].showing_front_b) {
+
+      // If recording, count number of flips (front-to-back only).
+      if (deckdata[i_deck].qrecord_id) {
+         deckdata[i_deck].n_flips++;
+      }
 
       // Hide whole thing (Chrome randomly ignoring backface-visibility?),
       // superscripts and subscripts (!) (shows through in Safari, Chrome,
       // "flashing" in Chrome on Mac).  Closure for setTimeout ().
       var hideFrontElements = function () {
-         el_front.css ('visibility', 'hidden');
-         el_front.find ('sup, sub').css ('visibility', 'hidden');
+         front_obj.css ('visibility', 'hidden');
+         front_obj.find ('sup, sub').css ('visibility', 'hidden');
       }
 
       // Hide qwiz icon/link.
-      if (deckdata[i_deck].i_card == 0) {
+      var i_card = deckdata[i_deck].i_card;
+      if (i_card == 0) {
          $ ('div.qcard_window div#icon_qdeck' + i_deck).hide ();
       }
 
@@ -1606,20 +1637,37 @@ this.flip = function (i_deck) {
       $ ('button.got_it-qdeck' + i_deck + ', button.next_card-qdeck' + i_deck).attr ('disabled', false).removeClass ('qbutton_disabled').addClass ('qbutton');
 
       // Increment n_reviewed on first flip for this card and redisplay progress.
-      if (! card_reviewed_b) {
-         card_reviewed_b = true;
+      if (! deckdata[i_deck].card_reviewed_b) {
+         deckdata[i_deck].card_reviewed_b = true;
          deckdata[i_deck].n_reviewed++;
+
+         // By topic, too.
+         var card_topics = deckdata[i_deck].card_topics[i_card];
+         if (debug[4]) {
+            console.log ('[flip] card_topics:', card_topics);
+         }
+         if (card_topics) {
+            for (var ii=0; ii<card_topics.length; ii++) {
+               var topic = card_topics[ii];
+               deckdata[i_deck].topic_statistics[topic].n_reviewed++;
+            }
+         }
          display_progress (i_deck);
+
+         // If recording this deck, record (locally) time of first flip.
+         if (deckdata[i_deck].q_record_id) {
+            var now_sec = new Date ().getTime ()/1000.0;
+            deckdata[i_deck].current_first_flip_sec = now_sec;
+         }
       }
 
       // If there's a text entry box...
-      if (el_textentry.length) {
+      if (textentry_obj.length) {
 
          // Hide it (shows through in Safari, Chrome, "flashing" in Chrome on
          // Mac).
-         el_textentry.css ('visibility', 'hidden');
+         textentry_obj.css ('visibility', 'hidden');
 
-         var i_card = deckdata[i_deck].i_card;
          var card = deckdata[i_deck].cards[i_card];
          if (card.textentry_required_b) {
 
@@ -1630,7 +1678,7 @@ this.flip = function (i_deck) {
 
             // If something entered in text box, then set back-side element to
             // what was entered.
-            var textentry = el_textentry.val ();
+            var textentry = textentry_obj.val ();
             if (textentry) {
 
                // Show what was within square brackets, insert user entry.
@@ -1659,11 +1707,11 @@ this.flip = function (i_deck) {
 
    // Closure for setTimeout ().
    var showFrontElements = function () {
-      if (el_textentry.length) {
-         el_textentry.css ('visibility', 'visible');
+      if (textentry_obj.length) {
+         textentry_obj.css ('visibility', 'visible');
       }
-      el_front.css ('visibility', 'visible');
-      el_front.find ('sup, sub').css ('visibility', 'visible');
+      front_obj.css ('visibility', 'visible');
+      front_obj.find ('sup, sub').css ('visibility', 'visible');
    };
 
    // Doing explicit show/hide for whole front back -- Chrome seemed to 
@@ -1798,8 +1846,8 @@ function textentry_set_card_back (i_deck, card) {
 
    // See with which choice the user textentry is associated, make div for
    // feedback for that choice visible.  Hide others.
-   var el_textentry = $ ('#textentry-qdeck' + i_deck);
-   var entry = el_textentry.val ();
+   var textentry_obj = $ ('#textentry-qdeck' + i_deck);
+   var entry = textentry_obj.val ();
 
    // See if entry among choices; identify default choice ("*").
    var i_choice = -1;
@@ -1936,14 +1984,27 @@ this.got_it = function (i_deck) {
    var ii_card = deckdata[i_deck].card_order[i_card];
    deckdata[i_deck].cards[ii_card].got_it = true;
    deckdata[i_deck].n_to_go--;
-   q.next_card (i_deck);
+   q.next_card (i_deck, true);
 };
 
 
-var directions = ['right', 'left', 'top', 'bottom'];
 // -----------------------------------------------------------------------------
 // Go to next card.
-this.next_card = function (i_deck) {
+var directions = ['right', 'left', 'top', 'bottom'];
+this.next_card = function (i_deck, got_it_f) {
+
+   // If recording, record either "Need more practice" or "Got it/check answer"
+   // button press, as well as stored data.
+   if (deckdata[i_deck].qrecord_id) {
+      got_it_f = got_it_f ? 1 : 0;
+      var data = {first_flip_sec:      current_first_flip_sec,
+                  n_flips:             n_flips,
+                  first_textentry_sec: current_first_textentry_sec,
+                  got_it:              got_it_f
+                 };
+      // DKTMP.
+      //qqc.jjax (...)
+   }
 
    // If showing back, change to front.
    if (! deckdata[i_deck].showing_front_b) {
@@ -2044,6 +2105,15 @@ var find_matching_terms = function (request, response) {
    var entry_metaphone = qqc.metaphone (entry);
    if (debug[6]) {
       console.log ('[find_matching_terms] entry_metaphone; ', entry_metaphone);
+   }
+
+   // If recording this deck, record (locally) time of first interaction with
+   // free-format input (textentry_i_deck set on focus in set_textentry_i_deck ()).
+   if (deckdata[textentry_i_deck].qrecord_id) {
+      if (! deckdata[textentry_i_deck].current_first_textentry_sec) {
+         var now_sec = new Date ().getTime ()/1000.0;
+         deckdata[textentry_i_deck].current_first_textentry_sec = now_sec;
+      }
    }
 
    // See if first character of entry metaphone matches first

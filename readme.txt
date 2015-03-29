@@ -21,12 +21,14 @@ Activate the plugin through the 'Plugins' menu in WordPress
 == Changelog ==
 
 = 3.00 =
+2015-04-??
 Word-wrap normal for labels (problem in Firefox).
 Don't use <code></code> for already-wrapped [q] and [l].
 Fix bug -- hint required matching first character.
 textentry minlength= option.
 Sort numeric for textentry suggestions.
 Login/recording capabilities.
+topic= for flashcards.
 
 = 2.28 =
 2015-02-03
