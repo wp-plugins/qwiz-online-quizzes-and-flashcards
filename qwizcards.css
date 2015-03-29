@@ -22,9 +22,9 @@ div.qcard_header {
 
 /* Any sub-elements of header have zero margin. */
 div.qcard_header * {
-   margin:              0px;
+   margin:              0px !important;
                     /* top right bot left */
-   padding:             0px 5px 0px 5px;
+   padding:             0px 5px 0px 5px !important;
 }
 
 /* Card */

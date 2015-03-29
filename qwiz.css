@@ -29,8 +29,8 @@ div.qwiz-header {
 
 /* All sub-elements of header have zero margin. */
 div.qwiz-header * {
-   margin:          0px;
-   padding:         0px 5px 0px 5px;
+   margin:          0px !important;
+   padding:         0px 5px 0px 5px !important;
 }
 
 .qwiz-mode {
