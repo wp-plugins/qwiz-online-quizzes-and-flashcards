@@ -1541,15 +1541,19 @@ function done (i_deck) {
    if (n_topics == 1) {
       var topic = deckdata[i_deck].topics[0];
       var all_both_n;
-      if (n_cards == 2) {
+      if (n_cards == 1) {
+         all_both_n = T ('This');
+      } else if (n_cards == 2) {
          all_both_n = T ('Both');
       } else {
          all_both_n = T ('All') + ' '+ qqc.number_to_word (n_cards);
       }
-      report_html.push ('<p>' + all_both_n + ' ' + Tplural ('card', 'cards', n_cards) + ' were about topic &ldquo;' + topic + '.&rdquo;</p>');
-   } else if (n_topics > 1) {
+      report_html.push ('<p>' + all_both_n + ' ' + Tplural ('card was', 'cards were', n_cards) + ' about topic &ldquo;' + topic + '.&rdquo;</p>');
+   } else if (n_topics > 1 && n_reviewed > n_cards) {
 
-      report_html.push ('<ul style="text-align: left; margin-left: 1em; margin-right: 1em;">');
+      // We'll show only topics where user clicked "Need more practice".  See
+      // which.
+      var need_more_practice_topics = [];
       for (var i_topic=0; i_topic<n_topics; i_topic++) {
          var topic = deckdata[i_deck].topics[i_topic];
          var i_topic_n_cards = deckdata[i_deck].topic_statistics[topic].n_cards;
@@ -1557,28 +1561,27 @@ function done (i_deck) {
          if (debug[4]) {
             console.log ('[done] topic:', topic, ', i_topic_n_cards:', i_topic_n_cards, ', i_topic_n_reviewed:', i_topic_n_reviewed);
          }
-         if (i_topic_n_cards > 0) {
-            var topic_html = '<li>';
-            topic_html += T ('For topic') + ' &ldquo;' + topic + '&rdquo; ' + Tplural ('there was', 'there were', i_topic_n_cards) + ' ' + qqc.number_to_word (i_topic_n_cards) + ' ' + Tplural ('card', 'cards', i_topic_n_cards) + '.&nbsp;';
-            if (n_reviewed > n_cards) {
-               if (i_topic_n_reviewed == i_topic_n_cards) {
-                  if (i_topic_n_cards > 2) {
-                     topic_html += T ('You clicked') + ' &ldquo;' + T ('Got it!') + '&rdquo; ' + T ('on the first try for every card') + '.';
-                  } else if (i_topic_n_cards == 2) {
-                     topic_html += T ('You clicked') + ' &ldquo;' + T ('Got it!') + '&rdquo; ' + T ('on the first try for both cards') + '.';
-                  } else {
-                     topic_html += T ('You clicked') + ' &ldquo;' + T ('Got it!') + '&rdquo; ' + T ('on the first try for this card') + '.';
-                  }
-               } else {
-                  topic_html += T ('It took you') + ' ' + qqc.number_to_word (i_topic_n_reviewed) + ' ' + Tplural ('try', 'tries', n_reviewed) + ' ' + T ('until you felt comfortable enough to click') + ' &ldquo;' + T ('Got it!') + '&rdquo; ' + Tplural ('for this card', 'for each card', i_topic_n_cards) + '.';
-               }
-            }
-            topic_html += '</li>';
-            report_html.push (topic_html);
+         if (i_topic_n_reviewed > i_topic_n_cards) {
+            var topic_text = '<strong>' + topic + '</strong>: ' + qqc.number_to_word (i_topic_n_cards) + ' ' + Tplural ('card', 'cards', i_topic_n_cards) + ', ' + qqc.number_to_word (i_topic_n_reviewed) + ' ' + 'tries';
+            need_more_practice_topics.push (topic_text);
          }
       }
-      report_html.push ('</ul>');
+      var n_need_more_practice_topics = need_more_practice_topics.length;
+      var topic_list_html = '<p class="topic_list">';
+      if (n_need_more_practice_topics > 1) {
+         topic_list_html += T ('These are the topics of cards where you clicked');
+         for (var i=0; i<n_need_more_practice_topics; i++) {
+            need_more_practice_topics[i] = '&bull; ' + need_more_practice_topics[i];
+         }
+      } else {
+         topic_list_html += T ('This is the only topic for which you clicked');
+      }
+      topic_list_html += ' &ldquo;' + T ('Need more practice') + '&rdquo;:<br />';
+      topic_list_html += need_more_practice_topics.join ('; ') + '.';
+      topic_list_html += '</p>';
+      report_html.push (topic_list_html);
    }
+
    // Show exit text.
    report_html.push (deckdata[i_deck].exit_html);
 

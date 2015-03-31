@@ -116,6 +116,13 @@ div.qcard_card img {
    box-shadow:          none;
 }
 
+p.topic_list {
+   font-weight:         normal;
+   text-align:          left;
+   margin-left:         2em;
+   text-indent:         -2em;
+}
+
 div.icon_qdeck {
    position:        absolute;
    left:            2px;
