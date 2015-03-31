@@ -119,7 +119,7 @@ div.qcard_card img {
 p.topic_list {
    font-weight:         normal;
    text-align:          left;
-   margin-left:         2em;
+   margin-left:         2em !important;
    text-indent:         -2em;
 }
 
