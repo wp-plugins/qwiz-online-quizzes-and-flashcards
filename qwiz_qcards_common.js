@@ -163,7 +163,7 @@ this.set_user_menus_and_icons = function (sign_out_f) {
 
       // "No thanks" item.
       htm +=    '<div>'
-             +     '<a href="javascript: qname.icon_no_login (i_qwiz)">'
+             +     '<a href="javascript: qname.icon_no_login (i_qwiz, true)">'
              +        '<strong>' + qqc.T ('No thanks') + '</strong>'
              +     '</a>'
              +     ' &nbsp;<span class="qwiz-remember" title="' + qqc.T ('Skip login in the future') + '"><span><input type="checkbox" /></span> ' + qqc.T ('Remember') + '</span>'

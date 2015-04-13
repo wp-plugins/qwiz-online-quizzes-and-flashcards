@@ -10,7 +10,7 @@
 .qcard_progress p {
    font-size:           90%;
    color:               gray;
-   margin:              0px;
+   margin:              0px !important;
 }
 
 div.qcard_header {

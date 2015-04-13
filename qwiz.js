@@ -1310,7 +1310,7 @@ function create_qwiz_divs (i_qwiz, qwiz_tag, htm, exit_html) {
                        +             '</button>'
                        +          '</td>'
                        +          '<td class="qwiz-remember">'
-                       +             '<button class="qbutton" onclick="' + qname + '.no_login (' + i_qwiz + ')">'
+                       +             '<button class="qbutton" onclick="' + qname + '.no_login (' + i_qwiz + ', true)">'
                        +                T ('No thanks')
                        +             '</button>'
                        +             '<br />'
@@ -1529,7 +1529,7 @@ this.restart_quiz = function (i_qwiz) {
 
 
 // -----------------------------------------------------------------------------
-this.next_question = function (i_qwiz) {
+this.next_question = function (i_qwiz, no_login_b) {
 
    var i_question = qwizdata[i_qwiz].i_question;
 
@@ -1550,7 +1550,7 @@ this.next_question = function (i_qwiz) {
    // "Start quiz" button...
    if (i_question == -1) {
       if (n_questions > 1) {
-         if (! no_intro_b[i_qwiz]) {
+         if (! no_intro_b[i_qwiz] && ! no_login_b) {
 
             // "Start quiz" clicked.  If quiz may be recorded, and user not logged
             // in, go to login rather than first question (if hasn't declined).
@@ -3552,7 +3552,7 @@ this.no_login = function (i_qwiz) {
    $ ('div.qwiz-usermenu_icon_no_intro').removeClass ('qwiz-icon-bounce');
 
    $ ('#qwiz_login-qwiz' + i_qwiz).hide ();
-   q.next_question (i_qwiz);
+   q.next_question (i_qwiz, true);
 }
 
 
