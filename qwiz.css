@@ -254,6 +254,13 @@ input.qwiz_textentry:-ms-input-placeholder {
    margin-bottom:   0.3em;
 }
 
+p.topic_list {
+   font-weight:         normal;
+   text-align:          left;
+   margin-left:         2em !important;
+   text-indent:         -2em;
+}
+
 div.icon_qwiz {
    position:        absolute;
    left:            2px;

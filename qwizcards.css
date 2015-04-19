@@ -4,6 +4,7 @@
 }
 
 .qcard_progress {
+   position:            relative;
    text-align:          right;
 }
 
@@ -12,6 +13,135 @@
    color:               gray;
    margin:              0px !important;
 }
+
+.qwiz-usermenu_icon {
+   visibility:      hidden;
+   float:           right;
+   margin-top:      -2px;
+   margin-left:     3px;
+   transform:       scale(1.0, 0.65);
+   -webkit-transform: scale(1.0, 0.65);
+}
+
+.qwiz-icon-bounce {
+   animation-name:                    icon-bounce;
+   animation-duration:                3.5s;
+   animation-iteration-count:         infinite;
+
+   -webkit-animation-name:            icon-bounce;
+   -webkit-animation-duration:        3.5s;
+   -webkit-animation-iteration-count: infinite;
+}
+@keyframes icon-bounce {
+   from {
+      margin-top:   -2px;
+   } 7% {
+      margin-top:   -10px;
+   } 15% {
+      margin-top:   -2px;
+   } 22% {
+      margin-top:   -7px;
+   } 30% {
+      margin-top:   -2px;
+   } 37% {
+      margin-top:   -7px;
+   } 50% {
+      margin-top:   -2px;
+   } to {
+      margin-top:   -2px;
+   }
+}
+
+@-webkit-keyframes icon-bounce {
+   from {
+      margin-top:   -2px;
+   } 7% {
+      margin-top:   -10px;
+   } 15% {
+      margin-top:   -2px;
+   } 22% {
+      margin-top:   -7px;
+   } 30% {
+      margin-top:   -2px;
+   } 37% {
+      margin-top:   -7px;
+   } 50% {
+      margin-top:   -2px;
+   } to {
+      margin-top:   -2px;
+   }
+}
+
+div.qdeck-usermenu {
+   position:        absolute;
+   display:         none;
+
+   /* Keep in front of labels. */
+   z-index:         3;
+
+   top:             2px;
+   right:           0px;
+   background:      white;
+   padding:         5px;
+   border:          2px solid rgba(79, 112, 153, 1);
+   box-shadow:      -3px 3px 2px gray;
+   text-align:      left;
+}
+
+div.qdeck-usermenu div {
+   padding-bottom:  5px;
+}
+
+.qdeck-login {
+   text-align:          center;
+   font-weight:         normal;
+}
+
+.qdeck-login p {
+   margin-bottom:       6px;
+}
+
+.qdeck-login input {
+   padding:             3px;
+}
+
+.qdeck-login table {
+   width:               auto;
+   text-align:          center;
+}
+
+.qdeck-login td {
+   border:              none;
+}
+
+.qdeck-login td.qdeck-remember {
+   position:            relative;
+   border:              none;
+   text-align:          center;
+   vertical-align:      top;
+}
+
+span.qdeck-remember {
+   position:            relative;
+   font-size:           80%;
+}
+
+span.qdeck-remember span {
+   position:            relative;
+   top:                 2px;
+}
+
+span.qdeck-remember input[type=checkbox] {
+   transform:           scale(0.8);
+   -webkit-transform:   scale(0.8);
+}
+
+.qdeck-login p.login_error {
+   visibility:          hidden;
+   color:               red;
+   font-weight:         bold;
+}
+
 
 div.qcard_header {
    color:               white;

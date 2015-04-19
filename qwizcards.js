@@ -154,6 +154,9 @@ var lc_textentry_matches = {};
 
 var Tcheck_answer_message;
 
+var qrecord_b = false;
+var q_and_a_text = '';
+
 // -----------------------------------------------------------------------------
 $(document).ready (function () {
 
@@ -320,6 +323,13 @@ function process_html () {
       n_decks = i_deck;
    });
 
+   // If any quizzes subject to recording, set user menus -- if this comes after
+   // check_session_id () callback, it will properly set the menus (while the
+   // callback may not have worked if the html hadn't been set at that time).
+   if (qrecord_b) {
+      qqc.set_user_menus_and_icons ();
+   }
+
    // Set flag to display page (qwizscripts.js).
    q.processing_complete_b = true;
 }
@@ -444,8 +454,36 @@ function process_qdeck_pair (htm, i_deck) {
 
    deckdata[i_deck].exit_html = '';
 
+   deckdata[i_deck].qrecord_id = false;
+
    // Include any opening tags (e.g., "<p>" in WordPress).
-   var qdeck_tag = htm.match (/(<[^\/][^>]*>\s*)*?\[qdeck[^\]]*\]/m)[0];
+   var m = htm.match (/(<[^\/][^>]*>\s*)*?\[qdeck([^\]]*)\]/m);
+   var qdeck_tag  = m[0];
+   var attributes = m[2];
+
+   // If "qrecord_id=..." present, parse out database ID.  Set flag indicating
+   // one or more quizzes subject to recording.  Set up array to save question
+   // text.
+   attributes = qqc.replace_smart_quotes (attributes);
+   if (debug[0]) {
+      console.log ('[process_qdeck_pair] qdeck_tag: ', qdeck_tag);
+      console.log ('[process_qdeck_pair] attributes: ', attributes);
+   }
+   var qrecord_id = qqc.get_attr (attributes, 'qrecord_id');
+   if (qrecord_id) {
+      deckdata[i_deck].qrecord_id = qrecord_id;
+      deckdata[i_deck].q_and_a_text = {};
+
+      // If haven't checked already, see if user already logged in (get session id
+      // in cookie, see if still valid).
+      if (! qrecord_b) {
+         qrecord_b = true;
+         if (typeof (document_qwiz_user_logged_in_b) == 'undefined'
+                              || document_qwiz_user_logged_in_b == 'not ready') {
+            qqc.check_session_id (i_deck, qrecord_id);
+         }
+      }
+   }
 
    var n_decks = 0;
    var new_html = '';
@@ -461,6 +499,7 @@ function process_qdeck_pair (htm, i_deck) {
       var initial_closing_tags = m[1];
       new_html += initial_closing_tags;
    }
+
 
    // Delete [qdeck], any initial closing tags.
    htm = htm.replace (/\[qdeck[^\]]*\]((<\/[^>]+>\s*)*)/m, '');
@@ -660,6 +699,13 @@ function process_card_input (i_deck, i_card, htm, opening_tags) {
       console.log ('[process_card_input] card_front_html: ', card_front_html);
    }
 
+   // If recording, save text without tags.  Also, replace non-breaking spaces
+   // and EOLs with space, multiple spaces with single space, trim.
+   if (deckdata[i_deck].qrecord_id) {
+      var q_and_a_text = qqc.remove_tags_eols (card_front_html);
+      deckdata[i_deck].q_and_a_text[i_card] = q_and_a_text;
+   }
+
    // If [textentry], change to html equivalent.  Save flag if there.
    var new_card_front_html = card_front_textentry_html (card_front_html, i_deck);
    card.card_front = new_card_front_html;
@@ -685,6 +731,12 @@ function process_card_input (i_deck, i_card, htm, opening_tags) {
    var card_back_items = card_back_html.split (/\[a\]/);
    if (card_back_items.length != 1) {
       errmsgs.push (T ('Got more than one answer ("[a]") -- card back -- for') + ': qdeck ' + (1 + i_deck) + ', ' + T ('card') + ' ' + (1 + i_card) + '\n' + htm);
+   }
+
+   // If recording, add card-back text to q_and_a_text.
+   if (deckdata[i_deck].qrecord_id) {
+      var q_and_a_text = qqc.remove_tags_eols (card_back_items[0]);
+      deckdata[i_deck].q_and_a_text[i_card] += '\n' + q_and_a_text;
    }
 
    // Capture any opening tags before "[a]" tag.
@@ -761,6 +813,12 @@ function process_textentry (i_deck, i_card, htm, opening_tags) {
    // Save as card front, set flag that entry required.
    card.card_front = htm;
    card.textentry_required_b = true;
+
+   // If recording, save card front without tags.
+   if (deckdata[i_deck].qrecord_id) {
+      var q_and_a_text = qqc.remove_tags_eols (htm);
+      deckdata[i_deck].q_and_a_text[i_card] = q_and_a_text;
+   }
 
    // Set up data for this card, create a div for each feedback alt -- so can
    // measure each, set front and back card size.  Div to show selected in
@@ -1154,8 +1212,29 @@ function create_qdeck_divs (i_deck, qdeck_tag) {
    // Add z-index, so if large graphic expands card, will stay on top of decks
    // farther down the page.
    divs.push ('<div id="qcard_window-qdeck' + i_deck + '" class="qcard_window" style="z-index: ' + (20 - i_deck) + ';">');
+
    divs.push ('   <div id="qcard_progress-qdeck' + i_deck + '" class="qcard_progress">');
+   if (deckdata[i_deck].qrecord_id) {
+      var addclass = '';
+      if (no_intro_b[i_deck] || deckdata[i_deck].n_cards == 1) {
+         addclass = ' qwiz-usermenu_icon_no_intro';
+      }
+      divs.push ('   <div id="usermenu_icon-qdeck' + i_deck + '" class="qwiz-usermenu_icon' + addclass + '" onmouseover="' + qname + '.show_usermenu (' + i_deck + ')">');
+      divs.push (      '&#x25bc;');
+      divs.push ('   </div>');
+      divs.push ('   <span class="progress_text">');
+      divs.push ('   </span>');
+   }
+
+
+   if (deckdata[i_deck].qrecord_id) {
+
+      // Add user menu div.  Don't populate until after start/login.
+      divs.push ('<div id="usermenu-qdeck' + i_deck + '" class="qq-usermenu qdeck-usermenu">');
+      divs.push ('</div>');
+   }
    divs.push ('   </div>');
+
    divs.push ('   <div id="qcard_header-qdeck' + i_deck + '" class="qcard_header">');
    divs.push ('   </div>');
    divs.push ('   <div class="card-container"> ');
@@ -1294,6 +1373,26 @@ this.start_deck = function (i_deck) {
    }
 
    init_card_order (i_deck);
+
+   // If deck may be recorded, and user not logged in, go to login rather than
+   // first card (if user hasn't declined).
+   if (deckdata[i_deck].qrecord_id) {
+      var user_logged_in_b 
+         = typeof (document_qwiz_user_logged_in_b) != 'undefined'
+                                              && document_qwiz_user_logged_in_b;
+      if (   user_logged_in_b 
+          || (   typeof (document_qwiz_declined_login_b) != 'undefined'
+              && document_qwiz_declined_login_b)) {
+         if (user_logged_in_b) {
+            var now_sec = new Date ().getTime ()/1000.0;
+            var data = {type: 'start', now_sec: now_sec};
+            qqc.jjax (qname, i_deck, deckdata[i_deck].qrecord_id, 'record_qcard', data);
+         }
+      } else {
+         q.display_login (i_deck);
+         return false;
+      }
+   }
    q.process_card (i_deck);
 };
 
@@ -1400,6 +1499,7 @@ function init_element_pointers (i_deck) {
    deckdata[i_deck].el_qcard_container  = $('div#qcard_window-qdeck' + i_deck + ' div.card-container');
    deckdata[i_deck].el_flip             = $('button.cbutton-qdeck' + i_deck);
    deckdata[i_deck].el_progress         = $('div#qcard_progress-qdeck' + i_deck);
+   deckdata[i_deck].el_progress_text    = $('div#qcard_progress-qdeck' + i_deck + ' span.progress_text');
    deckdata[i_deck].el_header           = $('div#qcard_header-qdeck' + i_deck);
    deckdata[i_deck].el_qcard_card       = $('div#qcard_card-qdeck' + i_deck);
    deckdata[i_deck].el_qcard_table_front= $('div#qcard_card-qdeck' + i_deck + ' div.front table');
@@ -1517,7 +1617,7 @@ function done (i_deck) {
       q.flip (i_deck);
    }
 
-   deckdata[i_deck].el_progress.html ('');
+   deckdata[i_deck].el_progress_text.html ('');
    deckdata[i_deck].el_qcard_card_back.html ('');
    deckdata[i_deck].el_next_buttons.html ('');
 
@@ -1531,7 +1631,7 @@ function done (i_deck) {
       overall = T ('In this %s-flashcard stack, you clicked') + ' &ldquo;' + T ('Got it!') + '&rdquo; ' + T ('on the first try for every card') + '.';
    } else {
       overall = T('This flashcard stack had %s cards.') + ' ';
-      overall += T ('It took you') + ' ' + qqc.number_to_word (n_reviewed) + ' ' + Tplural ('try', 'tries', n_reviewed) + ' ' + T ('until you felt comfortable enough to click') + ' &ldquo;' + T ('Got it!') + '&rdquo; ' + Tplural ('for this card', 'for each card', i_topic_n_cards) + '.';
+      overall += T ('It took you') + ' ' + qqc.number_to_word (n_reviewed) + ' ' + Tplural ('try', 'tries', n_reviewed) + ' ' + T ('until you felt comfortable enough to click') + ' &ldquo;' + T ('Got it!') + '&rdquo; ' + Tplural ('for this card', 'for each card', n_cards) + '.';
    }
    overall = overall.replace ('%s', qqc.number_to_word (n_cards));
    report_html.push ('<p>' + overall + '</p>');
@@ -1596,7 +1696,231 @@ function done (i_deck) {
 function display_progress (i_deck) {
    var progress_html;
    progress_html = '<p>' + deckdata[i_deck].n_cards + ' ' + T ('cards total') + ', ' + deckdata[i_deck].n_reviewed + ' ' + Tplural ('card', 'cards', deckdata[i_deck].n_reviewed) + ' ' + T ('reviewed') + ', ' + deckdata[i_deck].n_to_go + ' ' + Tplural ('card', 'cards', deckdata[i_deck].n_to_go) + ' ' + T ('to go') + '</p>';
-   deckdata[i_deck].el_progress.html (progress_html);
+   deckdata[i_deck].el_progress_text.html (progress_html);
+}
+
+
+// -----------------------------------------------------------------------------
+this.display_login = function (i_deck) {
+
+   // Close menu in case came from there, and stop any bouncing icons (no-intro
+   // quizzes/flashcard decks) bouncing.
+   $ ('#usermenu-qdeck' + i_deck).hide ();
+   $ ('div.qwiz-usermenu_icon_no_intro').removeClass ('qwiz-icon-bounce');
+
+   if (deckdata[i_deck].showing_front_b) {
+      deckdata[i_deck].el_qcard_card_front.html (get_login_html (i_deck));
+   } else {
+      deckdata[i_deck].el_qcard_card_back.html (get_login_html (i_deck));
+   }
+
+   // Hide buttons.
+   $ ('#qcard_next_buttons-qdeck' + i_deck).css ('visibility', 'hidden');
+
+   // Focus on username field.
+   $ ('#qdeck_username-qdeck' + i_deck).focus ();
+}
+
+
+// -----------------------------------------------------------------------------
+function get_login_html (i_deck) {
+
+   var onfocus = 'onfocus="jQuery (\'#qdeck_login-qdeck' + i_deck + ' p.login_error\').css (\'visibility\', \'hidden\')"';
+
+   var login_html =
+       '<div id="qdeck_login-qdeck' + i_deck + '" class="qdeck-login">\n'
+     +    '<p>'
+     +       '<strong>' + T ('Record score/credit?') + '</strong>'
+     +    '</p>\n'
+     +    '<table border="0" align="center">'
+     +       '<tr>'
+     +          '<td>'
+     +             '<label for="qdeck_username-qdeck' + i_deck + '">'+ T ('User name') + '</label>'
+     +          '</td>'
+     +          '<td>'
+     +             '<input type="text" id="qdeck_username-qdeck' + i_deck + '" ' + onfocus + ' />'
+     +          '</td>'
+     +       '</tr>'
+     +       '<tr>'
+     +          '<td>'
+     +             '<label for="qdeck_password-qdeck' + i_deck + '">'+ T ('Password') + '</label>'
+     +          '</td>'
+     +          '<td>'
+     +             '<input type="password" id="qdeck_password-qdeck' + i_deck + '" ' + onfocus + ' />'
+     +          '</td>'
+     +       '<tr>'
+     +    '</table>\n'
+     +    '<table border="0" align="center">'
+     +       '<tr>'
+     +          '<td class="qdeck-remember">'
+     +             '<button class="qbutton" onclick="' + qname + '.login (' + i_deck + ')">'
+     +                T ('Login')
+     +             '</button>'
+     +          '</td>'
+     +          '<td class="qdeck-remember">'
+     +             '<button class="qbutton" onclick="' + qname + '.no_login (' + i_deck + ', true)">'
+     +                T ('No thanks')
+     +             '</button>'
+     +             '<br />'
+     +             '<span class="qdeck-remember" title="' + T ('Skip login in the future') + '"><span><input type="checkbox" /></span> ' + T ('Remember') + '</span>'
+     +          '</td>'
+     +       '<tr>'
+     +    '</table>\n'
+     +    '<p class="login_error">'
+     +       'Login incorrect.&nbsp; Please try again'
+     +    '</p>\n'
+     + '</div>\n';
+
+   return login_html;
+}
+
+
+// -----------------------------------------------------------------------------
+this.login = function (i_deck) {
+
+   // In case previously declined login option, unset cookie and local flag.
+   $.removeCookie ('qdeck_declined_login', {path: '/'});
+   document_qwiz_declined_login_b = false;
+
+   // Have we got username and password?
+   var username_obj = $ ('#qdeck_username-qdeck' + i_deck);
+   var username = username_obj.val ();
+   if (! username ) {
+      alert (T ('Please enter User name'));
+      username_obj.focus ();
+      return;
+   }
+   document_qwiz_username = username;
+
+   var password_obj = $ ('#qdeck_password-qdeck' + i_deck);
+   var password = password_obj.val ();
+   if (! password) {
+      alert (T ('Please enter Password'));
+      password_obj.focus ();
+      return;
+   }
+
+   // We'll send "SHA3" of password.
+   var sha3_password = CryptoJS.SHA3 (password).toString ();
+
+   // Do jjax call.  First disable login button, show spinner.  DKTMP
+   var data = {username: username, sha3_password: sha3_password};
+   qqc.jjax (qname, i_deck, deckdata[i_deck].qrecord_id, 'login', data);
+}
+
+
+// -----------------------------------------------------------------------------
+this.login_ok = function (i_deck, session_id) {
+
+   // Success.  Create session cookie.  Valid just for this session, good for
+   // whole site.  Value set by server.  Callback script also saves session ID
+   // as global (document) variable document_qwiz_session_id.
+   $.cookie ('qwiz_session_id', session_id, {path: '/'});
+
+   // Set flag.
+   document_qwiz_user_logged_in_b = true;
+
+   // Set user menus.
+   qqc.set_user_menus_and_icons ();
+
+   // Hide login.
+   $ ('#qdeck_login-qdeck' + i_deck).hide ();
+
+   // If recording any decks, reset all start times.
+   if (qrecord_b) {
+      var qrecord_ids = [];
+      for (var ii_deck=0; ii_deck<n_decks; ii_deck++) {
+         if (deckdata[ii_deck].qrecord_id) {
+            qrecord_ids.push (deckdata[ii_deck].qrecord_id);
+         }
+      }
+      qrecord_ids = qrecord_ids.join ('\t');
+      var now_sec = new Date ().getTime ()/1000.0;
+      qqc.jjax (qname, i_deck, qrecord_ids, 'record_qcard', {type: 'start', now_sec: now_sec});
+   }
+
+   // Show buttons.
+   $ ('#qcard_next_buttons-qdeck' + i_deck).css ('visibility', 'visible');
+
+   if (deckdata[i_deck].i_card == 0) {
+
+      // Go to first card.
+      q.process_card (i_deck);
+   } else {
+
+      // Re-display current card.
+      i_card = deckdata[i_deck].i_card;
+      q.set_card_front_and_back (i_deck, i_card);
+   }
+}
+
+
+// -----------------------------------------------------------------------------
+this.login_not_ok = function (i_deck) {
+
+   // Invalid login.  Error message.
+   $ ('#qdeck_login-qdeck' + i_deck + ' p.login_error').css ('visibility', 'visible');
+   if (debug[0]) {
+      console.log ('[login_not_ok] $ (\'#qdeck_login-qdeck' + i_deck + ' p.login_error\'):', $ ('#qdeck_login-qdeck' + i_deck + ' p.login_error'));
+   }
+}
+
+
+// -----------------------------------------------------------------------------
+this.no_login = function (i_deck) {
+
+   // Skip login.  Hide login, go to first question.  If checkbox checked, set
+   // cookie and local flag to skip in the future.
+   if ($ ('#qdeck_login-qdeck' + i_deck + ' input[type="checkbox"]').prop('checked')) {
+      $.cookie ('qwiz_declined_login', 1, {path: '/'});
+      document_qwiz_declined_login_b = true;
+   }
+
+   // Stop any bouncing icons (no-intro quizzes) bouncing.
+   $ ('div.qwiz-usermenu_icon_no_intro').removeClass ('qwiz-icon-bounce');
+
+   // Show buttons.
+   $ ('#qcard_next_buttons-qdeck' + i_deck).css ('visibility', 'visible');
+
+   q.process_card (i_deck);
+}
+
+
+// -----------------------------------------------------------------------------
+this.icon_no_login = function (i_deck) {
+
+   // Stop icon from bouncing.  If checkbox checked, set cookie and local flag
+   // to skip bouncing/login in the future.
+   $ ('div.qwiz-usermenu_icon_no_intro').removeClass ('qwiz-icon-bounce');
+
+   if ($ ('#usermenu-qdeck' + i_deck + ' input[type="checkbox"]').prop('checked')) {
+      $.cookie ('qwiz_declined_login', 1, {path: '/'});
+      document_qwiz_declined_login_b = true;
+   }
+
+   // Close menu.
+   $ ('#usermenu-qdeck' + i_deck).hide ();
+}
+
+
+// -----------------------------------------------------------------------------
+this.show_usermenu = function (i_deck) {
+   $ ('#usermenu-qdeck' + i_deck).show ().mouseleave (function () {
+                                                        $ (this).hide ();
+                                                     });
+}
+
+
+// -----------------------------------------------------------------------------
+this.sign_out = function () {
+
+   // Delete cookie, unset flag.
+   $.removeCookie ('qwiz_session_id', {path: '/'});
+   document_qwiz_user_logged_in_b = false;
+
+   // Reset menus to reflect current (logged-out) state.  Flag to NOT start
+   // bouncing icons.
+   qqc.set_user_menus_and_icons (true);
 }
 
 
@@ -1658,7 +1982,7 @@ this.flip = function (i_deck) {
          display_progress (i_deck);
 
          // If recording this deck, record (locally) time of first flip.
-         if (deckdata[i_deck].q_record_id) {
+         if (deckdata[i_deck].qrecord_id) {
             var now_sec = new Date ().getTime ()/1000.0;
             deckdata[i_deck].current_first_flip_sec = now_sec;
          }
@@ -1998,15 +2322,22 @@ this.next_card = function (i_deck, got_it_f) {
 
    // If recording, record either "Need more practice" or "Got it/check answer"
    // button press, as well as stored data.
-   if (deckdata[i_deck].qrecord_id) {
+   if (deckdata[i_deck].qrecord_id && document_qwiz_user_logged_in_b) {
+      i_card = deckdata[i_deck].i_card;
+      var textentry = '';  // DKTMP
+      var now_sec = new Date ().getTime ()/1000.0;
       got_it_f = got_it_f ? 1 : 0;
-      var data = {first_flip_sec:      current_first_flip_sec,
-                  n_flips:             n_flips,
-                  first_textentry_sec: current_first_textentry_sec,
-                  got_it:              got_it_f
+      var data = {type:                'flashcard',
+                  i_card:              i_card,
+                  q_and_a_text:        deckdata[i_deck].q_and_a_text[i_card],
+                  first_flip_sec:      deckdata[i_deck].current_first_flip_sec,
+                  n_flips:             deckdata[i_deck].n_flips,
+                  first_textentry_sec: deckdata[i_deck].current_first_textentry_sec,
+                  response:            textentry,
+                  now_sec:             now_sec,
+                  got_it_f:            got_it_f
                  };
-      // DKTMP.
-      //qqc.jjax (...)
+      qqc.jjax (qname, i_deck, deckdata[i_deck].qrecord_id, 'record_qcard', data)
    }
 
    // If showing back, change to front.

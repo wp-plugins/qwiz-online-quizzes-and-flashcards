@@ -869,7 +869,7 @@ function process_qwiz_pair (htm, i_qwiz) {
    qwizdata[i_qwiz].qrecord_id = false;
 
    var m = htm.match (/\[qwiz([^\]]*)\]/m);
-   var qwiz_tag = m[0];
+   var qwiz_tag   = m[0];
    var attributes = m[1];
    attributes = qqc.replace_smart_quotes (attributes);
    if (debug[0]) {
@@ -1255,9 +1255,9 @@ function create_qwiz_divs (i_qwiz, qwiz_tag, htm, exit_html) {
 
       // Set up pull-down arrow for user menu login/logout, etc.  Right end of
       // progress bar.  Add class if this quiz doesn't have an intro/start
-      // button.
+      // button or is single-question quiz.
       var addclass = '';
-      if (no_intro_b[i_qwiz]) {
+      if (no_intro_b[i_qwiz] || qwizdata[i_qwiz].n_questions == 1) {
          addclass = ' qwiz-usermenu_icon_no_intro';
       }
       progress_div_html +=   '<div id="usermenu_icon-qwiz' + i_qwiz + '" class="qwiz-usermenu_icon' + addclass + '" onmouseover="' + qname + '.show_usermenu (' + i_qwiz + ')">\n'
@@ -1269,7 +1269,7 @@ function create_qwiz_divs (i_qwiz, qwiz_tag, htm, exit_html) {
    if (qwizdata[i_qwiz].qrecord_id) {
 
       // Add user menu div.  Don't populate until after start/login.
-      progress_div_html += '<div id="usermenu-qwiz' + i_qwiz + '" class="qwiz-usermenu">'
+      progress_div_html += '<div id="usermenu-qwiz' + i_qwiz + '" class="qq-usermenu qwiz-usermenu">'
                          + '</div>';
    }
    progress_div_html += '</div>\n';
@@ -1552,8 +1552,9 @@ this.next_question = function (i_qwiz, no_login_b) {
       if (n_questions > 1) {
          if (! no_intro_b[i_qwiz] && ! no_login_b) {
 
-            // "Start quiz" clicked.  If quiz may be recorded, and user not logged
-            // in, go to login rather than first question (if hasn't declined).
+            // "Start quiz" clicked.  If quiz may be recorded, and user not
+            // logged in, go to login rather than first question (if user hasn't
+            // declined).
             if (qwizdata[i_qwiz].qrecord_id) {
                var user_logged_in_b 
                   = typeof (document_qwiz_user_logged_in_b) != 'undefined'
@@ -2810,47 +2811,33 @@ function display_summary_and_exit (i_qwiz) {
          all_both_n = T ('All') + ' '+ qqc.number_to_word (n_questions);
       }
       report_html.push ('<p>' + all_both_n + ' ' + Tplural ('question', 'questions', n_questions) + ' were about topic &ldquo;' + topic + '.&rdquo;</p>');
-   } else if (n_topics > 1) {
+   } else if (n_topics > 1 && n_incorrect > 0) {
 
-      // By topic.
-      report_html.push ('<ul>');
+      // We'll show only topics where user got some incorrect.  See which.
+      var incorrect_topics = [];
       for (var i_topic=0; i_topic<n_topics; i_topic++) {
          var topic = qwizdata[i_qwiz].topics[i_topic];
          var n_topic_correct = qwizdata[i_qwiz].topic_statistics[topic].n_correct;
          var n_topic_incorrect = qwizdata[i_qwiz].topic_statistics[topic].n_incorrect;
          var n_topic_items = n_topic_correct + n_topic_incorrect;
-         if (n_topic_items > 0) {
-            var topic_html = '<li>';
-            topic_html += T ('For topic') + ' &ldquo;' + topic + '&rdquo; ' + Tplural ('there was', 'there were', n_topic_items) + ' ' + qqc.number_to_word (n_topic_items) + ' ' + Tplural ('question', 'questions', n_topic_items) + '.&nbsp;';
-            if (n_topic_incorrect == 0) {
-               if (n_topic_items > 2) {
-                  topic_html += T ('You answered all of these questions correctly');
-               } else if (n_topic_items == 2) {
-                  topic_html += T ('You answered both of these questions correctly');
-               } else {
-                  topic_html += T ('You answered this question correctly');
-               }
-               if (qwizdata[i_qwiz].repeat_incorrect_b) {
-                  topic_html += ' ' + T ('on the first try.');
-               } else {
-                  topic_html += '.';
-               }
-            } else {
-               if (qwizdata[i_qwiz].repeat_incorrect_b) {
-                  var n_tries = n_topic_items + n_topic_incorrect;
-                  topic_html += Tplural ('It took you one try', 'It took you %s tries', n_tries) + ' ' + Tplural ('to answer this question correctly', 'to answer these questions correctly', n_topic_items) + '.';
-                  topic_html = topic_html.replace ('%s', qqc.number_to_word (n_tries));
-               } else {
-                  topic_html += T ('Your score is %s correct out of %s') + '.';
-                  topic_html = topic_html.replace ('%s', qqc.number_to_word (n_topic_correct));
-                  topic_html = topic_html.replace ('%s', qqc.number_to_word (n_topic_items));
-               }
-            }
-            topic_html += '</li>';
-            report_html.push (topic_html);
+         if (n_topic_incorrect > 0) {
+            var topic_text = '<strong>' + topic + '</strong>: ' + qqc.number_to_word (n_topic_items) + ' ' + Tplural ('question', 'questions', n_topic_items) + ', ' + qqc.number_to_word (n_topic_incorrect) + ' ' + T ('incorrect');
+            incorrect_topics.push (topic_text);
          }
       }
-      report_html.push ('</ul>');
+      var n_incorrect_topics = incorrect_topics.length;
+      var topic_list_html = '<p class="topic_list">';
+      if (n_incorrect_topics > 1) {
+         topic_list_html += T ('These are the topics of questions that you answered incorrectly') + ':<br />';
+         for (var i=0; i<n_incorrect_topics; i++) {
+            incorrect_topics[i] = '&bull; ' + incorrect_topics[i];
+         }
+      } else {
+         topic_list_html += T ('The topic of the only question you answered incorrectly is' + ' ');
+      }
+      topic_list_html += incorrect_topics.join ('; ') + '.';
+      topic_list_html += '</p>';
+      report_html.push (topic_list_html);
    }
 
    // Place in report div.
@@ -3500,15 +3487,17 @@ this.login_ok = function (i_qwiz, session_id) {
    // Hide login.
    $ ('#qwiz_login-qwiz' + i_qwiz).hide ();
 
-   // Reset all start times.
-   var qrecord_ids = [];
-   for (var ii_qwiz=0; ii_qwiz<n_qwizzes; ii_qwiz++) {
-      if (qwizdata[ii_qwiz].qrecord_id) {
-         qrecord_ids.push (qwizdata[ii_qwiz].qrecord_id);
+   // If recording any quizzes, reset all start times.
+   if (qrecord_b) {
+      var qrecord_ids = [];
+      for (var ii_qwiz=0; ii_qwiz<n_qwizzes; ii_qwiz++) {
+         if (qwizdata[ii_qwiz].qrecord_id) {
+            qrecord_ids.push (qwizdata[ii_qwiz].qrecord_id);
+         }
       }
+      qrecord_ids = qrecord_ids.join ('\t');
+      qqc.jjax (qname, i_qwiz, qrecord_ids, 'record_response', {type: 'start'});
    }
-   qrecord_ids = qrecord_ids.join ('\t');
-   qqc.jjax (qname, i_qwiz, qrecord_ids, 'record_response', {type: 'start'});
 
    if (qwizdata[i_qwiz].i_question == -1) {
 
