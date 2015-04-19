@@ -1,6 +1,7 @@
 /*
- * Version 3.00 2015-04-??
+ * Version 2.29 2015-04-19
  * topic= implemented.
+ * Recording implemented.
  *
  * Version 2.28 2015-02-03
  * Don't do container set on one-card deck.
@@ -178,8 +179,48 @@ $(document).ready (function () {
    }
 
    if (n_decks) {
-      for (var i_deck=0; i_deck<n_decks; i_deck++) {
 
+      // If any decks subject to recording, see if user logged in (may need
+      // to wait for check_session_id () to return).  Mark "start" time for
+      // decks that have no intro or are single-question.
+      if (qrecord_b) {
+
+         // Data for closure for setTimeout ().
+         var i_tries = 0;
+         var qrecord_ids = [];
+         for (var i_deck=0; i_deck<n_decks; i_deck++) {
+            if (no_intro_b[i_deck] || deckdata[i_deck].n_cards == 1) {
+               if (deckdata[i_deck].qrecord_id) {
+                  qrecord_ids.push (deckdata[i_deck].qrecord_id);
+               }
+            }
+         }
+         qrecord_ids = qrecord_ids.join ('\t');
+
+         // Closure.
+         var mark_start = function () {
+            i_tries++;
+            if (   i_tries < 100
+                && (   typeof (document_qwiz_user_logged_in_b) == 'undefined'
+                    || document_qwiz_user_logged_in_b          == 'not ready')) {
+               if (debug[6]) {
+                  console.log ('[mark_start] i_tries:', i_tries);
+               }
+               setTimeout (mark_start, 100);
+            } else {
+               if (debug[6]) {
+                  console.log ('[mark_start] document_qwiz_user_logged_in_b:', document_qwiz_user_logged_in_b);
+               }
+               if (document_qwiz_user_logged_in_b) {
+                  var now_sec = new Date ().getTime ()/1000.0;
+                  var data = {type: 'start', now_sec: now_sec};
+                  qqc.jjax (qname, i_deck, qrecord_ids, 'record_qcard', data);
+               }
+            }
+         }
+         mark_start ();
+      }
+      for (var i_deck=0; i_deck<n_decks; i_deck++) {
          init_element_pointers (i_deck);
          init_card_order (i_deck);
 

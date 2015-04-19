@@ -1,10 +1,12 @@
 /*
- * Version 2.29 2015-03-??
+ * Version 2.29 2015-04-19
  * Word-wrap normal for labels (problem in Firefox).
  * Don't use <code></code> for already-wrapped [q] and [l].
  * Fix bug -- hint required matching first character.
  * textentry minlength= option.
  * Sort numeric for textentry suggestions.
+ * Recording/progress.
+ * Briefer topic summary.
  *
  * Version 2.28 2015-02-03
  * Hide Qwiz icon when autocomplete starts.
@@ -235,7 +237,7 @@ $ (document).ready (function () {
       // quizzes that have no intro or are single-question.
       if (qrecord_b) {
 
-         // Closure for setTimeout ().
+         // Data for closure for setTimeout ().
          var i_tries = 0;
          var qrecord_ids = [];
          for (var i_qwiz=0; i_qwiz<n_qwizzes; i_qwiz++) {
@@ -246,6 +248,8 @@ $ (document).ready (function () {
             }
          }
          qrecord_ids = qrecord_ids.join ('\t');
+
+         // Closure.
          var mark_start = function () {
             i_tries++;
             if (   i_tries < 100

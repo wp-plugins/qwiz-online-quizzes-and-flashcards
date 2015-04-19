@@ -2,7 +2,7 @@
 Contributors: dan_kirshner
 Tags: interactive quiz, quiz, flashcards, labeled diagrams
 Tested up to: 4.1
-Stable tag: 3.00
+Stable tag: 2.29
 License: GPL2
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
@@ -21,7 +21,7 @@ Activate the plugin through the 'Plugins' menu in WordPress
 == Changelog ==
 
 = 2.29 =
-2015-04-??
+2015-04-19
 Word-wrap normal for labels (problem in Firefox).
 Don't use <code></code> for already-wrapped [q] and [l].
 Fix bug -- hint required matching first character.
@@ -29,8 +29,8 @@ textentry minlength= option.
 Sort numeric for textentry suggestions.
 Login/recording capabilities.
 topic= for flashcards.
-Briefer topic summary report for quizzes (matches flashcards topic summary).
 Recording for flashcards.
+Briefer topic summary report for quizzes (matches flashcards topic summary).
 
 = 2.28 =
 2015-02-03
