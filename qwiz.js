@@ -813,7 +813,7 @@ this.label_dropped = function (target_obj, label_obj) {
 
       // Also, if finished diagram, record that as separate entry.
       if (finished_diagram_b) {
-         var data = {q_and_a_text: q_and_a_text, i_question: i_question, type: 'labeled_diagram', response: 'done', correct_b: correct_b};
+         var data = {q_and_a_text: q_and_a_text, i_question: i_question, type: 'labeled_diagram', response: 'done', correct_b: correct_b ? 1 : ''};
          qqc.jjax (qname, i_qwiz, qwizdata[i_qwiz].qrecord_id, 'record_response', data);
 
          // Reset q_and_a_text global so will retrieve for next labeled
@@ -3003,7 +3003,7 @@ this.process_choice = function (feedback_id) {
                           + '\t'
                           + qqc.remove_tags_eols ($ ('#' + feedback_id).html ());
          }
-         var data = {q_and_a_text: qwizdata[i_qwiz].q_and_a_text[i_question], i_question: i_question, type: 'multiple_choice', response: choice_text, i_choice: i_choice, correct_b: correct_b};
+         var data = {q_and_a_text: qwizdata[i_qwiz].q_and_a_text[i_question], i_question: i_question, type: 'multiple_choice', response: choice_text, i_choice: i_choice, correct_b: correct_b ? 1 : ''};
          qqc.jjax (qname, i_qwiz, qwizdata[i_qwiz].qrecord_id, 'record_response', data);
       }
 
@@ -3351,7 +3351,7 @@ this.textentry_check_answer = function (i_qwiz) {
    if (qwizdata[i_qwiz].qrecord_id && document_qwiz_user_logged_in_b) {
 
       // Include text entered.
-      var data = {q_and_a_text: qwizdata[i_qwiz].q_and_a_text[i_question], i_question: i_question, type: 'textentry', response: entry, i_choice: -1, correct_b: correct_b};
+      var data = {q_and_a_text: qwizdata[i_qwiz].q_and_a_text[i_question], i_question: i_question, type: 'textentry', response: entry, i_choice: -1, correct_b: correct_b ? 1 : ''};
       qqc.jjax (qname, i_qwiz, qwizdata[i_qwiz].qrecord_id, 'record_response', data);
    }
    update_topic_statistics (i_qwiz, i_question, correct_b);
