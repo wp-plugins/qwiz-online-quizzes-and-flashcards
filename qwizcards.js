@@ -1222,10 +1222,10 @@ function create_qdeck_divs (i_deck, qdeck_tag) {
       divs.push ('   <div id="usermenu_icon-qdeck' + i_deck + '" class="qwiz-usermenu_icon' + addclass + '" onmouseover="' + qname + '.show_usermenu (' + i_deck + ')">');
       divs.push (      '&#x25bc;');
       divs.push ('   </div>');
-      divs.push ('   <span class="progress_text">');
-      divs.push ('   </span>');
    }
 
+   divs.push ('   <span class="progress_text">');
+   divs.push ('   </span>');
 
    if (deckdata[i_deck].qrecord_id) {
 
