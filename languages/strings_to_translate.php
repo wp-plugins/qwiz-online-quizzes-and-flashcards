@@ -75,25 +75,34 @@
       /* Translators: as in "This quiz is in learn mode" */
       'Learn' => __ ('Learn', $q),
       'Learn mode: questions repeat until answered correctly' => __ ('Learn mode: questions repeat until answered correctly', $q),
+      'Log in' => __ ('Log in', $q),
+      'Logged in as' => __ ('Logged in as', $q),
       'Move each item to its correct <span class="qwizzled_target_border">place</span>' => __ ('Move each item to its correct <span class="qwizzled_target_border">place</span>', $q),
+      'My scores' => __ ('My scores', $q),
       'Need more practice' => __ ('Need more practice', $q),
 
       /* Translators: as in "Click here to go to the next question" */
       'Next question' => __ ('Next question', $q),
 
       'No.' => __ ('No.', $q),
+      'No thanks' => __ ('No thanks', $q),
       'No, that\'s not correct.' => __ ('No, that\'s not correct.', $q),
       'on the first try' => __ ('on the first try', $q),
+
+      /* Translators: as in "Not Michael Caine?  Sign out." */
+      'Not' => __ ('Not', $q),
 
       /* Translators: as in "three out of four" */
       'out of' => __ ('out of', $q),
 
+      'Password' => __ ('Password', $q),
       'Please try again' => __ ('Please try again', $q),
       'Put this card at the bottom of stack, show the next card' => __ ('Put this card at the bottom of stack, show the next card', $q),
       'question' => __ ('question', $q),
       'questions' => __ ('questions', $q),
       'Questions in this quiz:' => __ ('Questions in this quiz:', $q),
       'Randomly shuffle the remaining cards' => __ ('Randomly shuffle the remaining cards', $q),
+      'Remember' => __ ('Remember', $q),
       'Remove this card from the stack' => __ ('Remove this card from the stack', $q),
 
       /* Translators: as in "three cards have been reviewed" */
@@ -103,10 +112,13 @@
       'responses' => __ ('responses', $q),
       'Review this flashcard stack again' => __ ('Review this flashcard stack again', $q),
       'Show the other side' => __ ('Show the other side', $q),
+      'Sign out' => __ ('Sign out', $q),
+      'Signed out' => __ ('Signed out', $q),
 
       /* Translators: as in "Shuffle the deck of cards" */
       'Shuffle' => __ ('Shuffle', $q),
 
+      'Skip login in the future' => __ ('Skip login in the future', $q),
       'Sorry, that\'s not correct.' => __ ('Sorry, that\'s not correct.', $q),
 
       /* Translators: as in "Click here to start quiz" */
@@ -114,6 +126,7 @@
 
       'Start reviewing cards' => __ ('Start reviewing cards', $q),
       'Take the quiz again' => __ ('Take the quiz again', $q),
+      'Record score/credit?' => __ ('Record score/credit?', $q),
 
       /* Translators: as in "This quiz is in test mode" */
       'Test' => __ ('Test', $q),
@@ -130,6 +143,8 @@
       /* Translators: as in "there are three cards to go" */
       'to go' => __ ('to go', $q),
 
+      'Type chars, then select from list' => __ ('Type chars, then select from list', $q),
+      'User name' => __ ('User name', $q),
       'View summary report' => __ ('View summary report', $q),
       'You answered all of these questions correctly' => __ ('You answered all of these questions correctly', $q),
       'You answered both of these questions correctly' => __ ('You answered both of these questions correctly', $q),
@@ -150,6 +165,7 @@
       'End of labeled-diagram question' => __ ('End of labeled-diagram question', $q),
       'Error' => __ ('Error', $q),
       'Error: no text selected' => __ ('Error: no text selected', $q),
+      'Label [l] is blank' => __ ('Label [l] is blank', $q),
       'labeled diagram editing menu' => __ ('labeled diagram editing menu', $q),
       'Please select "Visual" mode to create a target/drop zone' => __ ('Please select "Visual" mode to create a target/drop zone', $q),
       'Select the text or click on the image (you may have to click twice) where you want the target "drop zone" for this label' => __ ('Select the text or click on the image (you may have to click twice) where you want the target "drop zone" for this label', $q),

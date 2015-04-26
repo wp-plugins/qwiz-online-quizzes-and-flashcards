@@ -1,4 +1,8 @@
 /*
+ * Version 2.29 2015-04-19
+ * topic= implemented.
+ * Recording implemented.
+ *
  * Version 2.28 2015-02-03
  * Don't do container set on one-card deck.
  * Resize card front/back to larger of two (including alternate textentry backs).
@@ -128,7 +132,6 @@ var no_intro_b = [];
 var deck_id;
 var deckdata = [];
 
-var card_reviewed_b = false;
 var next_button_active_b  = false;
 
 var textentry_i_deck;
@@ -152,17 +155,8 @@ var lc_textentry_matches = {};
 
 var Tcheck_answer_message;
 
-// ----------------------
-// Array of topics (will check that individual card entries are in this list).
-// Short names.
-var topics = [];
-var n_topics;
-
-// Topic description for summary report.
-var topic_descriptions = {};
-
-// Statistics by topic.
-var topic_statistics = {};
+var qrecord_b = false;
+var q_and_a_text = '';
 
 // -----------------------------------------------------------------------------
 $(document).ready (function () {
@@ -177,9 +171,6 @@ $(document).ready (function () {
    content = qqc.get_qwiz_param ('content', 'body');
    Tcheck_answer_message = T ('Enter your best guess - eventually we\'ll provide suggestions or offer a hint');
 
-   // Add default styles for qcard divs to page.
-   add_style ();
-
    process_html ();
 
    // Error messages, if any.
@@ -188,8 +179,48 @@ $(document).ready (function () {
    }
 
    if (n_decks) {
-      for (var i_deck=0; i_deck<n_decks; i_deck++) {
 
+      // If any decks subject to recording, see if user logged in (may need
+      // to wait for check_session_id () to return).  Mark "start" time for
+      // decks that have no intro or are single-question.
+      if (qrecord_b) {
+
+         // Data for closure for setTimeout ().
+         var i_tries = 0;
+         var qrecord_ids = [];
+         for (var i_deck=0; i_deck<n_decks; i_deck++) {
+            if (no_intro_b[i_deck] || deckdata[i_deck].n_cards == 1) {
+               if (deckdata[i_deck].qrecord_id) {
+                  qrecord_ids.push (deckdata[i_deck].qrecord_id);
+               }
+            }
+         }
+         qrecord_ids = qrecord_ids.join ('\t');
+
+         // Closure.
+         var mark_start = function () {
+            i_tries++;
+            if (   i_tries < 100
+                && (   typeof (document_qwiz_user_logged_in_b) == 'undefined'
+                    || document_qwiz_user_logged_in_b          == 'not ready')) {
+               if (debug[6]) {
+                  console.log ('[mark_start] i_tries:', i_tries);
+               }
+               setTimeout (mark_start, 100);
+            } else {
+               if (debug[6]) {
+                  console.log ('[mark_start] document_qwiz_user_logged_in_b:', document_qwiz_user_logged_in_b);
+               }
+               if (document_qwiz_user_logged_in_b) {
+                  var now_sec = new Date ().getTime ()/1000.0;
+                  var data = {type: 'start', now_sec: now_sec};
+                  qqc.jjax (qname, i_deck, qrecord_ids, 'record_qcard', data);
+               }
+            }
+         }
+         mark_start ();
+      }
+      for (var i_deck=0; i_deck<n_decks; i_deck++) {
          init_element_pointers (i_deck);
          init_card_order (i_deck);
 
@@ -333,6 +364,13 @@ function process_html () {
       n_decks = i_deck;
    });
 
+   // If any quizzes subject to recording, set user menus -- if this comes after
+   // check_session_id () callback, it will properly set the menus (while the
+   // callback may not have worked if the html hadn't been set at that time).
+   if (qrecord_b) {
+      qqc.set_user_menus_and_icons ();
+   }
+
    // Set flag to display page (qwizscripts.js).
    q.processing_complete_b = true;
 }
@@ -440,359 +478,6 @@ function init_textentry_autocomplete (i_deck, i_card) {
 
 
 // -----------------------------------------------------------------------------
-function add_style () {
-
-   var s = [];
-
-   s.push ('<style type="text/css">');
-
-   /* The "canvas" for each item: question, answers (choices), feedback. */
-   s.push ('.qcard_window {');
-   s.push ('   position:            relative;');
-   s.push ('}');
-
-   s.push ('.qcard_progress {');
-   s.push ('   text-align:          right;');
-   s.push ('}');
-
-   s.push ('.qcard_progress p {');
-   s.push ('   font-size:           90%;');
-   s.push ('   color:               gray;');
-   s.push ('   margin:              0px;');
-   s.push ('}');
-
-   s.push ('div.qcard_header {');
-   s.push ('   color:               white;');
-   s.push ('   background:          black;');
-   s.push ('   margin:              0px;');
-   s.push ('   padding:             0px;');
-   s.push ('}');
-
-   /* Any sub-elements of header have zero margin. */
-   s.push ('div.qcard_header * {');
-   s.push ('   margin:              0px;');
-                                 /* top right bot left */
-   s.push ('   padding:             0px 5px 0px 5px;');
-   s.push ('}');
-
-            /* Card */
-   s.push ('div.qcard_card {');
-   s.push ('   position:            relative;');
-   s.push ('}');
-
-   s.push ('.qcard_textentry {');
-   s.push ('   display:             inline-block;');
-   s.push ('   position:            relative;');
-   s.push ('   width:               240px;');
-   s.push ('   font-weight:         bold;');
-   s.push ('   color:               blue;');
-   s.push ('}');
-
-   s.push ('div.card_back_textentry {');
-   s.push ('   position:            absolute;');
-   s.push ('   top:                 0px;');
-   s.push ('   left:                0px;');
-   s.push ('   visibility:          hidden;');
-   s.push ('}');
-
-   s.push ('.back_qcard_textentry {');
-   s.push ('   font-weight:         bold;');
-   s.push ('   color:               blue;');
-   s.push ('}');
-
-   s.push ('input.qcard_textentry::-webkit-input-placeholder {');
-   s.push ('   font-size:           83%;');
-   s.push ('   font-weight:         normal;');
-   s.push ('   color:               gray;');
-   s.push ('}');
-
-   s.push ('input.qcard_textentry::-moz-placeholder {');
-   s.push ('   font-size:           83%;');
-   s.push ('   font-weight:         normal;');
-   s.push ('   color:               gray;');
-   s.push ('}');
-
-   /* Older versions of Firefox */
-   s.push ('input.qcard_textentry:-moz-placeholder {');
-   s.push ('   font-size:           83%;');
-   s.push ('   font-weight:         normal;');
-   s.push ('   color:               gray;');
-   s.push ('}');
-
-   s.push ('input.qcard_textentry:-ms-input-placeholder {');
-   s.push ('   font-size:           83%;');
-   s.push ('   font-weight:         normal;');
-   s.push ('   color:               gray;');
-   s.push ('}');
-
-   s.push ('button.textentry_hint {');
-   s.push ('   position:            absolute;');
-   s.push ('   right:               2px;');
-   s.push ('   top:                 50%;');
-   s.push ('   transform:           translateY(-50%);');
-   s.push ('   font-size:           11px;');
-   s.push ('   line-spacing:        90%;');
-                                 /* top right bot left */
-   s.push ('   padding:             2px 2px 1px 2px;');
-   s.push ('   border-radius:       5px;');
-   s.push ('   display:             none;');
-   s.push ('}');
-
-   s.push ('.back_textentry_p {');
-   s.push ('   margin-top:          0px;');
-   s.push ('}');
-
-   s.push ('table.qcard_table {');
-   s.push ('   border-collapse:     separate;');
-   s.push ('}');
-
-   s.push ('div.qcard_card .front {');
-   s.push ('   min-height:          280px;');
-   s.push ('}');
-
-   s.push ('div.qcard_card td.center {');
-   s.push ('   position:            relative;');
-   s.push ('   padding:             5px;');
-   s.push ('   text-align:          center;');
-   s.push ('   vertical-align:      middle;');
-   s.push ('   font-size:           12pt;');
-   s.push ('   font-weight:         bold;');
-   s.push ('}');
-
-   s.push ('div.qcard_card img {');
-   s.push ('   border:              0px;');
-   s.push ('   box-shadow:          none;');
-   s.push ('}');
-
-   s.push ('div.icon_qdeck {');
-   s.push ('   position:        absolute;');
-   s.push ('   left:            2px;');
-   s.push ('   bottom:          2px;');
-   s.push ('   width:           16px;');
-   s.push ('   height:          16px;');
-   s.push ('   line-height:     0px;');
-   s.push ('}');
-
-   s.push ('img.icon_qdeck {');
-   s.push ('   opacity:         0.4;');
-   s.push ('}');
-
-   s.push ('img.icon_qdeck:hover {');
-   s.push ('   opacity:         1.0;');
-   s.push ('}');
-
-   s.push ('div.qcard_card .back .center {');
-   s.push ('   background-image: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAf4AAAE2CAIAAAAPtmerAAAACXBIWXMAAA7EAAAOxAGVKw4bAAAEnklEQVR4nO3YMW1AMRQEwTgyf3ix9Mm8sLCLnUFw1Ra3ZuYHgJLf1wMAuE36AXKkHyBH+gFypB8gR/oBcqQfIEf6AXKkHyBH+gFypB8gR/oBcqQfIEf6AXKkHyBH+gFypB8gR/oBcqQfIEf6AXKkHyBH+gFypB8gR/oBcqQfIEf6AXKkHyBH+gFypB8gR/oBcqQfIEf6AXKkHyBH+gFypB8gR/oBcqQfIEf6AXKkHyBH+gFypB8gR/oBcqQfIEf6AXKkHyBH+gFypB8gR/oBcqQfIGf//P293gDAVWtmXm8A4CqHD0CO9APkSD9AjvQD5Eg/QI70A+RIP0CO9APkSD9AjvQD5Eg/QI70A+RIP0CO9APkSD9AjvQD5Eg/QI70A+RIP0CO9APkSD9AjvQD5Eg/QI70A+Ts883rDQBctWakH6DF4QOQI/0AOdIPkCP9ADnSD5Aj/QA50g+QI/0AOdIPkCP9ADnSD5Aj/QA50g+QI/0AOdIPkCP9ADnSD5Aj/QA50g+QI/0AOdIPkCP9ADnSD5Aj/QA5+3zzegMAV60Z6QdocfgA5Eg/QI70A+RIP0CO9APkSD9AjvQD5Eg/QI70A+RIP0CO9APkSD9AjvQD5Eg/QI70A+RIP0CO9APkSD9AjvQD5Eg/QI70A+RIP0CO9APkSD9Azj7fvN4AwFVrRvoBWhw+ADnSD5Aj/QA50g+QI/0AOdIPkCP9ADnSD5Aj/QA50g+QI/0AOdIPkCP9ADnSD5Aj/QA50g+QI/0AOdIPkCP9ADnSD5Aj/QA50g+QI/0AOdIPkLPPN683AHDVmpF+gBaHD0CO9APkSD9AjvQD5Eg/QI70A+RIP0CO9APkSD9AjvQD5Eg/QI70A+RIP0CO9APkSD9AjvQD5Eg/QI70A+RIP0CO9APkSD9AjvQD5Eg/QI70A+Ts883rDQBctWakH6DF4QOQI/0AOdIPkCP9ADnSD5Aj/QA50g+QI/0AOdIPkCP9ADnSD5Aj/QA50g+QI/0AOdIPkCP9ADnSD5Aj/QA50g+QI/0AOdIPkCP9ADnSD5Aj/QA5+3zzegMAV60Z6QdocfgA5Eg/QI70A+RIP0CO9APkSD9AjvQD5Eg/QI70A+RIP0CO9APkSD9AjvQD5Eg/QI70A+RIP0CO9APkSD9AjvQD5Eg/QI70A+RIP0CO9APkSD9Azj7fvN4AwFVrRvoBWhw+ADnSD5Aj/QA50g+QI/0AOdIPkCP9ADnSD5Aj/QA50g+QI/0AOdIPkCP9ADnSD5Aj/QA50g+QI/0AOdIPkCP9ADnSD5Aj/QA50g+QI/0AOdIPkLPPN683AHDVmpF+gBaHD0CO9APkSD9AjvQD5Eg/QI70A+RIP0CO9APkSD9AjvQD5Eg/QI70A+RIP0CO9APkSD9AjvQD5Eg/QI70A+RIP0CO9APkSD9AjvQD5Eg/QI70A+Ts883rDQBctWakH6DF4QOQI/0AOdIPkCP9ADnSD5Aj/QA50g+QI/0AOdIPkCP9ADnSD5Aj/QA50g+QI/0AOdIPkCP9ADnSD5Aj/QA50g+QI/0AOdIPkCP9ADnSD5Aj/QA5/8mNPTHI1j+2AAAAAElFTkSuQmCC);');
-   s.push ('   background-repeat:   no-repeat;');
-   s.push ('   background-size:     contain;');
-   s.push ('   background-position: center;');
-   s.push ('   min-height:          280px;');
-   s.push ('   line-height:         25px;');
-   s.push ('   font-size:           12pt;');
-   s.push ('}');
-   s.push ('div.qcard_card button.cbutton {');
-   s.push ('   display:          none;');
-   s.push ('}');
-   s.push ('.qcard_next_buttons {');
-   s.push ('   position:            relative;');
-   s.push ('   margin-top:          5px;');
-   s.push ('   text-align:          center;');
-   s.push ('}');
-   s.push ('.qbutton {');
-   s.push ('   margin-bottom: 2px;');
-   s.push ('   border-top: 1px solid #96d1f8;');
-   s.push ('   background: #65a9d7;');
-   s.push ('   background: -webkit-gradient(linear, left top, left bottom, from(#3e779d), to(#65a9d7));');
-   s.push ('   background: -webkit-linear-gradient(top, #3e779d, #65a9d7);');
-   s.push ('   background: -moz-linear-gradient(top, #3e779d, #65a9d7);');
-   s.push ('   background: -ms-linear-gradient(top, #3e779d, #65a9d7);');
-   s.push ('   background: -o-linear-gradient(top, #3e779d, #65a9d7);');
-   s.push ('   padding: 3px 3px;');
-   s.push ('   -webkit-border-radius: 8px;');
-   s.push ('   -moz-border-radius: 8px;');
-   s.push ('   border-radius: 8px;');
-   s.push ('   -webkit-box-shadow: rgba(0,0,0,1) 0 1px 0;');
-   s.push ('   -moz-box-shadow: rgba(0,0,0,1) 0 1px 0;');
-   s.push ('   box-shadow: rgba(0,0,0,1) 0 1px 0;');
-   s.push ('   text-shadow: rgba(0,0,0,.4) 0 1px 0;');
-   s.push ('   color: white;');
-   s.push ('   font-size: 14px;');
-   s.push ('   font-weight: bold;');
-   s.push ('   font-family: arial, verdana, sans-serif;');
-   s.push ('   text-decoration: none;');
-   s.push ('   vertical-align: middle;');
-   s.push ('}');
-   s.push ('.qbutton_disabled {');
-   s.push ('   margin-bottom: 2px;');
-   s.push ('   border-top: 1px solid #cccccc;');
-   s.push ('   background: #cccccc;');
-   s.push ('   padding: 3px 3px;');
-   s.push ('   -webkit-border-radius: 8px;');
-   s.push ('   -moz-border-radius: 8px;');
-   s.push ('   border-radius: 8px;');
-   s.push ('   -webkit-box-shadow: none;');
-   s.push ('   -moz-box-shadow: none;');
-   s.push ('   box-shadow: none;');
-   s.push ('   text-shadow: none;');
-   s.push ('   color: #e6e6e6;');
-   s.push ('   font-size: 14px;');
-   s.push ('   font-weight: bold;');
-   s.push ('   font-family: arial, verdana, sans-serif;');
-   s.push ('   text-decoration: none;');
-   s.push ('   vertical-align: middle;');
-   s.push ('}');
-   s.push ('.qcard_next_buttons .qbutton:hover {');
-   s.push ('   border-top-color: #28597a;');
-   s.push ('   background: #28597a;');
-   s.push ('   color: #ccc;');
-   s.push ('}');
-   s.push ('.qcard_next_buttons .qbutton:active {');
-   s.push ('   border-top-color: #1b435e;');
-   s.push ('   background: #1b435e;');
-   s.push ('}');
-   s.push ('.clear {');
-   s.push ('   clear:               both;');
-   s.push ('}');
-   s.push ('// flipCard_v2.css.');
-   s.push ('div.fc_card-container img{');
-   s.push ('        position: static !important;');
-   s.push ('}');
-            /* === CARD CONTAINER === */
-   s.push ('div.card-container {');
-   s.push ('   position: relative;');
-   s.push ('   display: block;');
-   s.push ('   padding: 0;');
-   s.push ('   margin: 0;');
-   s.push ('        ');
-   s.push ('   -webkit-perspective: 1000px;');
-   s.push ('      -moz-perspective: 1000px;');
-   s.push ('        -o-perspective: 1000px;');
-   s.push ('       -ms-perspective: 1000px;');
-   s.push ('           perspective: 1000px;');
-   s.push ('}');
-            /* === CARD === */
-   s.push ('.card-container .card {');
-   s.push ('   border-radius: 0px;');
-   s.push ('   width: 100%;');
-   s.push ('   height: 100%;');
-   s.push ('   position: absolute;');
-   s.push ('   display: inline-block;');
-   s.push ('   padding: 0;');
-   s.push ('   margin: 0;');
-   s.push ('   -webkit-transition: -webkit-transform .7s;');
-   s.push ('    -moz-transition: -moz-transform .7s;');
-   s.push ('      -o-transition: -o-transform .7s;');
-   s.push ('     -ms-transition: -o-transform .7s;');
-   s.push ('         transition: transform .7s;');
-   s.push ('   -webkit-transform-style: preserve-3d;');
-   s.push ('      -moz-transform-style: preserve-3d;');
-   s.push ('        -o-transform-style: preserve-3d;');
-   s.push ('       -ms-transform-style: preserve-3d;');
-   s.push ('           transform-style: preserve-3d;');
-   s.push ('}');
-            /* === STYLE FOR THE FRONT & BACK SIDE === */
-   s.push ('.card-container .card>div{	');
-   s.push ('   border-radius: 0px;');
-   s.push ('   ');
-   s.push ('   height: 100%;');
-   s.push ('   width: 100%;');
-   s.push ('   position: absolute;');
-   s.push ('   background: #FFFFFF;');
-   s.push ('   text-align: center;');
-   s.push ('   ');
-   s.push ('   margin: 0;');
-   s.push ('   -webkit-box-sizing:border-box;');
-   s.push ('      -moz-box-sizing:border-box;');
-   s.push ('       -ms-box-sizing:border-box;');
-   s.push ('           box-sizing:border-box;');
-   s.push ('   -webkit-backface-visibility: hidden;');
-   s.push ('      -moz-backface-visibility: hidden;');
-   s.push ('        -o-backface-visibility: hidden;');
-   s.push ('       -ms-backface-visibility: hidden;');
-   s.push ('           backface-visibility: hidden;');
-   s.push ('}');
-            /* === BEGINNING EFFECT === */
-   s.push ('.card-container .card[data-direction="top"] .back, .card-container .card[data-direction="bottom"] .back{');
-   s.push ('   -webkit-transform: rotateX(180deg);');
-   s.push ('      -moz-transform: rotateX(180deg);');
-   s.push ('        -o-transform: rotateX(180deg);');
-   s.push ('       -ms-transform: rotateX(180deg);');
-   s.push ('           transform: rotateX(180deg);');
-   s.push ('}');
-   s.push ('.card-container .card[data-direction="right"] .back, .card-container .card[data-direction="left"] .back{');
-   s.push ('        -webkit-transform: rotateY(180deg);');
-   s.push ('         -moz-transform: rotateY(180deg);');
-   s.push ('           -o-transform: rotateY(180deg);');
-   s.push ('          -ms-transform: rotateY(180deg);');
-   s.push ('              transform: rotateY(180deg);');
-   s.push ('}');
-            /* === EFFECT DIRECTIONS === */
-   s.push ('.flipping-right {');
-   s.push (' -webkit-transform: rotateY(180deg);');
-   s.push ('    -moz-transform: rotateY(180deg);');
-   s.push ('      -o-transform: rotateY(180deg);');
-   s.push ('     -ms-transform: rotateY(180deg);');
-   s.push ('         transform: rotateY(180deg);');
-   s.push ('}');
-   s.push ('.flipping-left {');
-   s.push ('   -webkit-transform: rotateY(-180deg);');
-   s.push ('    -moz-transform: rotateY(-180deg);');
-   s.push ('      -o-transform: rotateY(-180deg);');
-   s.push ('     -ms-transform: rotateY(-180deg);');
-   s.push ('         transform: rotateY(-180deg);');
-   s.push ('}');
-   s.push ('.flipping-top {');
-   s.push ('   -webkit-transform: rotateX(180deg);');
-   s.push ('      -moz-transform: rotateX(180deg);');
-   s.push ('        -o-transform: rotateX(180deg);');
-   s.push ('       -ms-transform: rotateX(180deg);');
-   s.push ('           transform: rotateX(180deg);');
-   s.push ('}');
-   s.push ('.flipping-bottom {');
-   s.push ('   -webkit-transform: rotateX(-180deg);');
-   s.push ('    -moz-transform: rotateX(-180deg);');
-   s.push ('      -o-transform: rotateX(-180deg);');
-   s.push ('     -ms-transform: rotateX(-180deg);');
-   s.push ('         transform: rotateX(-180deg);');
-   s.push ('}');
-   s.push ('.noCSS3Container{');
-   s.push ('        -webkit-perspective: none !important;');
-   s.push ('           -moz-perspective: none !important;');
-   s.push ('                 -o-perspective: none !important;');
-   s.push ('            -ms-perspective: none !important;');
-   s.push ('                        perspective: none !important; ');
-   s.push ('}');
-   s.push ('.noCSS3Card{');
-   s.push ('   -webkit-transition: none !important;');
-   s.push ('      -moz-transition: none !important;');
-   s.push ('        -o-transition: none !important;');
-   s.push ('       -ms-transition: none !important;');
-   s.push ('                    transition: none !important;');
-   s.push ('   -webkit-transform-style: none !important;');
-   s.push ('      -moz-transform-style: none !important;');
-   s.push ('        -o-transform-style: none !important;');
-   s.push ('       -ms-transform-style: none !important;');
-   s.push ('           transform-style: none !important;');
-   s.push ('}');
-   s.push ('.noCSS3Sides{');
-   s.push ('   -webkit-backface-visibility: visible !important;');
-   s.push ('      -moz-backface-visibility: visible !important;');
-   s.push ('        -o-backface-visibility: visible !important;');
-   s.push ('       -ms-backface-visibility: visible !important;');
-   s.push ('           backface-visibility: visible !important;');
-   s.push ('   -webkit-transform: none !important;');
-   s.push ('      -moz-transform: none !important;');
-   s.push ('        -o-transform: none !important;');
-   s.push ('       -ms-transform: none !important;');
-   s.push ('           transform: none !important;');
-   s.push ('}');
-   s.push ('</style>');
-
-   $(s.join ('\n')).appendTo ('head');
-}
-
-
-// -----------------------------------------------------------------------------
 function process_qdeck_pair (htm, i_deck) {
 
    // Data object for this deck.
@@ -810,8 +495,36 @@ function process_qdeck_pair (htm, i_deck) {
 
    deckdata[i_deck].exit_html = '';
 
+   deckdata[i_deck].qrecord_id = false;
+
    // Include any opening tags (e.g., "<p>" in WordPress).
-   var qdeck_tag = htm.match (/(<[^\/][^>]*>\s*)*?\[qdeck[^\]]*\]/m)[0];
+   var m = htm.match (/(<[^\/][^>]*>\s*)*?\[qdeck([^\]]*)\]/m);
+   var qdeck_tag  = m[0];
+   var attributes = m[2];
+
+   // If "qrecord_id=..." present, parse out database ID.  Set flag indicating
+   // one or more quizzes subject to recording.  Set up array to save question
+   // text.
+   attributes = qqc.replace_smart_quotes (attributes);
+   if (debug[0]) {
+      console.log ('[process_qdeck_pair] qdeck_tag: ', qdeck_tag);
+      console.log ('[process_qdeck_pair] attributes: ', attributes);
+   }
+   var qrecord_id = qqc.get_attr (attributes, 'qrecord_id');
+   if (qrecord_id) {
+      deckdata[i_deck].qrecord_id = qrecord_id;
+      deckdata[i_deck].q_and_a_text = {};
+
+      // If haven't checked already, see if user already logged in (get session id
+      // in cookie, see if still valid).
+      if (! qrecord_b) {
+         qrecord_b = true;
+         if (typeof (document_qwiz_user_logged_in_b) == 'undefined'
+                              || document_qwiz_user_logged_in_b == 'not ready') {
+            qqc.check_session_id (i_deck, qrecord_id);
+         }
+      }
+   }
 
    var n_decks = 0;
    var new_html = '';
@@ -827,6 +540,7 @@ function process_qdeck_pair (htm, i_deck) {
       var initial_closing_tags = m[1];
       new_html += initial_closing_tags;
    }
+
 
    // Delete [qdeck], any initial closing tags.
    htm = htm.replace (/\[qdeck[^\]]*\]((<\/[^>]+>\s*)*)/m, '');
@@ -909,12 +623,6 @@ function process_qdeck_pair (htm, i_deck) {
       if (debug[0]) {
          console.log ('[process_qdeck_pair] n_cards: ', n_cards);
       }
-
-      // Topic or topics each card.
-      deckdata[i_deck].card_topics = new Array (n_cards);
-
-      // List of all topics.
-      deckdata[i_deck].topics = [];
 
       process_topics (i_deck, card_tags);
 
@@ -1032,6 +740,13 @@ function process_card_input (i_deck, i_card, htm, opening_tags) {
       console.log ('[process_card_input] card_front_html: ', card_front_html);
    }
 
+   // If recording, save text without tags.  Also, replace non-breaking spaces
+   // and EOLs with space, multiple spaces with single space, trim.
+   if (deckdata[i_deck].qrecord_id) {
+      var q_and_a_text = qqc.remove_tags_eols (card_front_html);
+      deckdata[i_deck].q_and_a_text[i_card] = q_and_a_text;
+   }
+
    // If [textentry], change to html equivalent.  Save flag if there.
    var new_card_front_html = card_front_textentry_html (card_front_html, i_deck);
    card.card_front = new_card_front_html;
@@ -1057,6 +772,12 @@ function process_card_input (i_deck, i_card, htm, opening_tags) {
    var card_back_items = card_back_html.split (/\[a\]/);
    if (card_back_items.length != 1) {
       errmsgs.push (T ('Got more than one answer ("[a]") -- card back -- for') + ': qdeck ' + (1 + i_deck) + ', ' + T ('card') + ' ' + (1 + i_card) + '\n' + htm);
+   }
+
+   // If recording, add card-back text to q_and_a_text.
+   if (deckdata[i_deck].qrecord_id) {
+      var q_and_a_text = qqc.remove_tags_eols (card_back_items[0]);
+      deckdata[i_deck].q_and_a_text[i_card] += '\n' + q_and_a_text;
    }
 
    // Capture any opening tags before "[a]" tag.
@@ -1133,6 +854,12 @@ function process_textentry (i_deck, i_card, htm, opening_tags) {
    // Save as card front, set flag that entry required.
    card.card_front = htm;
    card.textentry_required_b = true;
+
+   // If recording, save card front without tags.
+   if (deckdata[i_deck].qrecord_id) {
+      var q_and_a_text = qqc.remove_tags_eols (htm);
+      deckdata[i_deck].q_and_a_text[i_card] = q_and_a_text;
+   }
 
    // Set up data for this card, create a div for each feedback alt -- so can
    // measure each, set front and back card size.  Div to show selected in
@@ -1526,8 +1253,29 @@ function create_qdeck_divs (i_deck, qdeck_tag) {
    // Add z-index, so if large graphic expands card, will stay on top of decks
    // farther down the page.
    divs.push ('<div id="qcard_window-qdeck' + i_deck + '" class="qcard_window" style="z-index: ' + (20 - i_deck) + ';">');
+
    divs.push ('   <div id="qcard_progress-qdeck' + i_deck + '" class="qcard_progress">');
+   if (deckdata[i_deck].qrecord_id) {
+      var addclass = '';
+      if (no_intro_b[i_deck] || deckdata[i_deck].n_cards == 1) {
+         addclass = ' qwiz-usermenu_icon_no_intro';
+      }
+      divs.push ('   <div id="usermenu_icon-qdeck' + i_deck + '" class="qwiz-usermenu_icon' + addclass + '" onmouseover="' + qname + '.show_usermenu (' + i_deck + ')">');
+      divs.push (      '&#x25bc;');
+      divs.push ('   </div>');
+   }
+
+   divs.push ('   <span class="progress_text">');
+   divs.push ('   </span>');
+
+   if (deckdata[i_deck].qrecord_id) {
+
+      // Add user menu div.  Don't populate until after start/login.
+      divs.push ('<div id="usermenu-qdeck' + i_deck + '" class="qq-usermenu qdeck-usermenu">');
+      divs.push ('</div>');
+   }
    divs.push ('   </div>');
+
    divs.push ('   <div id="qcard_header-qdeck' + i_deck + '" class="qcard_header">');
    divs.push ('   </div>');
    divs.push ('   <div class="card-container"> ');
@@ -1561,6 +1309,12 @@ function create_qdeck_divs (i_deck, qdeck_tag) {
 // -----------------------------------------------------------------------------
 function process_topics (i_deck, card_tags) {
 
+   // Topic or topics each card, if any.
+   deckdata[i_deck].card_topics = new Array (n_cards);
+
+   // List of all topics.
+   deckdata[i_deck].topics = [];
+
    // Loop over tags.
    var n_cards_w_topics = 0;
    var n_cards = card_tags.length;
@@ -1571,6 +1325,8 @@ function process_topics (i_deck, card_tags) {
       var matches = card_tag.match (/\[q +([^\]]*)\]/);
       if (matches) {
          var attributes = matches[1];
+
+         // Look for "topic=" attribute.
          attributes = qqc.replace_smart_quotes (attributes);
          var card_topics = qqc.get_attr (attributes, 'topic');
          if (card_topics) {
@@ -1594,15 +1350,18 @@ function process_topics (i_deck, card_tags) {
          }
       }
    }
+   if (debug[4]) {
+      console.log ('[process_topics] deckdata[i_deck].card_topics:', deckdata[i_deck].card_topics);
+   }
 
    if (n_cards_w_topics > 0) {
 
       // If any topics given, every card must have at least one topic.
       if (n_cards_w_topics != n_cards) {
-         errmsgs.push (T ('Topic(s) were given for at least one card, but at least one card doesn\'t have a topic'));
+         errmsgs.push (T ('A topic was given for at least one card, but at least one card doesn\'t have a topic in deck') + ' ' + (i_deck + 1));
       }
       if (debug[4]) {
-         console.log ('[process_topics] topics: ' + deckdata[i_deck].topics.join ('; '));
+         console.log ('[process_topics] topics: ' + deckdata[i_deck].topics);
       }
 
       // Set up statistics by topic.  Object of objects (list of lists).
@@ -1611,8 +1370,23 @@ function process_topics (i_deck, card_tags) {
       for (var i_topic=0; i_topic<n_topics; i_topic++) {
          var topic = deckdata[i_deck].topics[i_topic];
          deckdata[i_deck].topic_statistics[topic] = {};
-         deckdata[i_deck].topic_statistics[topic].n_correct = 0;
-         deckdata[i_deck].topic_statistics[topic].n_incorrect = 0;
+         deckdata[i_deck].topic_statistics[topic].n_cards = 0;
+         deckdata[i_deck].topic_statistics[topic].n_reviewed = 0;
+      }
+
+      // Count how many cards with each topic.
+      for (var i_card=0; i_card<n_cards; i_card++) {
+         var card_topics = deckdata[i_deck].card_topics[i_card];
+         if (card_topics) {
+            if (debug[4]) {
+               console.log ('[process_topics] i_card:', i_card, ', card_topics: ' + card_topics);
+            }
+            var n_topics = card_topics.length;
+            for (var i_topic=0; i_topic<n_topics; i_topic++) {
+               var topic = card_topics[i_topic];
+               deckdata[i_deck].topic_statistics[topic].n_cards++;
+            }
+         }
       }
    }
 }
@@ -1633,12 +1407,33 @@ this.start_deck = function (i_deck) {
       deckdata[i_deck].cards[ii_card].got_it = false;
    }
 
+   var n_topics = deckdata[i_deck].topics.length;
    for (var i_topic=0; i_topic<n_topics; i_topic++) {
       var topic = deckdata[i_deck].topics[i_topic];
-      deckdata[i_deck].topic_statistics[topic].n_got_it = 0;
+      deckdata[i_deck].topic_statistics[topic].n_reviewed = 0;
    }
 
    init_card_order (i_deck);
+
+   // If deck may be recorded, and user not logged in, go to login rather than
+   // first card (if user hasn't declined).
+   if (deckdata[i_deck].qrecord_id) {
+      var user_logged_in_b 
+         = typeof (document_qwiz_user_logged_in_b) != 'undefined'
+                                              && document_qwiz_user_logged_in_b;
+      if (   user_logged_in_b 
+          || (   typeof (document_qwiz_declined_login_b) != 'undefined'
+              && document_qwiz_declined_login_b)) {
+         if (user_logged_in_b) {
+            var now_sec = new Date ().getTime ()/1000.0;
+            var data = {type: 'start', now_sec: now_sec};
+            qqc.jjax (qname, i_deck, deckdata[i_deck].qrecord_id, 'record_qcard', data);
+         }
+      } else {
+         q.display_login (i_deck);
+         return false;
+      }
+   }
    q.process_card (i_deck);
 };
 
@@ -1739,47 +1534,13 @@ function card_back_textentry_html (htm, i_deck) {
 
 
 // -----------------------------------------------------------------------------
-function check_and_init_topics () {
-
-   var errmsg = [];
-
-   // Collect topics from cards, see if we have a topic description.
-   for (var ii_card=0; ii_card<n_cards; ii_card++) {
-      var card_topics = cards[ii_card].topics;
-      for (var ii=0; ii<card_topics.length; ii++) {
-         topic = card_topics[ii];
-         if (topics.indexOf (topic) == -1) {
-
-            // Add to list.
-            topics.push (topic);
-         }
-
-         // Did we get a topic description?
-         if (! topic_descriptions.hasOwnProperty (topic)) {
-            errmsg.push ('Did not get topic/description for topic ' + topic);
-         }
-      }
-   }
-   n_topics = topics.length;
-
-   // Set up statistics by topic.  Object of objects (list of lists).
-   for (var i_topic=0; i_topic<n_topics; i_topic++) {
-      var topic = topics[i_topic];
-      topic_statistics[topic] = {};
-      topic_statistics[topic].n_got_it = 0;
-   }
-
-   return errmsg;
-}
-
-
-// -----------------------------------------------------------------------------
 function init_element_pointers (i_deck) {
 
    // jQuery element objects for this deck.
    deckdata[i_deck].el_qcard_container  = $('div#qcard_window-qdeck' + i_deck + ' div.card-container');
    deckdata[i_deck].el_flip             = $('button.cbutton-qdeck' + i_deck);
    deckdata[i_deck].el_progress         = $('div#qcard_progress-qdeck' + i_deck);
+   deckdata[i_deck].el_progress_text    = $('div#qcard_progress-qdeck' + i_deck + ' span.progress_text');
    deckdata[i_deck].el_header           = $('div#qcard_header-qdeck' + i_deck);
    deckdata[i_deck].el_qcard_card       = $('div#qcard_card-qdeck' + i_deck);
    deckdata[i_deck].el_qcard_table_front= $('div#qcard_card-qdeck' + i_deck + ' div.front table');
@@ -1861,13 +1622,18 @@ this.process_card = function (i_deck) {
 
             // Display card - not "reviewed" until "Check answer"/flip.  "Need
             // more practice" and "Got it!" buttons start out disabled, gray.
-            card_reviewed_b = false;
+            deckdata[i_deck].card_reviewed_b = false;
+            if (deckdata[i_deck].qrecord_id) {
+               deckdata[i_deck].current_first_flip_sec = 0;
+               deckdata[i_deck].n_flips = 0;
+               deckdata[i_deck].current_first_textentry_sec = 0;
+            }
             if (! next_button_active_b) {
                $ ('button.got_it-qdeck' + i_deck + ', button.next_card-qdeck' + i_deck).attr ('disabled', true).removeClass ('qbutton').addClass ('qbutton_disabled');
             }
 
-            // If only one to go, disable and gray out
-            // more practice/next card and shuffle buttons.
+            // If only one to go, disable and gray out more practice/next card
+            // and shuffle buttons.
             if (deckdata[i_deck].n_to_go == 1) {
                $ ('button.next_card-qdeck' + i_deck + ', button.shuffle-qdeck' + i_deck).attr ('disabled', true).removeClass ('qbutton').addClass ('qbutton_disabled');
             }
@@ -1892,7 +1658,7 @@ function done (i_deck) {
       q.flip (i_deck);
    }
 
-   deckdata[i_deck].el_progress.html ('');
+   deckdata[i_deck].el_progress_text.html ('');
    deckdata[i_deck].el_qcard_card_back.html ('');
    deckdata[i_deck].el_next_buttons.html ('');
 
@@ -1900,15 +1666,62 @@ function done (i_deck) {
 
    // Overall.
    var overall;
-   if (deckdata[i_deck].n_reviewed == deckdata[i_deck].n_cards) {
-      overall = T ('In this %s-flashcard stack, you clicked') + ' "' + T ('Got it!') + '" ' + T ('on the first try for every card') + '.';
-      overall = overall.replace ('%s', qqc.number_to_word (deckdata[i_deck].n_cards));
+   var n_cards = deckdata[i_deck].n_cards;
+   var n_reviewed = deckdata[i_deck].n_reviewed;
+   if (n_reviewed == n_cards) {
+      overall = T ('In this %s-flashcard stack, you clicked') + ' &ldquo;' + T ('Got it!') + '&rdquo; ' + T ('on the first try for every card') + '.';
    } else {
-      overall = T('This flashcard stack had %s cards.  It took you %s tries until you felt comfortable enough to click') + ' "' + T ('Got it!') + '" ' + T ('for each card') + '.';
-      overall = overall.replace ('%s', qqc.number_to_word (deckdata[i_deck].n_cards));
-      overall = overall.replace ('%s', qqc.number_to_word (deckdata[i_deck].n_reviewed));
+      overall = T('This flashcard stack had %s cards.') + ' ';
+      overall += T ('It took you') + ' ' + qqc.number_to_word (n_reviewed) + ' ' + Tplural ('try', 'tries', n_reviewed) + ' ' + T ('until you felt comfortable enough to click') + ' &ldquo;' + T ('Got it!') + '&rdquo; ' + Tplural ('for this card', 'for each card', n_cards) + '.';
    }
+   overall = overall.replace ('%s', qqc.number_to_word (n_cards));
    report_html.push ('<p>' + overall + '</p>');
+
+   // By topic.
+   var n_topics = deckdata[i_deck].topics.length;
+   if (n_topics == 1) {
+      var topic = deckdata[i_deck].topics[0];
+      var all_both_n;
+      if (n_cards == 1) {
+         all_both_n = T ('This');
+      } else if (n_cards == 2) {
+         all_both_n = T ('Both');
+      } else {
+         all_both_n = T ('All') + ' '+ qqc.number_to_word (n_cards);
+      }
+      report_html.push ('<p>' + all_both_n + ' ' + Tplural ('card was', 'cards were', n_cards) + ' about topic &ldquo;' + topic + '.&rdquo;</p>');
+   } else if (n_topics > 1 && n_reviewed > n_cards) {
+
+      // We'll show only topics where user clicked "Need more practice".  See
+      // which.
+      var need_more_practice_topics = [];
+      for (var i_topic=0; i_topic<n_topics; i_topic++) {
+         var topic = deckdata[i_deck].topics[i_topic];
+         var i_topic_n_cards = deckdata[i_deck].topic_statistics[topic].n_cards;
+         var i_topic_n_reviewed = deckdata[i_deck].topic_statistics[topic].n_reviewed;
+         if (debug[4]) {
+            console.log ('[done] topic:', topic, ', i_topic_n_cards:', i_topic_n_cards, ', i_topic_n_reviewed:', i_topic_n_reviewed);
+         }
+         if (i_topic_n_reviewed > i_topic_n_cards) {
+            var topic_text = '<strong>' + topic + '</strong>: ' + qqc.number_to_word (i_topic_n_cards) + ' ' + Tplural ('card', 'cards', i_topic_n_cards) + ', ' + qqc.number_to_word (i_topic_n_reviewed) + ' ' + 'tries';
+            need_more_practice_topics.push (topic_text);
+         }
+      }
+      var n_need_more_practice_topics = need_more_practice_topics.length;
+      var topic_list_html = '<p class="topic_list">';
+      if (n_need_more_practice_topics > 1) {
+         topic_list_html += T ('These are the topics of cards where you clicked');
+         for (var i=0; i<n_need_more_practice_topics; i++) {
+            need_more_practice_topics[i] = '&bull; ' + need_more_practice_topics[i];
+         }
+      } else {
+         topic_list_html += T ('This is the only topic for which you clicked');
+      }
+      topic_list_html += ' &ldquo;' + T ('Need more practice') + '&rdquo;:<br />';
+      topic_list_html += need_more_practice_topics.join ('; ') + '.';
+      topic_list_html += '</p>';
+      report_html.push (topic_list_html);
+   }
 
    // Show exit text.
    report_html.push (deckdata[i_deck].exit_html);
@@ -1924,7 +1737,231 @@ function done (i_deck) {
 function display_progress (i_deck) {
    var progress_html;
    progress_html = '<p>' + deckdata[i_deck].n_cards + ' ' + T ('cards total') + ', ' + deckdata[i_deck].n_reviewed + ' ' + Tplural ('card', 'cards', deckdata[i_deck].n_reviewed) + ' ' + T ('reviewed') + ', ' + deckdata[i_deck].n_to_go + ' ' + Tplural ('card', 'cards', deckdata[i_deck].n_to_go) + ' ' + T ('to go') + '</p>';
-   deckdata[i_deck].el_progress.html (progress_html);
+   deckdata[i_deck].el_progress_text.html (progress_html);
+}
+
+
+// -----------------------------------------------------------------------------
+this.display_login = function (i_deck) {
+
+   // Close menu in case came from there, and stop any bouncing icons (no-intro
+   // quizzes/flashcard decks) bouncing.
+   $ ('#usermenu-qdeck' + i_deck).hide ();
+   $ ('div.qwiz-usermenu_icon_no_intro').removeClass ('qwiz-icon-bounce');
+
+   if (deckdata[i_deck].showing_front_b) {
+      deckdata[i_deck].el_qcard_card_front.html (get_login_html (i_deck));
+   } else {
+      deckdata[i_deck].el_qcard_card_back.html (get_login_html (i_deck));
+   }
+
+   // Hide buttons.
+   $ ('#qcard_next_buttons-qdeck' + i_deck).css ('visibility', 'hidden');
+
+   // Focus on username field.
+   $ ('#qdeck_username-qdeck' + i_deck).focus ();
+}
+
+
+// -----------------------------------------------------------------------------
+function get_login_html (i_deck) {
+
+   var onfocus = 'onfocus="jQuery (\'#qdeck_login-qdeck' + i_deck + ' p.login_error\').css (\'visibility\', \'hidden\')"';
+
+   var login_html =
+       '<div id="qdeck_login-qdeck' + i_deck + '" class="qdeck-login">\n'
+     +    '<p>'
+     +       '<strong>' + T ('Record score/credit?') + '</strong>'
+     +    '</p>\n'
+     +    '<table border="0" align="center">'
+     +       '<tr>'
+     +          '<td>'
+     +             '<label for="qdeck_username-qdeck' + i_deck + '">'+ T ('User name') + '</label>'
+     +          '</td>'
+     +          '<td>'
+     +             '<input type="text" id="qdeck_username-qdeck' + i_deck + '" ' + onfocus + ' />'
+     +          '</td>'
+     +       '</tr>'
+     +       '<tr>'
+     +          '<td>'
+     +             '<label for="qdeck_password-qdeck' + i_deck + '">'+ T ('Password') + '</label>'
+     +          '</td>'
+     +          '<td>'
+     +             '<input type="password" id="qdeck_password-qdeck' + i_deck + '" ' + onfocus + ' />'
+     +          '</td>'
+     +       '<tr>'
+     +    '</table>\n'
+     +    '<table border="0" align="center">'
+     +       '<tr>'
+     +          '<td class="qdeck-remember">'
+     +             '<button class="qbutton" onclick="' + qname + '.login (' + i_deck + ')">'
+     +                T ('Login')
+     +             '</button>'
+     +          '</td>'
+     +          '<td class="qdeck-remember">'
+     +             '<button class="qbutton" onclick="' + qname + '.no_login (' + i_deck + ', true)">'
+     +                T ('No thanks')
+     +             '</button>'
+     +             '<br />'
+     +             '<span class="qdeck-remember" title="' + T ('Skip login in the future') + '"><span><input type="checkbox" /></span> ' + T ('Remember') + '</span>'
+     +          '</td>'
+     +       '<tr>'
+     +    '</table>\n'
+     +    '<p class="login_error">'
+     +       'Login incorrect.&nbsp; Please try again'
+     +    '</p>\n'
+     + '</div>\n';
+
+   return login_html;
+}
+
+
+// -----------------------------------------------------------------------------
+this.login = function (i_deck) {
+
+   // In case previously declined login option, unset cookie and local flag.
+   $.removeCookie ('qdeck_declined_login', {path: '/'});
+   document_qwiz_declined_login_b = false;
+
+   // Have we got username and password?
+   var username_obj = $ ('#qdeck_username-qdeck' + i_deck);
+   var username = username_obj.val ();
+   if (! username ) {
+      alert (T ('Please enter User name'));
+      username_obj.focus ();
+      return;
+   }
+   document_qwiz_username = username;
+
+   var password_obj = $ ('#qdeck_password-qdeck' + i_deck);
+   var password = password_obj.val ();
+   if (! password) {
+      alert (T ('Please enter Password'));
+      password_obj.focus ();
+      return;
+   }
+
+   // We'll send "SHA3" of password.
+   var sha3_password = CryptoJS.SHA3 (password).toString ();
+
+   // Do jjax call.  First disable login button, show spinner.  DKTMP
+   var data = {username: username, sha3_password: sha3_password};
+   qqc.jjax (qname, i_deck, deckdata[i_deck].qrecord_id, 'login', data);
+}
+
+
+// -----------------------------------------------------------------------------
+this.login_ok = function (i_deck, session_id) {
+
+   // Success.  Create session cookie.  Valid just for this session, good for
+   // whole site.  Value set by server.  Callback script also saves session ID
+   // as global (document) variable document_qwiz_session_id.
+   $.cookie ('qwiz_session_id', session_id, {path: '/'});
+
+   // Set flag.
+   document_qwiz_user_logged_in_b = true;
+
+   // Set user menus.
+   qqc.set_user_menus_and_icons ();
+
+   // Hide login.
+   $ ('#qdeck_login-qdeck' + i_deck).hide ();
+
+   // If recording any decks, reset all start times.
+   if (qrecord_b) {
+      var qrecord_ids = [];
+      for (var ii_deck=0; ii_deck<n_decks; ii_deck++) {
+         if (deckdata[ii_deck].qrecord_id) {
+            qrecord_ids.push (deckdata[ii_deck].qrecord_id);
+         }
+      }
+      qrecord_ids = qrecord_ids.join ('\t');
+      var now_sec = new Date ().getTime ()/1000.0;
+      qqc.jjax (qname, i_deck, qrecord_ids, 'record_qcard', {type: 'start', now_sec: now_sec});
+   }
+
+   // Show buttons.
+   $ ('#qcard_next_buttons-qdeck' + i_deck).css ('visibility', 'visible');
+
+   if (deckdata[i_deck].i_card == 0) {
+
+      // Go to first card.
+      q.process_card (i_deck);
+   } else {
+
+      // Re-display current card.
+      i_card = deckdata[i_deck].i_card;
+      q.set_card_front_and_back (i_deck, i_card);
+   }
+}
+
+
+// -----------------------------------------------------------------------------
+this.login_not_ok = function (i_deck) {
+
+   // Invalid login.  Error message.
+   $ ('#qdeck_login-qdeck' + i_deck + ' p.login_error').css ('visibility', 'visible');
+   if (debug[0]) {
+      console.log ('[login_not_ok] $ (\'#qdeck_login-qdeck' + i_deck + ' p.login_error\'):', $ ('#qdeck_login-qdeck' + i_deck + ' p.login_error'));
+   }
+}
+
+
+// -----------------------------------------------------------------------------
+this.no_login = function (i_deck) {
+
+   // Skip login.  Hide login, go to first question.  If checkbox checked, set
+   // cookie and local flag to skip in the future.
+   if ($ ('#qdeck_login-qdeck' + i_deck + ' input[type="checkbox"]').prop('checked')) {
+      $.cookie ('qwiz_declined_login', 1, {path: '/'});
+      document_qwiz_declined_login_b = true;
+   }
+
+   // Stop any bouncing icons (no-intro quizzes) bouncing.
+   $ ('div.qwiz-usermenu_icon_no_intro').removeClass ('qwiz-icon-bounce');
+
+   // Show buttons.
+   $ ('#qcard_next_buttons-qdeck' + i_deck).css ('visibility', 'visible');
+
+   q.process_card (i_deck);
+}
+
+
+// -----------------------------------------------------------------------------
+this.icon_no_login = function (i_deck) {
+
+   // Stop icon from bouncing.  If checkbox checked, set cookie and local flag
+   // to skip bouncing/login in the future.
+   $ ('div.qwiz-usermenu_icon_no_intro').removeClass ('qwiz-icon-bounce');
+
+   if ($ ('#usermenu-qdeck' + i_deck + ' input[type="checkbox"]').prop('checked')) {
+      $.cookie ('qwiz_declined_login', 1, {path: '/'});
+      document_qwiz_declined_login_b = true;
+   }
+
+   // Close menu.
+   $ ('#usermenu-qdeck' + i_deck).hide ();
+}
+
+
+// -----------------------------------------------------------------------------
+this.show_usermenu = function (i_deck) {
+   $ ('#usermenu-qdeck' + i_deck).show ().mouseleave (function () {
+                                                        $ (this).hide ();
+                                                     });
+}
+
+
+// -----------------------------------------------------------------------------
+this.sign_out = function () {
+
+   // Delete cookie, unset flag.
+   $.removeCookie ('qwiz_session_id', {path: '/'});
+   document_qwiz_user_logged_in_b = false;
+
+   // Reset menus to reflect current (logged-out) state.  Flag to NOT start
+   // bouncing icons.
+   qqc.set_user_menus_and_icons (true);
 }
 
 
@@ -1936,22 +1973,28 @@ this.flip = function (i_deck) {
       return;
    }
 
-   var el_textentry = $ ('#textentry-qdeck' + i_deck);
-   var el_front = $ ('#qcard_card-qdeck' + i_deck + ' div.front');
+   var textentry_obj = $ ('#textentry-qdeck' + i_deck);
+   var front_obj = $ ('#qcard_card-qdeck' + i_deck + ' div.front');
 
    var set_front_back;
    if (deckdata[i_deck].showing_front_b) {
+
+      // If recording, count number of flips (front-to-back only).
+      if (deckdata[i_deck].qrecord_id) {
+         deckdata[i_deck].n_flips++;
+      }
 
       // Hide whole thing (Chrome randomly ignoring backface-visibility?),
       // superscripts and subscripts (!) (shows through in Safari, Chrome,
       // "flashing" in Chrome on Mac).  Closure for setTimeout ().
       var hideFrontElements = function () {
-         el_front.css ('visibility', 'hidden');
-         el_front.find ('sup, sub').css ('visibility', 'hidden');
+         front_obj.css ('visibility', 'hidden');
+         front_obj.find ('sup, sub').css ('visibility', 'hidden');
       }
 
       // Hide qwiz icon/link.
-      if (deckdata[i_deck].i_card == 0) {
+      var i_card = deckdata[i_deck].i_card;
+      if (i_card == 0) {
          $ ('div.qcard_window div#icon_qdeck' + i_deck).hide ();
       }
 
@@ -1962,20 +2005,37 @@ this.flip = function (i_deck) {
       $ ('button.got_it-qdeck' + i_deck + ', button.next_card-qdeck' + i_deck).attr ('disabled', false).removeClass ('qbutton_disabled').addClass ('qbutton');
 
       // Increment n_reviewed on first flip for this card and redisplay progress.
-      if (! card_reviewed_b) {
-         card_reviewed_b = true;
+      if (! deckdata[i_deck].card_reviewed_b) {
+         deckdata[i_deck].card_reviewed_b = true;
          deckdata[i_deck].n_reviewed++;
+
+         // By topic, too.
+         var card_topics = deckdata[i_deck].card_topics[i_card];
+         if (debug[4]) {
+            console.log ('[flip] card_topics:', card_topics);
+         }
+         if (card_topics) {
+            for (var ii=0; ii<card_topics.length; ii++) {
+               var topic = card_topics[ii];
+               deckdata[i_deck].topic_statistics[topic].n_reviewed++;
+            }
+         }
          display_progress (i_deck);
+
+         // If recording this deck, record (locally) time of first flip.
+         if (deckdata[i_deck].qrecord_id) {
+            var now_sec = new Date ().getTime ()/1000.0;
+            deckdata[i_deck].current_first_flip_sec = now_sec;
+         }
       }
 
       // If there's a text entry box...
-      if (el_textentry.length) {
+      if (textentry_obj.length) {
 
          // Hide it (shows through in Safari, Chrome, "flashing" in Chrome on
          // Mac).
-         el_textentry.css ('visibility', 'hidden');
+         textentry_obj.css ('visibility', 'hidden');
 
-         var i_card = deckdata[i_deck].i_card;
          var card = deckdata[i_deck].cards[i_card];
          if (card.textentry_required_b) {
 
@@ -1986,7 +2046,7 @@ this.flip = function (i_deck) {
 
             // If something entered in text box, then set back-side element to
             // what was entered.
-            var textentry = el_textentry.val ();
+            var textentry = textentry_obj.val ();
             if (textentry) {
 
                // Show what was within square brackets, insert user entry.
@@ -2015,11 +2075,11 @@ this.flip = function (i_deck) {
 
    // Closure for setTimeout ().
    var showFrontElements = function () {
-      if (el_textentry.length) {
-         el_textentry.css ('visibility', 'visible');
+      if (textentry_obj.length) {
+         textentry_obj.css ('visibility', 'visible');
       }
-      el_front.css ('visibility', 'visible');
-      el_front.find ('sup, sub').css ('visibility', 'visible');
+      front_obj.css ('visibility', 'visible');
+      front_obj.find ('sup, sub').css ('visibility', 'visible');
    };
 
    // Doing explicit show/hide for whole front back -- Chrome seemed to 
@@ -2154,8 +2214,8 @@ function textentry_set_card_back (i_deck, card) {
 
    // See with which choice the user textentry is associated, make div for
    // feedback for that choice visible.  Hide others.
-   var el_textentry = $ ('#textentry-qdeck' + i_deck);
-   var entry = el_textentry.val ();
+   var textentry_obj = $ ('#textentry-qdeck' + i_deck);
+   var entry = textentry_obj.val ();
 
    // See if entry among choices; identify default choice ("*").
    var i_choice = -1;
@@ -2292,14 +2352,34 @@ this.got_it = function (i_deck) {
    var ii_card = deckdata[i_deck].card_order[i_card];
    deckdata[i_deck].cards[ii_card].got_it = true;
    deckdata[i_deck].n_to_go--;
-   q.next_card (i_deck);
+   q.next_card (i_deck, true);
 };
 
 
-var directions = ['right', 'left', 'top', 'bottom'];
 // -----------------------------------------------------------------------------
 // Go to next card.
-this.next_card = function (i_deck) {
+var directions = ['right', 'left', 'top', 'bottom'];
+this.next_card = function (i_deck, got_it_f) {
+
+   // If recording, record either "Need more practice" or "Got it/check answer"
+   // button press, as well as stored data.
+   if (deckdata[i_deck].qrecord_id && document_qwiz_user_logged_in_b) {
+      i_card = deckdata[i_deck].i_card;
+      var textentry = '';  // DKTMP
+      var now_sec = new Date ().getTime ()/1000.0;
+      got_it_f = got_it_f ? 1 : 0;
+      var data = {type:                'flashcard',
+                  i_card:              i_card,
+                  q_and_a_text:        deckdata[i_deck].q_and_a_text[i_card],
+                  first_flip_sec:      deckdata[i_deck].current_first_flip_sec,
+                  n_flips:             deckdata[i_deck].n_flips,
+                  first_textentry_sec: deckdata[i_deck].current_first_textentry_sec,
+                  response:            textentry,
+                  now_sec:             now_sec,
+                  got_it_f:            got_it_f
+                 };
+      qqc.jjax (qname, i_deck, deckdata[i_deck].qrecord_id, 'record_qcard', data)
+   }
 
    // If showing back, change to front.
    if (! deckdata[i_deck].showing_front_b) {
@@ -2400,6 +2480,15 @@ var find_matching_terms = function (request, response) {
    var entry_metaphone = qqc.metaphone (entry);
    if (debug[6]) {
       console.log ('[find_matching_terms] entry_metaphone; ', entry_metaphone);
+   }
+
+   // If recording this deck, record (locally) time of first interaction with
+   // free-format input (textentry_i_deck set on focus in set_textentry_i_deck ()).
+   if (deckdata[textentry_i_deck].qrecord_id) {
+      if (! deckdata[textentry_i_deck].current_first_textentry_sec) {
+         var now_sec = new Date ().getTime ()/1000.0;
+         deckdata[textentry_i_deck].current_first_textentry_sec = now_sec;
+      }
    }
 
    // See if first character of entry metaphone matches first
@@ -2560,13 +2649,10 @@ function Tplural (word, plural_word, n) {
 // Close - isolate namespace.
 };
 
-
-// -----------------------------------------------------------------------------
 qcardf.call (qcard_);
 
-// =============================================================================
-// =============================================================================
-/* =======================================================
+
+/* =============================================================================
  * Flipping Cards 3D
  * By David Blanco
  *

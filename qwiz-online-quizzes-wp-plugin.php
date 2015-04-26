@@ -3,11 +3,10 @@
  * Plugin Name: Qwiz - online quizzes and flashcards
  * Plugin URI: http://dkprojects.net/qwiz
  * Description: Easy online quizzes and flashcards for WordPress
- * Version: 2.28
+ * Version: 2.29
  * Author: Dan Kirshner
  * Author URI: http://dkprojects.net/qwiz
  * License: GPL2
- *
  */
 
 /*  Copyright 2014  Dan Kirshner  (email : dan_kirshner@yahoo.com)
@@ -51,11 +50,11 @@ function add_qwiz_js_and_style () {
    $qwiz_qcards_common   = qwiz_plugin_url ('qwiz_qcards_common.js');
    $jquery_ui            = qwiz_plugin_url ('jquery-ui.min.js');
    $jquery_ui_touchpunch = qwiz_plugin_url ('jquery.ui.touch-punch.min.js');
-   wp_enqueue_script ('qwiz_handle',                 $qwiz,                 array (), '2.28', true);
-   wp_enqueue_script ('qwizcards_handle',            $qwizcards,            array (), '2.28', true);
-   wp_enqueue_script ('qwiz_qcards_common_handle',   $qwiz_qcards_common,   array (), '2.28', true);
-   wp_enqueue_script ('jquery_ui_handle',            $jquery_ui,            array (), '2.28', true);
-   wp_enqueue_script ('jquery_ui_touchpunch_handle', $jquery_ui_touchpunch, array (), '2.28', true);
+   wp_enqueue_script ('qwiz_handle',                 $qwiz,                 array (), '2.29', true);
+   wp_enqueue_script ('qwizcards_handle',            $qwizcards,            array (), '2.29', true);
+   wp_enqueue_script ('qwiz_qcards_common_handle',   $qwiz_qcards_common,   array (), '2.29', true);
+   wp_enqueue_script ('jquery_ui_handle',            $jquery_ui,            array (), '2.29', true);
+   wp_enqueue_script ('jquery_ui_touchpunch_handle', $jquery_ui_touchpunch, array (), '2.29', true);
 
    // Options/parameters.  Set default content option.
    $plugin_url = qwiz_plugin_url ( '/');
@@ -93,19 +92,24 @@ function add_qwiz_js_and_style () {
    $beta = isset ($_SESSION['qwiz_beta']);
 
    $qwiz_params = array (
-      'T'         => $qwiz_T, 
-      'url'       => $plugin_url, 
-      'icon_qwiz' => $icon_qwiz,
-      'content'   => $content,
-      'beta'      => $beta
+      'T'          => $qwiz_T, 
+      'url'        => $plugin_url, 
+      'icon_qwiz'  => $icon_qwiz,
+      'content'    => $content,
+      'beta'       => $beta,
+      'server_loc' => '//dkprojects.net/qwiz/admin'
    );
    wp_localize_script ('qwiz_handle',      'qwiz_params', $qwiz_params);
    wp_localize_script ('qwizcards_handle', 'qwiz_params', $qwiz_params);
 
    // Stylesheets.
+   wp_register_style ('qwiz_css_handle', qwiz_plugin_url ('qwiz.css'));
+   wp_register_style ('qwizcards_css_handle', qwiz_plugin_url ('qwizcards.css'));
    wp_register_style ('qwiz_styles_handle', qwiz_plugin_url ('qwiz_styles.css'));
    wp_register_style ('jquery_ui_styles_handle', qwiz_plugin_url ('jquery-ui.css'));
 
+   wp_enqueue_style ('qwiz_css_handle');
+   wp_enqueue_style ('qwizcards_css_handle');
    wp_enqueue_style ('qwiz_styles_handle');
    wp_enqueue_style ('jquery_ui_styles_handle');
 }
@@ -189,6 +193,23 @@ add_filter ('mce_external_languages', 'qwizzled_add_locale');
 
 
 // =============================================================================
+/*
+function qwiz_change_mce_options ($mceInit) {
+   $mceInit['paste_preprocess'] 
+      = 'function (pl, o) {
+            console.log ("[qwiz_change_mce_options] o.content: ", o.content);
+            o.content = "[[" + o.content + "]]";
+         }';
+   //error_log ("[qwiz_change_mce_options] mceInit: " . print_r ($mceInit, true));
+
+   return $mceInit;
+}
+
+add_filter ('tiny_mce_before_init', 'qwiz_change_mce_options');
+*/
+
+
+// =============================================================================
 function qwiz_admin_bar_item ($wp_admin_bar) {
 
    $args = array (
@@ -244,13 +265,13 @@ function qwiz_process_shortcodes_initially ($content) {
          $content = qwiz_wrap_shortcode_pairs ($content, 'qwiz');
          $content = qwiz_wrap_shortcode_pairs ($content, 'qdeck');
       }
-   }
 
-   // Restore demo contents, without the opening/closing shortcodes.
-   $content = qwiz_unwrap_and_paste_demos ($content, $qwizdemos, 'qwiz');
-   $content = qwiz_unwrap_and_paste_demos ($content, $qdeckdemos, 'qdeck');
-   if ($debug) {
-      error_log ("[qwiz_process_shortcodes_initially] content:\n" . $content);
+      // Restore demo contents, without the opening/closing shortcodes.
+      $content = qwiz_unwrap_and_paste_demos ($content, $qwizdemos, 'qwiz');
+      $content = qwiz_unwrap_and_paste_demos ($content, $qdeckdemos, 'qdeck');
+      if ($debug) {
+         error_log ("[qwiz_process_shortcodes_initially] content:\n" . $content);
+      }
    }
 
    return $content;
@@ -310,7 +331,9 @@ function qwiz_wrap_shortcode_pairs ($content, $qwiz_qdeck) {
    return implode ('', $new_content);
 }
 
+
 function qwiz_check_fix_wrap_matched_divs ($qcontent, $qwiz_qdeck) {
+   global $debug;
 
    // Find all opening/closing divs.
    $div_match_pat = "/<div[^>]*>|<\/div>/";
@@ -346,6 +369,9 @@ function qwiz_check_fix_wrap_matched_divs ($qcontent, $qwiz_qdeck) {
    array_push ($new_qcontent, $pieces[0]);
    for ($i=0; $i<$n_tags; $i++) {
       if ($matched_pair_b[$i]) {
+         if ($debug) {
+            error_log ('[qwiz_check_fix_wrap_matched_divs] matched pair tag html: ' . summary ($div_matches[$i][0], 100));
+         }
          $tag = $div_matches[$i][0];
          array_push ($new_qcontent, $tag);
       }
@@ -358,6 +384,9 @@ function qwiz_check_fix_wrap_matched_divs ($qcontent, $qwiz_qdeck) {
    // Finally, add unmatched divs afterword.
    for ($i=0; $i<$n_tags; $i++) {
       if (! $matched_pair_b[$i]) {
+         if ($debug) {
+            error_log ('[qwiz_check_fix_wrap_matched_divs] unmatched pair tag html: ' . summary ($div_matches[$i][0], 100));
+         }
          $tag = $div_matches[$i][0];
          array_push ($new_qcontent, $tag);
       }
@@ -404,6 +433,19 @@ function qwiz_check_shortcode_pairs_ok ($content, $qwiz_qdeck) {
    }
 
    return $ok_b;
+}
+
+
+function summary ($txt, $summary_len) {
+   $txtlen = strlen ($txt);
+   if ($txtlen > 2*$summary_len) {
+      $errtxt = substr ($txt, 0, $summary_len)
+                . ' ... ' . substr ($txt, -$summary_len);
+   } else {
+      $errtxt = $txt;
+   }
+
+   return $errtxt;
 }
 
 
