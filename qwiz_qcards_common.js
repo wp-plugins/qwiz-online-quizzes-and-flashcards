@@ -1,6 +1,7 @@
 // Document globals.
-var document_qwiz_declined_login_b = 'not ready';
-var document_qwiz_user_logged_in_b = 'not ready';
+var document_qwiz_declined_login_b  = 'not ready';
+var document_qwiz_user_logged_in_b  = 'not ready';
+var document_qwiz_current_login_sec = 0;
 
 // =============================================================================
 // Isolate namespace.
@@ -129,6 +130,13 @@ this.set_user_menus_and_icons = function (sign_out_f) {
       // Yes.  Show login name.
       htm +=    '<div>'
              +     qqc.T ('Logged in as') + ' <strong>' + document_qwiz_username + '</strong>'
+             +  '</div>';
+
+      // Menu item for additional team-member login.
+      htm +=    '<div>'
+             +     '<a href="javascript: qname.display_login (i_qwiz, 1)">'
+             +         qqc.T ('Add team member')
+             +     '</a>'
              +  '</div>';
 
       // Menu item for records.

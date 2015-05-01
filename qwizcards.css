@@ -114,13 +114,6 @@ div.qdeck-usermenu div {
    border:              none;
 }
 
-.qdeck-login td.qdeck-remember {
-   position:            relative;
-   border:              none;
-   text-align:          center;
-   vertical-align:      top;
-}
-
 span.qdeck-remember {
    position:            relative;
    font-size:           80%;
@@ -140,6 +133,7 @@ span.qdeck-remember input[type=checkbox] {
    visibility:          hidden;
    color:               red;
    font-weight:         bold;
+   text-align:          center;
 }
 
 

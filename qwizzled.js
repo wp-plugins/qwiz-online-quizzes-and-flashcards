@@ -1,5 +1,5 @@
 /*
- * Version 2.29 2015-03-??
+ * Version 2.29 2015-04-26
  * Don't use <code></code> for already-wrapped [q] and [l].
  * Warnings on removing blank labels.
  * Error if selection already is a target.

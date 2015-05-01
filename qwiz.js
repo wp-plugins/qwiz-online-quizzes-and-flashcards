@@ -1,5 +1,9 @@
 /*
- * Version 2.29 2015-04-19
+ * Version 3.00 2015-??-??
+ * Team login.
+ * Login timeout.
+ *
+ * Version 2.29 2015-04-26
  * Word-wrap normal for labels (problem in Firefox).
  * Don't use <code></code> for already-wrapped [q] and [l].
  * Fix bug -- hint required matching first character.
@@ -156,7 +160,6 @@ debug.push (false);    // 2 - feedback html.
 debug.push (false);    // 3 - old/new html dump.
 debug.push (false);    // 4 - question tags/topics.
 debug.push (false);    // 5 - [textentry] / autocomplete.
-debug.push (false);    // 6 - mark_start ().
 
 var $ = jQuery;
 
@@ -232,49 +235,17 @@ $ (document).ready (function () {
 
    if (n_qwizzes) {
 
-      // If any quizzes subject to recording, see if user logged in (may need
-      // to wait for check_session_id () to return).  Mark "start" time for
-      // quizzes that have no intro or are single-question.
-      if (qrecord_b) {
-
-         // Data for closure for setTimeout ().
-         var i_tries = 0;
-         var qrecord_ids = [];
-         for (var i_qwiz=0; i_qwiz<n_qwizzes; i_qwiz++) {
-            if (no_intro_b[i_qwiz] || qwizdata[i_qwiz].n_questions == 1) {
-               if (qwizdata[i_qwiz].qrecord_id) {
-                  qrecord_ids.push (qwizdata[i_qwiz].qrecord_id);
-               }
-            }
-         }
-         qrecord_ids = qrecord_ids.join ('\t');
-
-         // Closure.
-         var mark_start = function () {
-            i_tries++;
-            if (   i_tries < 100
-                && (   typeof (document_qwiz_user_logged_in_b) == 'undefined'
-                    || document_qwiz_user_logged_in_b          == 'not ready')) {
-               if (debug[6]) {
-                  console.log ('[mark_start] i_tries:', i_tries);
-               }
-               setTimeout (mark_start, 100);
-            } else {
-               if (debug[6]) {
-                  console.log ('[mark_start] document_qwiz_user_logged_in_b:', document_qwiz_user_logged_in_b);
-               }
-               if (document_qwiz_user_logged_in_b) {
-                  qqc.jjax (qname, i_qwiz, qrecord_ids, 'record_response', {type: 'start'});
-               }
-            }
-         }
-         mark_start ();
-      }
-
       // If no intro for a quiz or single-question quiz, move immediately to
       // first question.
       for (var i_qwiz=0; i_qwiz<n_qwizzes; i_qwiz++) {
          if (no_intro_b[i_qwiz] || qwizdata[i_qwiz].n_questions == 1) {
+
+            // For quizzes that have no intro or are single-question, set
+            // boolean to record "start" time when first interact with quiz (in
+            // process_choice ()).
+            if (qwizdata[i_qwiz].qrecord_id) {
+               qwizdata[i_qwiz].record_start_b = true;
+            }
             q.next_question (i_qwiz);
          }
       }
@@ -1280,52 +1251,10 @@ function create_qwiz_divs (i_qwiz, qwiz_tag, htm, exit_html) {
 
    // ..........................................................................
    // Login div, if quiz may be recorded.
-   var login_div_html = '';
+   var login_div = '';
    if (qwizdata[i_qwiz].qrecord_id) {
-      var onfocus = 'onfocus="jQuery (\'#qwiz_login-qwiz' + i_qwiz + ' p.login_error\').hide ()"';
-
-      login_div_html =   '<div id="qwiz_login-qwiz' + i_qwiz + '" class="qwiz-login">\n'
-                       +    '<p>'
-                       +       '<strong>' + T ('Record score/credit?') + '</strong>'
-                       +    '</p>\n'
-                       +    '<table border="0" align="center">'
-                       +       '<tr>'
-                       +          '<td>'
-                       +             '<label for="qwiz_username-qwiz' + i_qwiz + '">'+ T ('User name') + '</label>'
-                       +          '</td>'
-                       +          '<td>'
-                       +             '<input type="text" id="qwiz_username-qwiz' + i_qwiz + '" ' + onfocus + ' />'
-                       +          '</td>'
-                       +       '</tr>'
-                       +       '<tr>'
-                       +          '<td>'
-                       +             '<label for="qwiz_password-qwiz' + i_qwiz + '">'+ T ('Password') + '</label>'
-                       +          '</td>'
-                       +          '<td>'
-                       +             '<input type="password" id="qwiz_password-qwiz' + i_qwiz + '" ' + onfocus + ' />'
-                       +          '</td>'
-                       +       '<tr>'
-                       +    '</table>\n'
-                       +    '<table border="0" align="center">'
-                       +       '<tr>'
-                       +          '<td class="qwiz-remember">'
-                       +             '<button class="qbutton" onclick="' + qname + '.login (' + i_qwiz + ')">'
-                       +                T ('Login')
-                       +             '</button>'
-                       +          '</td>'
-                       +          '<td class="qwiz-remember">'
-                       +             '<button class="qbutton" onclick="' + qname + '.no_login (' + i_qwiz + ', true)">'
-                       +                T ('No thanks')
-                       +             '</button>'
-                       +             '<br />'
-                       +             '<span class="qwiz-remember" title="' + T ('Skip login in the future') + '"><span><input type="checkbox" /></span> ' + T ('Remember') + '</span>'
-                       +          '</td>'
-                       +       '<tr>'
-                       +    '</table>\n'
-                       +    '<p class="login_error">'
-                       +       'Login incorrect.&nbsp; Please try again'
-                       +    '</p>\n'
-                       + '</div>\n';
+      login_div =  '<div id="qwiz_login-qwiz' + i_qwiz + '" class="qwiz-login">\n'
+                 + '</div>';
    }
 
 
@@ -1405,9 +1334,69 @@ function create_qwiz_divs (i_qwiz, qwiz_tag, htm, exit_html) {
    bottom_html += '</div>\n';
 
    // Add opening and closing html.
-   htm = top_html + progress_div_html + login_div_html + htm + bottom_html;
+   htm = top_html + progress_div_html + login_div + htm + bottom_html;
 
    return htm;
+}
+
+
+// -----------------------------------------------------------------------------
+function get_login_html (i_qwiz, add_team_member_f) {
+
+   add_team_member_f = add_team_member_f ? 1 : 0;
+   var onfocus = 'onfocus="jQuery (\'#qwiz_login-qwiz' + i_qwiz + ' p.login_error\').hide ()"';
+
+   var login_div_html =
+         '<p>';
+   if (add_team_member_f) {
+      login_div_html +=
+            '<strong>' + T ('Add team member') + '</strong>';
+   } else {
+      login_div_html +=
+            '<strong>' + T ('Record score/credit?') + '</strong>';
+   }
+   login_div_html +=
+         '</p>\n'
+     +   '<table border="0" align="center">'
+     +      '<tr>'
+     +         '<td>'
+     +            '<label for="qwiz_username-qwiz' + i_qwiz + '">'+ T ('User name') + '</label>'
+     +         '</td>'
+     +         '<td>'
+     +            '<input type="text" id="qwiz_username-qwiz' + i_qwiz + '" ' + onfocus + ' />'
+     +         '</td>'
+     +      '</tr>'
+     +      '<tr>'
+     +         '<td>'
+     +            '<label for="qwiz_password-qwiz' + i_qwiz + '">'+ T ('Password') + '</label>'
+     +         '</td>'
+     +         '<td>'
+     +            '<input type="password" id="qwiz_password-qwiz' + i_qwiz + '" ' + onfocus + ' />'
+     +         '</td>'
+     +      '<tr>'
+     +   '</table>\n'
+     +   '<button class="qbutton" onclick="' + qname + '.login (' + i_qwiz + ',' + add_team_member_f + ')">'
+     +      T ('Login')
+     +   '</button>'
+     +   '&emsp;'
+     +   '<button class="qbutton" onclick="' + qname + '.no_login (' + i_qwiz + ', true)">'
+   if (add_team_member_f) {
+      login_div_html +=
+             T ('Cancel')
+     +    '</button>';
+   } else {
+      login_div_html +=
+            T ('No thanks')
+     +   '</button>'
+     +   '<br />'
+     +   '<span class="qwiz-remember" title="' + T ('Save preference (do not use on shared computer)') + '"><span><input type="checkbox" /></span> ' + T ('Remember') + '</span>';
+   }
+   login_div_html +=
+         '<p class="login_error">'
+     +      T ('Login incorrect. Please try again')
+     +   '</p>\n';
+
+   return login_div_html;
 }
 
 
@@ -1567,6 +1556,34 @@ this.next_question = function (i_qwiz, no_login_b) {
                    || (   typeof (document_qwiz_declined_login_b) != 'undefined'
                        && document_qwiz_declined_login_b)) {
                   if (user_logged_in_b) {
+
+                     // If more than [default 40] minutes since last login,
+                     // confirm continue.
+                     var now_sec = new Date ().getTime ()/1000.0;
+                     var login_timeout_min = qqc.get_qwiz_param ('login_timeout_min', 40);
+                     if (now_sec > document_qwiz_current_login_sec + login_timeout_min*60) {
+                        if (confirm (T ('You are logged in as') + ' ' + document_qwiz_username + '.\n' + T ('Do you want to continue?  (Click "Cancel" to sign out)'))) {
+                           document_qwiz_current_login_sec = now_sec;
+                        } else {
+                           q.sign_out ();
+                        }
+                     }
+
+                     // If logged in as team, check if want to continue as team.
+                     if (typeof (document_qwiz_team_b) != 'undefined' && document_qwiz_team_b) {
+
+                        if (! confirm (T ('You are logged in as team') + ': ' + document_qwiz_username + '.\n' + T ('Do you want to continue as this team?'))) {
+
+                           // No.  Reset document global flags and user menu.
+                           document_qwiz_session_id = document_qwiz_session_id.split (';')[0];
+                           document_qwiz_username   = document_qwiz_username.split ('; ')[0];
+                           document_qwiz_team_b     = false;
+                           qqc.set_user_menus_and_icons ();
+                           var msg = T ('OK.  Only %s is logged in now');
+                           msg = msg.replace ('%s', document_qwiz_username);
+                           alert (msg)
+                        }
+                     }
                      var data = {type: 'start'};
                      qqc.jjax (qname, i_qwiz, qwizdata[i_qwiz].qrecord_id, 'record_response', data);
                   }
@@ -2944,6 +2961,13 @@ this.process_choice = function (feedback_id) {
       console.log ('[process_choice] feedback_id: ', feedback_id, ', qwizq_id: ', qwizq_id, ', i_qwiz: ', i_qwiz);
    }
 
+   // If recording and this is first interaction with no-intro, single-question
+   // quiz, record as start time.  
+   if (qwizdata[i_qwiz].record_start_b && document_qwiz_user_logged_in_b) {
+      qwizdata[i_qwiz].record_start_b = false;
+      qqc.jjax (qname, i_qwiz, qwizdata[i_qwiz].qrecord_id, 'record_response', {type: 'start'});
+   }
+
    // Don't do if already disabled.
    var disabled = $ ('input[name=' + qwizq_id + ']').attr ('disabled');
    if (disabled != 'disabled') {
@@ -3408,12 +3432,16 @@ this.keep_next_button_active = function () {
 
 
 // -----------------------------------------------------------------------------
-this.display_login = function (i_qwiz) {
+this.display_login = function (i_qwiz, add_team_member_f) {
 
-   // Close menu in case came from there, and stop any bouncing icons (no-intro
-   // quizzes) bouncing.
+   // Close menu in case came from there.
    $ ('#usermenu-qwiz' + i_qwiz).hide ();
-   $ ('div.qwiz-usermenu_icon_no_intro').removeClass ('qwiz-icon-bounce');
+
+   if (! add_team_member_f) {
+
+      // Stop any bouncing icons (no-intro quizzes/flashcard decks) bouncing.
+      $ ('div.qwiz-usermenu_icon_no_intro').removeClass ('qwiz-icon-bounce');
+   }
 
    if (qwizdata[i_qwiz].i_question == -1) {
 
@@ -3434,14 +3462,16 @@ this.display_login = function (i_qwiz) {
    // Don't show next button.
    $ ('#next_button-qwiz' + i_qwiz).hide ();
 
-   $ ('#qwiz_login-qwiz' + i_qwiz).show ();
+   $ ('#qwiz_login-qwiz' + i_qwiz).html (get_login_html (i_qwiz, add_team_member_f)).show ();
 
    $ ('#qwiz_username-qwiz' + i_qwiz).focus ();
 }
 
 
 // -----------------------------------------------------------------------------
-this.login = function (i_qwiz) {
+this.login = function (i_qwiz, add_team_member_f) {
+
+   add_team_member_f = add_team_member_f ? 1 : 0;
 
    // In case previously declined login option, unset cookie and local flag.
    $.removeCookie ('qwiz_declined_login', {path: '/'});
@@ -3455,7 +3485,16 @@ this.login = function (i_qwiz) {
       username_obj.focus ();
       return;
    }
-   document_qwiz_username = username;
+
+   if (add_team_member_f) {
+
+      // Check if this username already on team list.
+      var usernames = document_qwiz_username.split ('; ');
+      if (usernames.indexOf (username) != -1) {
+         alert ('User ' + username + ' is already on your team.');
+         return false;
+      }
+   }
 
    var password_obj = $ ('#qwiz_password-qwiz' + i_qwiz);
    var password = password_obj.val ();
@@ -3468,22 +3507,28 @@ this.login = function (i_qwiz) {
    // We'll send "SHA3" of password.
    var sha3_password = CryptoJS.SHA3 (password).toString ();
 
+   // Pass state of "Remember" checkbox.
+   var remember_f = $ ('#qwiz_login-qwiz' + i_qwiz + ' input[type="checkbox"]').prop('checked') ? 1 : 0;
+
    // Do jjax call.  First disable login button, show spinner.  DKTMP
-   var data = {username: username, sha3_password: sha3_password};
+   var data = {username: username, sha3_password: sha3_password, remember_f: remember_f, add_team_member_f: add_team_member_f};
    qqc.jjax (qname, i_qwiz, qwizdata[i_qwiz].qrecord_id, 'login', data);
 }
 
 
 // -----------------------------------------------------------------------------
-this.login_ok = function (i_qwiz, session_id) {
+this.login_ok = function (i_qwiz, session_id, remember_f) {
 
-   // Success.  Create session cookie.  Valid just for this session, good for
-   // whole site.  Value set by server.  Callback script also saves session ID
-   // as global (document) variable document_qwiz_session_id.
-   $.cookie ('qwiz_session_id', session_id, {path: '/'});
+   // Success.  If flag set, create session cookie.  Valid just for this 
+   // session, good for whole site.  Value set by server.  Callback script also
+   // saves session ID as global (document) variable document_qwiz_session_id.
+   if (remember_f == 1) {
+      $.cookie ('qwiz_session_id', session_id, {path: '/'});
+   }
 
-   // Set flag.
+   // Set flag, record time.
    document_qwiz_user_logged_in_b = true;
+   document_qwiz_current_login_sec = new Date ().getTime ()/1000.0;
 
    // Set user menus.
    qqc.set_user_menus_and_icons ();
@@ -3550,15 +3595,17 @@ this.no_login = function (i_qwiz) {
 
 
 // -----------------------------------------------------------------------------
-this.icon_no_login = function (i_qwiz) {
+this.icon_no_login = function (i_qwiz, add_team_member_f) {
 
    // Stop icon from bouncing.  If checkbox checked, set cookie and local flag
    // to skip bouncing/login in the future.
    $ ('div.qwiz-usermenu_icon_no_intro').removeClass ('qwiz-icon-bounce');
 
-   if ($ ('#usermenu-qwiz' + i_qwiz + ' input[type="checkbox"]').prop('checked')) {
-      $.cookie ('qwiz_declined_login', 1, {path: '/'});
-      document_qwiz_declined_login_b = true;
+   if (! add_team_member_f) {
+      if ($ ('#usermenu-qwiz' + i_qwiz + ' input[type="checkbox"]').prop('checked')) {
+         $.cookie ('qwiz_declined_login', 1, {path: '/'});
+         document_qwiz_declined_login_b = true;
+      }
    }
 
    // Close menu.
