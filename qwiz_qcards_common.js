@@ -1,6 +1,7 @@
 // Document globals.
 var document_qwiz_declined_login_b  = 'not ready';
 var document_qwiz_user_logged_in_b  = 'not ready';
+var document_qwiz_remember_f        = false;
 var document_qwiz_current_login_sec = 0;
 
 // =============================================================================

@@ -484,8 +484,8 @@ function process_qdeck_pair (htm, i_deck) {
       deckdata[i_deck].qrecord_id = qrecord_id;
       deckdata[i_deck].q_and_a_text = {};
 
-      // If haven't checked already, see if user already logged in (get session id
-      // in cookie, see if still valid).
+      // If haven't checked already, see if user already logged in (get session
+      // ID in cookie, see if still valid).
       if (! qrecord_b) {
          qrecord_b = true;
          if (typeof (document_qwiz_user_logged_in_b) == 'undefined'
@@ -1863,11 +1863,21 @@ this.login = function (i_deck, add_team_member_f) {
    // We'll send "SHA3" of password.
    var sha3_password = CryptoJS.SHA3 (password).toString ();
 
-   // Pass state of "Remember" checkbox.
-   var remember_f = $ ('#qdeck_login-qdeck' + i_deck + ' input[type="checkbox"]').prop('checked') ? 1 : 0;
+   var remember_f;
+   if (add_team_member_f) {
+      remember_f = document_qwiz_remember_f;
+   } else {
+
+      // Pass state of "Remember" checkbox.
+      remember_f = $ ('#qdeck_login-qdeck' + i_deck + ' input[type="checkbox"]').prop('checked') ? 1 : 0;
+      document_qwiz_remember_f = remember_f;
+   }
 
    // Do jjax call.  First disable login button, show spinner.  DKTMP
    var data = {username: username, sha3_password: sha3_password, remember_f: remember_f, add_team_member_f: add_team_member_f};
+   if (add_team_member_f) {
+      data.previous_username = document_qwiz_username;
+   }
    qqc.jjax (qname, i_deck, deckdata[i_deck].qrecord_id, 'login', data);
 }
 
@@ -1879,7 +1889,7 @@ this.login_ok = function (i_deck, session_id, remember_f) {
    // session, good for whole site.  Value set by server.  Callback script also
    // saves session ID as global (document) variable document_qwiz_session_id.
    if (remember_f == 1) {
-      $.cookie ('qwiz_session_id', session_id, {path: '/'});
+      $.cookie ('qwiz_session_id', document_qwiz_session_id, {path: '/'});
    }
 
    // Set flag, record time.
