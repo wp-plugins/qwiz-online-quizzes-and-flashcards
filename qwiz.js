@@ -2,6 +2,8 @@
  * Version 3.00 2015-??-??
  * Team login.
  * Login timeout.
+ * Check that attributes have a value given in double quotes.
+ * Set textentry minlength for short answer choices.
  *
  * Version 2.29 2015-04-26
  * Word-wrap normal for labels (problem in Firefox).
@@ -854,7 +856,7 @@ function process_qwiz_pair (htm, i_qwiz) {
    // If "qrecord_id=..." present, parse out database ID.  Set flag indicating
    // one or more quizzes subject to recording.  Set up array to save question
    // text.
-   var qrecord_id = qqc.get_attr (attributes, 'qrecord_id');
+   var qrecord_id = get_attr (attributes, 'qrecord_id');
    if (qrecord_id) {
       qwizdata[i_qwiz].qrecord_id = qrecord_id;
       qwizdata[i_qwiz].q_and_a_text = {};
@@ -1171,7 +1173,7 @@ function create_qwiz_divs (i_qwiz, qwiz_tag, htm, exit_html) {
 
 
    // If "repeat_incorrect=..." present, parse out true/false.
-   var repeat_incorrect_value = qqc.get_attr (attributes, 'repeat_incorrect');
+   var repeat_incorrect_value = get_attr (attributes, 'repeat_incorrect');
    qwizdata[i_qwiz].repeat_incorrect_b = repeat_incorrect_value != 'false';
    if (debug[0]) {
       console.log ('[create_qwiz_divs] repeat_incorrect_value:', repeat_incorrect_value, ', repeat_incorrect_b:', qwizdata[i_qwiz].repeat_incorrect_b);
@@ -1179,7 +1181,7 @@ function create_qwiz_divs (i_qwiz, qwiz_tag, htm, exit_html) {
 
 
    // If "random=..." present, parse out true/false.
-   var random = qqc.get_attr (attributes, 'random');
+   var random = get_attr (attributes, 'random');
    qwizdata[i_qwiz].random_b = random == 'true';
    if (debug[0]) {
       console.log ('[create_qwiz_divs] random:', random, ', random_b:', qwizdata[i_qwiz].random_b);
@@ -1435,7 +1437,7 @@ function process_topics (i_qwiz, question_tags) {
 
          // Look for "topic=" attribute.
          attributes = qqc.replace_smart_quotes (attributes);
-         var question_topics = qqc.get_attr (attributes, 'topic');
+         var question_topics = get_attr (attributes, 'topic');
          if (question_topics) {
             if (debug[4]) {
                console.log ('[process_topics] question_topics: ', question_topics);
@@ -1838,9 +1840,27 @@ function display_question (i_qwiz, i_question) {
          }
 
          // Set minlength for autocomplete suggestions for this question.
-         var minlength = qwizdata[i_qwiz].textentry[i_question].textentry_minlength;
+         var question = qwizdata[i_qwiz].textentry[i_question];
+         var minlength = question.textentry_minlength;
+         var correct_answer_length = question.first_correct_answer.length;
+         if (correct_answer_length < minlength) {
+            minlength = correct_answer_length;
+         }
          $ ('#textentry-qwiz' + i_qwiz + '-q' + i_question).autocomplete ('option', 'minLength', minlength);
 
+         // Also set placeholder now.
+         var placeholder;
+         if (minlength <= 1) {
+            placeholder = T ('Type a character');
+         } else {
+            minlength = Math.max (minlength, 3);
+            placeholder = T ('Type %s+ chars, then select from list');
+            placeholder = placeholder.replace ('%s', minlength);
+         }
+         $ ('#textentry-qwiz' + i_qwiz + '-q' + i_question).attr ('placeholder', placeholder);
+
+         // Needed in find_matching_terms ().
+         question.textentry_minlength = minlength;
       } else {
 
          // ....................................................................
@@ -2127,15 +2147,16 @@ function process_textentry (i_qwiz, i_question, htm, opening_tags) {
          // Look for "plural=" attribute.  Match regular double-quote, or
          // left- or right-double-quote.
          attributes = qqc.replace_smart_quotes (attributes);
-         textentry_plural_b = qqc.get_attr (attributes, 'plural') == 'true';
+         textentry_plural_b = get_attr (attributes, 'plural') == 'true';
 
          // "minlength=" attribute.
-         textentry_minlength = qqc.get_attr (attributes, 'minlength');
+         textentry_minlength = get_attr (attributes, 'minlength');
       }
    }
 
-   // Replace [textentry] with input textbox.
-   new_htm = new_htm.replace (/\[textentry([^\]]*)\]/, '<input type="text" id="textentry-qwiz' + i_qwiz + '-q' + i_question + '" class="qwiz_textentry" placeholder="' + T ('Type chars, then select from list') + '" onfocus="' + qname + '.set_textentry_i_qwiz (this)" />');
+   // Replace [textentry] with input textbox.  Placeholder will be set later (in
+   // display_question ()).
+   new_htm = new_htm.replace (/\[textentry([^\]]*)\]/, '<input type="text" id="textentry-qwiz' + i_qwiz + '-q' + i_question + '" class="qwiz_textentry" onfocus="' + qname + '.set_textentry_i_qwiz (this)" />');
 
    // Look for choices and feedback (interleaved only, feedback optional).
    // Save as data, delete here.
@@ -2359,7 +2380,7 @@ function process_qwizzled (i_qwiz, i_question, question_htm, opening_tags,
          // Look for "labels=" attribute.  Match regular double-quote, or
          // left- or right-double-quote.
          attributes = qqc.replace_smart_quotes (attributes);
-         labels_position = qqc.get_attr (attributes, 'labels');
+         labels_position = get_attr (attributes, 'labels');
          labels_position = labels_position.toLowerCase ();
          if (debug[0]) {
             console.log ('[process_qwizzled] labels_position:', labels_position);
@@ -3185,9 +3206,9 @@ function canned_feedback (correct_b) {
 var find_matching_terms = function (request, response) {
 
    // If no separate intro page, and this is first question, hide qwiz icon.
-   if (qwizdata[textentry_i_qwiz].i_question == 0 
-                         && (no_intro_b[textentry_i_qwiz] 
-                             || qwizdata[textentry_i_qwiz].n_questions == 1)) {
+   var i_question = qwizdata[textentry_i_qwiz].i_question;
+   if (i_question == 0 && (   no_intro_b[textentry_i_qwiz] 
+                           || qwizdata[textentry_i_qwiz].n_questions == 1)) {
       $ ('div.qwiz div#icon_qwiz' + textentry_i_qwiz).hide ();
    }
 
@@ -3202,6 +3223,7 @@ var find_matching_terms = function (request, response) {
    // matches.
    var required_entry_length = 100;
    var required_metaphone_length = 100;
+   var minlength = qwizdata[textentry_i_qwiz].textentry[i_question].textentry_minlength;
    for (var i=0; i<textentry_answer_metaphones[textentry_i_qwiz].length; i++) {
       if (entry[0] == textentry_answers[textentry_i_qwiz][i][0].toLowerCase ()) {
          required_entry_length = Math.min (required_entry_length, textentry_answers[textentry_i_qwiz][i].length);
@@ -3216,9 +3238,11 @@ var find_matching_terms = function (request, response) {
          }
       }
    }
-   if (required_entry_length != 100) {
+   if (required_entry_length == 100) {
+      required_entry_length = minlength;
+   } else {
       required_entry_length -= 2;
-      required_entry_length = Math.min (3, required_entry_length);
+      required_entry_length = Math.min (minlength, required_entry_length);
    }
 
    if (required_metaphone_length != 100) {
@@ -3245,7 +3269,8 @@ var find_matching_terms = function (request, response) {
          console.log ('[find_matching_terms] request.term:', request.term,', entry_metaphone:', entry_metaphone, ', entry_metaphone.length:', entry_metaphone.length);
       }
       textentry_matches[textentry_i_qwiz] = $.map (current_question_textentry_terms_metaphones[textentry_i_qwiz], function (term_i) {
-         if (term_i[1].indexOf (entry_metaphone) === 0 || term_i[0].toLowerCase ().indexOf (entry) === 0) {
+         if ((entry_metaphone != '' && term_i[1].indexOf (entry_metaphone) === 0)
+                            || term_i[0].toLowerCase ().indexOf (entry) === 0) {
             if (debug[5]) {
                console.log ('[find_matching_terms] term_i:', term_i);
             }
@@ -3266,8 +3291,7 @@ var find_matching_terms = function (request, response) {
    if (debug[5]) {
       console.log ('[find_matching_terms] deduped_entry.length: ', deduped_entry.length, ', textentry_matches[textentry_i_qwiz].length: ', textentry_matches[textentry_i_qwiz].length, ', qwizdata[textentry_i_qwiz].textentry_n_hints: ', qwizdata[textentry_i_qwiz].textentry_n_hints);
    }
-   if (deduped_entry.length >= 3 && qwizdata[textentry_i_qwiz].textentry_n_hints < 5) {
-      var i_question = qwizdata[textentry_i_qwiz].i_question;
+   if (deduped_entry.length >= minlength && qwizdata[textentry_i_qwiz].textentry_n_hints < 5) {
       var lc_first_correct_answer = qwizdata[textentry_i_qwiz].textentry[i_question].first_correct_answer.toLowerCase ();
       if (typeof (lc_textentry_matches[textentry_i_qwiz]) == 'undefined'
             || lc_textentry_matches[textentry_i_qwiz].indexOf (lc_first_correct_answer) == -1) {
@@ -3649,6 +3673,15 @@ this.sign_out = function () {
    // Reset menus to reflect current (logged-out) state.  Flag to NOT start
    // bouncing icons.
    qqc.set_user_menus_and_icons (true);
+}
+
+
+// -----------------------------------------------------------------------------
+function get_attr (htm, attr_name) {
+   var attr_value = qqc.get_attr (htm, attr_name, qwizdata);
+   errmsgs = errmsgs.concat (qwizdata.additional_errmsgs);
+
+   return attr_value;
 }
 
 

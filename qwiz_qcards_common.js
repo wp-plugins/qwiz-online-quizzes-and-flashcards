@@ -456,16 +456,21 @@ this.remove_tags_eols = function (htm) {
 
 
 // -----------------------------------------------------------------------------
-this.get_attr = function (htm, attr_name) {
+this.get_attr = function (htm, attr_name, qdata) {
 
+   qdata.additional_errmsgs = [];
    var attr_value = '';
 
    // get_attr () is always preceded by replace_smart_quotes (), so can just
    // handle regular quotes.
-   var attr_re = new RegExp (attr_name + '\\s*=\\s*"([^"]+)"', 'm');
+   var attr_re = new RegExp (attr_name + '\\s*=\\s*("([^"]+)")*', 'm');
    var attr_match = htm.match (attr_re);
    if (attr_match) {
-      attr_value = qqc.trim (attr_match[1]);
+      if (attr_match[2]) {
+         attr_value = qqc.trim (attr_match[2]);
+      } else {
+         qdata.additional_errmsgs.push (qqc.T ('Did not get value (inside double quotation marks) with') + ' ' + attr_name + qqc.T (' in') + ' ' + htm);
+      }
    }
 
    return attr_value;

@@ -2,6 +2,9 @@
  * Version 3.00 2015-??-??
  * Team login.
  * Login timeout.
+ * Check that attributes have a value given in double quotes.
+ * textentry minlength= option.
+ * Set textentry minlength for short answer choices.
  *
  * Version 2.29 2015-04-26
  * topic= implemented.
@@ -427,7 +430,7 @@ function init_textentry_autocomplete (i_deck, i_card) {
                                   return [answer, qqc.metaphone (answer)];
                                });
    if (debug[6]) {
-      console.log ('[display_question] textentry_answers_metaphones: ', textentry_answers_metaphones);
+      console.log ('[init_textentry_autocomplete] textentry_answers_metaphones: ', textentry_answers_metaphones);
    }
    current_card_textentry_terms_metaphones[i_deck] = current_card_textentry_terms_metaphones[i_deck].concat (textentry_answers_metaphones);
 
@@ -436,13 +439,34 @@ function init_textentry_autocomplete (i_deck, i_card) {
       = qqc.sort_dedupe_terms_metaphones (current_card_textentry_terms_metaphones[i_deck]);
 
    if (debug[6]) {
-      console.log ('[display_question] current_card_textentry_terms_metaphones[i_deck].length: ', current_card_textentry_terms_metaphones[i_deck].length);
-      console.log ('[display_question] current_card_textentry_terms_metaphones[i_deck].slice (0, 10): ', current_card_textentry_terms_metaphones[i_deck].slice (0, 10));
+      console.log ('[init_textentry_autocomplete] current_card_textentry_terms_metaphones[i_deck].length: ', current_card_textentry_terms_metaphones[i_deck].length);
+      console.log ('[init_textentry_autocomplete] current_card_textentry_terms_metaphones[i_deck].slice (0, 10): ', current_card_textentry_terms_metaphones[i_deck].slice (0, 10));
       var i_start = current_card_textentry_terms_metaphones[i_deck].length - 10;
       if (i_start > 0) {
-         console.log ('[display_question] current_card_textentry_terms_metaphones[i_deck].slice (' + i_start + '): ', current_card_textentry_terms_metaphones[i_deck].slice (i_start));
+         console.log ('[init_textentry_autocomplete] current_card_textentry_terms_metaphones[i_deck].slice (' + i_start + '): ', current_card_textentry_terms_metaphones[i_deck].slice (i_start));
       }
    }
+
+   // Set minlength for autocomplete suggestions for this card.
+   var minlength = card.textentry_minlength;
+   if (card.all_choices[0].length < minlength) {
+      minlength = card.all_choices[0].length;
+   }
+   $ ('#textentry-qdeck' + i_deck).autocomplete ('option', 'minLength', minlength);
+
+   // Set placeholder now.
+   var placeholder;
+   if (minlength <= 1) {
+      placeholder = T ('Type a character, then select from list');
+   } else {
+      minlength = Math.max (minlength, 3);
+      placeholder = T ('Type %s+ chars, then select from list');
+      placeholder = placeholder.replace ('%s', minlength);
+   }
+   $ ('#textentry-qdeck' + i_deck).attr ('placeholder', placeholder);
+
+   // Needed in find_matching_terms ().
+   card.textentry_minlength = minlength;
 }
 
 
@@ -479,7 +503,7 @@ function process_qdeck_pair (htm, i_deck) {
       console.log ('[process_qdeck_pair] qdeck_tag: ', qdeck_tag);
       console.log ('[process_qdeck_pair] attributes: ', attributes);
    }
-   var qrecord_id = qqc.get_attr (attributes, 'qrecord_id');
+   var qrecord_id = get_attr (attributes, 'qrecord_id');
    if (qrecord_id) {
       deckdata[i_deck].qrecord_id = qrecord_id;
       deckdata[i_deck].q_and_a_text = {};
@@ -779,8 +803,9 @@ function process_textentry (i_deck, i_card, htm, opening_tags) {
    // Start with any opening tags that preceded "[q]" tag.
    var card_front_html = opening_tags + htm;
 
-   // Look for [textentry], see if plurals specified..
+   // Look for [textentry], see if plurals specified or minlength specified.
    var textentry_plural_b = false;
+   var textentry_minlength = 3;
    var m = htm.match (/\[textentry([^\]]*)\]/m);
    if (! m) {
       errmsgs.push (T ('Free-form input choices [c] or [c*] card does not have [textentry]'));
@@ -791,13 +816,17 @@ function process_textentry (i_deck, i_card, htm, opening_tags) {
          // Look for "plural=" attribute.  Match regular double-quote, or
          // left- or right-double-quote.
          attributes = qqc.replace_smart_quotes (attributes);
-         textentry_plural_b = qqc.get_attr (attributes, 'plural') == 'true';
+         textentry_plural_b = get_attr (attributes, 'plural') == 'true';
+
+         // "minlength=" attribute.
+         textentry_minlength = get_attr (attributes, 'minlength');
       }
    }
 
    // Replace [textentry] with input textbox and (hidden, initially) hint button.
+   // Placeholder will be set later (in init_textentry_autocomplete ()).
    var input_and_button_htm =   '<div class="qcard_textentry">\n'
-                              +    '<input type="text" id="textentry-qdeck' + i_deck + '" class="qcard_textentry qdeck_textentry_autocomplete" placeholder="' + T ('Type chars, then select from list') + '" onfocus="' + qname + '.set_textentry_i_deck (this)" />\n'
+                              +    '<input type="text" id="textentry-qdeck' + i_deck + '" class="qcard_textentry qdeck_textentry_autocomplete" onfocus="' + qname + '.set_textentry_i_deck (this)" />\n'
                               +    '<button id="textentry_hint-qdeck' + i_deck + '" class="qbutton textentry_hint" onclick="' + qname + '.textentry_hint (' + i_deck + ')" disabled>'
                               +        T ('Hint')
                               +    '</button>\n'
@@ -835,6 +864,7 @@ function process_textentry (i_deck, i_card, htm, opening_tags) {
    // this.flip () > textentry_set_card_back () depending on text entered.
    card.choices = [];
    card.textentry_plural_b = textentry_plural_b;
+   card.textentry_minlength = textentry_minlength;
    card.feedback_htmls = [];
    card.all_choices = [];
    card.card_back = '';
@@ -1206,7 +1236,7 @@ function create_qdeck_divs (i_deck, qdeck_tag) {
       }
 
       // If "random=..." present, parse out true/false.
-      var random = qqc.get_attr (attributes, 'random');
+      var random = get_attr (attributes, 'random');
       deckdata[i_deck].random_b = random == 'true';
       if (debug[0]) {
          console.log ('[create_qdeck_divs] random:', random, ', random_b:', deckdata[i_deck].random_b);
@@ -1297,7 +1327,7 @@ function process_topics (i_deck, card_tags) {
 
          // Look for "topic=" attribute.
          attributes = qqc.replace_smart_quotes (attributes);
-         var card_topics = qqc.get_attr (attributes, 'topic');
+         var card_topics = get_attr (attributes, 'topic');
          if (card_topics) {
             if (debug[4]) {
                console.log ('[process_topics] card_topics: ', card_topics);
@@ -2546,6 +2576,9 @@ var find_matching_terms = function (request, response) {
    // answer metaphone that matches.
    var required_entry_length = 100;
    var required_metaphone_length = 100;
+   var i_card = deckdata[textentry_i_deck].i_card;
+   var card = deckdata[textentry_i_deck].cards[i_card];
+   var minlength = card.textentry_minlength;
    for (var i=0; i<textentry_answer_metaphones[textentry_i_deck].length; i++) {
       if (entry[0] == textentry_answers[textentry_i_deck][i][0].toLowerCase ()) {
          required_entry_length = Math.min (required_entry_length, textentry_answers[textentry_i_deck][i].length);
@@ -2556,13 +2589,15 @@ var find_matching_terms = function (request, response) {
       if (entry_metaphone[0] == textentry_answer_metaphones[textentry_i_deck][i][0]) {
          required_metaphone_length = Math.min (required_metaphone_length, textentry_answer_metaphones[textentry_i_deck][i].length);
          if (debug[6]) {
-            console.log ('[find_matching_terms] textentry_answer_metaphones[textentry_i_deck][i]:', textentry_answer_metaphones[textentry_i_deck][i], ', required_metaphone_length:', required_metaphone_length);
+            console.log ('[find_matching_terms] textentry_answer_metaphones[textentry_i_deck][' + i + ']:', textentry_answer_metaphones[textentry_i_deck][i], ', textentry_answers[textentry_i_deck][' + i + '][0]:', textentry_answers[textentry_i_deck][i][0], ', required_metaphone_length:', required_metaphone_length);
          }
       }
    }
-   if (required_entry_length != 100) {
+   if (required_entry_length == 100) {
+      required_entry_length = minlength;
+   } else {
       required_entry_length -= 2;
-      required_entry_length = Math.min (3, required_entry_length);
+      required_entry_length = Math.min (minlength, required_entry_length);
    }
 
    if (required_metaphone_length != 100) {
@@ -2588,7 +2623,8 @@ var find_matching_terms = function (request, response) {
          console.log ('[find_matching_terms] request.term:', request.term, entry_metaphone, entry_metaphone.length);
       }
       textentry_matches[textentry_i_deck] = $.map (current_card_textentry_terms_metaphones[textentry_i_deck], function (term_i) {
-         if (term_i[1].indexOf (entry_metaphone) === 0 || term_i[0].toLowerCase ().indexOf (entry) === 0) {
+         if ((entry_metaphone != '' && term_i[1].indexOf (entry_metaphone) === 0)
+                              || term_i[0].toLowerCase ().indexOf (entry) === 0) {
             if (debug[6]) {
                console.log ('[find_matching_terms] term_i:', term_i);
             }
@@ -2609,9 +2645,7 @@ var find_matching_terms = function (request, response) {
    if (debug[6]) {
       console.log ('[find_matching_terms] deduped_entry.length: ', deduped_entry.length, ', textentry_matches[textentry_i_deck].length: ', textentry_matches[textentry_i_deck].length, ', deckdata[textentry_i_deck].textentry_n_hints: ', deckdata[textentry_i_deck].textentry_n_hints);
    }
-   if (deduped_entry.length >= 3 && deckdata[textentry_i_deck].textentry_n_hints < 5) {
-      var i_card = deckdata[textentry_i_deck].i_card;
-      var card = deckdata[textentry_i_deck].cards[i_card];
+   if (deduped_entry.length >= minlength && deckdata[textentry_i_deck].textentry_n_hints < 5) {
       var lc_first_choice = card.all_choices[0];
       if (typeof (lc_textentry_matches[textentry_i_deck]) == 'undefined'
             || lc_textentry_matches[textentry_i_deck].indexOf (lc_first_choice) == -1) {
@@ -2681,6 +2715,15 @@ this.keep_next_button_active = function () {
    next_button_active_b = true;
    $ ('button.got_it').attr ('disabled', false).removeClass ('qbutton_disabled').addClass ('qbutton');
 
+}
+
+
+// -----------------------------------------------------------------------------
+function get_attr (htm, attr_name) {
+   var attr_value = qqc.get_attr (htm, attr_name, deckdata);
+   errmsgs = errmsgs.concat (deckdata.additional_errmsgs);
+
+   return attr_value;
 }
 
 
