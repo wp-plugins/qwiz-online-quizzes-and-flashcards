@@ -1780,7 +1780,7 @@ function get_login_html (i_deck, add_team_member_f) {
    }
    login_html +=
           '</p>\n'
-     +    '<table border="0" align="center">'
+     +    '<table border="0" align="center" style="width: auto;">'
      +       '<tr>'
      +          '<td>'
      +             '<label for="qdeck_username-qdeck' + i_deck + '">'+ T ('User name') + '</label>'
@@ -1812,7 +1812,7 @@ function get_login_html (i_deck, add_team_member_f) {
              T ('No thanks')
      +    '</button>'
      +    '<br />'
-     +    '<span class="qdeck-remember" title="' + T ('Save preference (do not use on shared computer)') + '"><span><input type="checkbox" /></span> ' + T ('Remember') + '</span>';
+     +    '<span class="qdeck-remember" title="' + T ('Save preference (do not use on shared computer)') + '"><label><span><input type="checkbox" /></span> ' + T ('Remember') + '</label></span>';
    }
    login_html +=
           '<p class="login_error">'
@@ -1885,12 +1885,16 @@ this.login = function (i_deck, add_team_member_f) {
 // -----------------------------------------------------------------------------
 this.login_ok = function (i_deck, session_id, remember_f) {
 
-   // Success.  If flag set, create session cookie.  Valid just for this 
-   // session, good for whole site.  Value set by server.  Callback script also
-   // saves session ID as global (document) variable document_qwiz_session_id.
+   // Success.  Create session cookie, valid for this session, or -- if flag
+   // set -- 1 day, good for whole site.  Value set by server.  Callback 
+   // script also saves session ID as global (document) variable
+   // document_qwiz_session_id.
+   var options = {path: '/'};
    if (remember_f == 1) {
-      $.cookie ('qwiz_session_id', document_qwiz_session_id, {path: '/'});
+      options.expires = 1;
    }
+   $.cookie ('qwiz_session_id', document_qwiz_session_id, options);
+   
 
    // Set flag, record time.
    document_qwiz_user_logged_in_b = true;
@@ -2558,7 +2562,7 @@ var find_matching_terms = function (request, response) {
    }
    if (required_entry_length != 100) {
       required_entry_length -= 2;
-      required_entry_length = Math.min (5, required_entry_length);
+      required_entry_length = Math.min (3, required_entry_length);
    }
 
    if (required_metaphone_length != 100) {
@@ -2605,11 +2609,12 @@ var find_matching_terms = function (request, response) {
    if (debug[6]) {
       console.log ('[find_matching_terms] deduped_entry.length: ', deduped_entry.length, ', textentry_matches[textentry_i_deck].length: ', textentry_matches[textentry_i_deck].length, ', deckdata[textentry_i_deck].textentry_n_hints: ', deckdata[textentry_i_deck].textentry_n_hints);
    }
-   if (deduped_entry.length >= 5 && deckdata[textentry_i_deck].textentry_n_hints < 5) {
+   if (deduped_entry.length >= 3 && deckdata[textentry_i_deck].textentry_n_hints < 5) {
       var i_card = deckdata[textentry_i_deck].i_card;
       var card = deckdata[textentry_i_deck].cards[i_card];
       var lc_first_choice = card.all_choices[0];
-      if (lc_textentry_matches[textentry_i_deck].indexOf (lc_first_choice) == -1) {
+      if (typeof (lc_textentry_matches[textentry_i_deck]) == 'undefined'
+            || lc_textentry_matches[textentry_i_deck].indexOf (lc_first_choice) == -1) {
          $ ('#textentry_hint-qdeck' + textentry_i_deck).removeAttr ('disabled').removeClass ('qbutton_disabled').addClass ('qbutton').show ();
       }
    }

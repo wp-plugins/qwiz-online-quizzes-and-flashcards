@@ -1544,7 +1544,7 @@ function set_mult_targets_indicator (label_obj) {
 
       // Increment.  Remove existing class, add incremented.
       var current_class = m[0];
-      var n_targets = parseInt (m[1]);
+      var n_targets = parseInt (m[1], 10);
       if (debug[0]) {
          console.log ('[set_mult_targets_indicator] current_class:', current_class, ', n_targets:', n_targets);
       }
@@ -2397,7 +2397,7 @@ function T (string) {
 function time_id () {
    var now = new Date ();
    var now_millisec = now.getTime ();
-   return parseInt (now_millisec / 1000.0);
+   return parseInt (now_millisec / 1000.0, 10);
 }
 
 

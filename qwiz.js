@@ -500,7 +500,7 @@ function init_qwizzled (content_obj, local_n_qwizzes) {
          console.log ('[init_qwizzled] id:', id);
       }
       var fields = id.split ('-');
-      var i_qwiz     = parseInt (fields[0].substr (4));
+      var i_qwiz     = parseInt (fields[0].substr (4), 10);
       if (debug[0]) {
          console.log ('                i_qwiz:', i_qwiz);
       }
@@ -522,7 +522,6 @@ function init_textentry_autocomplete () {
 
    $ ('.qwiz_textentry').keyup (menu_closed);
 }
-
 
 
 // -----------------------------------------------------------------------------
@@ -639,7 +638,7 @@ this.label_dropped = function (target_obj, label_obj) {
          // Either decrement targets remaining, or, if only one left, remove
          // class.
          var current_n_targets = m[0];
-         var n_targets = parseInt (m[1]);
+         var n_targets = parseInt (m[1], 10);
          var current_n_targets = m[0];
          if (n_targets == 2) {
 
@@ -1389,7 +1388,7 @@ function get_login_html (i_qwiz, add_team_member_f) {
             T ('No thanks')
      +   '</button>'
      +   '<br />'
-     +   '<span class="qwiz-remember" title="' + T ('Save preference (do not use on shared computer)') + '"><span><input type="checkbox" /></span> ' + T ('Remember') + '</span>';
+     +   '<span class="qwiz-remember" title="' + T ('Save preference (do not use on shared computer)') + '"><label><span><input type="checkbox" /></span> ' + T ('Remember') + '</label></span>';
    }
    login_div_html +=
          '<p class="login_error">'
@@ -2523,7 +2522,7 @@ function process_qwizzled (i_qwiz, i_question, question_htm, opening_tags,
 
       // Create a div for each.
       feedback_divs.push (
-            create_feedback_div_html (i_qwiz, i_question, parseInt (i_item/2),
+            create_feedback_div_html (i_qwiz, i_question, parseInt (i_item/2, 10),
                                       feedback_item_html, c_x)
       );
       i_item++;
@@ -2956,7 +2955,7 @@ this.process_choice = function (feedback_id) {
 
    // Qwiz number.  Non-greedy search.
    var qwiz_id = feedback_id.match (/(.*?)-/)[1];
-   i_qwiz = parseInt (qwiz_id.substr (4));
+   i_qwiz = parseInt (qwiz_id.substr (4), 10);
    if (debug[0]) {
       console.log ('[process_choice] feedback_id: ', feedback_id, ', qwizq_id: ', qwizq_id, ', i_qwiz: ', i_qwiz);
    }
@@ -3219,7 +3218,7 @@ var find_matching_terms = function (request, response) {
    }
    if (required_entry_length != 100) {
       required_entry_length -= 2;
-      required_entry_length = Math.min (5, required_entry_length);
+      required_entry_length = Math.min (3, required_entry_length);
    }
 
    if (required_metaphone_length != 100) {
@@ -3267,10 +3266,11 @@ var find_matching_terms = function (request, response) {
    if (debug[5]) {
       console.log ('[find_matching_terms] deduped_entry.length: ', deduped_entry.length, ', textentry_matches[textentry_i_qwiz].length: ', textentry_matches[textentry_i_qwiz].length, ', qwizdata[textentry_i_qwiz].textentry_n_hints: ', qwizdata[textentry_i_qwiz].textentry_n_hints);
    }
-   if (deduped_entry.length >= 5 && qwizdata[textentry_i_qwiz].textentry_n_hints < 5) {
+   if (deduped_entry.length >= 3 && qwizdata[textentry_i_qwiz].textentry_n_hints < 5) {
       var i_question = qwizdata[textentry_i_qwiz].i_question;
       var lc_first_correct_answer = qwizdata[textentry_i_qwiz].textentry[i_question].first_correct_answer.toLowerCase ();
-      if (lc_textentry_matches[textentry_i_qwiz].indexOf (lc_first_correct_answer) == -1) {
+      if (typeof (lc_textentry_matches[textentry_i_qwiz]) == 'undefined'
+            || lc_textentry_matches[textentry_i_qwiz].indexOf (lc_first_correct_answer) == -1) {
          $ ('#textentry_check_answer_div-qwiz' + textentry_i_qwiz + ' button.qwiz_textentry_hint').removeAttr ('disabled').removeClass ('qbutton_disabled').addClass ('qbutton').show ();
       }
    }
@@ -3396,7 +3396,9 @@ this.textentry_hint = function (i_qwiz) {
 
    var i_question = qwizdata[i_qwiz].i_question;
    var textentry_hint_val = qwizdata[i_qwiz].textentry[i_question].first_correct_answer.substr (0, qwizdata[i_qwiz].textentry_n_hints);
-   $ ('#textentry-qwiz' + i_qwiz + '-q' + i_question).val (textentry_hint_val).focus ();
+
+   // Also show suggestions for hint, if any.
+   $ ('#textentry-qwiz' + i_qwiz + '-q' + i_question).val (textentry_hint_val).focus ().trigger ('keydown');
 
    // Disable hint button, reset label.
    $ ('#textentry_check_answer_div-qwiz' + i_qwiz + ' button.qwiz_textentry_hint').attr ('disabled', true).removeClass ('qbutton').addClass ('qbutton_disabled').html ('Add. hint');
@@ -3529,16 +3531,22 @@ this.login = function (i_qwiz, add_team_member_f) {
 // -----------------------------------------------------------------------------
 this.login_ok = function (i_qwiz, session_id, remember_f) {
 
-   // Success.  If flag set, create session cookie.  Valid just for this 
-   // session, good for whole site.  Value set by server.  Callback script also
-   // saves session ID as global (document) variable document_qwiz_session_id.
+   // Success.  Create session cookie, valid for this session, or -- if flag
+   // set -- 1 day, good for whole site.  Value set by server.  Callback 
+   // script also saves session ID as global (document) variable
+   // document_qwiz_session_id.
+   var options = {path: '/'};
    if (remember_f == 1) {
-      $.cookie ('qwiz_session_id', document_qwiz_session_id, {path: '/'});
+      options.expires = 1;
    }
+   $.cookie ('qwiz_session_id', document_qwiz_session_id, options);
 
    // Set flag, record time.
    document_qwiz_user_logged_in_b = true;
    document_qwiz_current_login_sec = new Date ().getTime ()/1000.0;
+   if (debug[0]) {
+      console.log ('[login_ok] document_qwiz_current_login_sec:', document_qwiz_current_login_sec);
+   }
 
    // Set user menus.
    qqc.set_user_menus_and_icons ();

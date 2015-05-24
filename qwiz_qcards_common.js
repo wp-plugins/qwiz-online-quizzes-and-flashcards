@@ -155,14 +155,16 @@ this.set_user_menus_and_icons = function (sign_out_f) {
 
       icon_color = 'green';
 
-      // Logged in.  No animation for no-intro quizzes icon.
+      // Since logged in, no animation for no-intro quizzes icon.
       $ ('div.qwiz-usermenu_icon_no_intro').removeClass ('qwiz-icon-bounce');
+
    } else {
 
+      // Not logged in.
       // Note: breaks before and after items -- make logged-out menu as big as
       // logged-in menu, so when click "Sign out" cursor is still on menu (and
       // mouseleave will work).
-      // Not logged in: login menu item.
+      // Login menu item.
       htm +=    '<br />'
              +  '<div  onclick="qname.display_login (i_qwiz)">'
              +     '<a href="javascript: qname.display_login (i_qwiz)">'
@@ -175,7 +177,7 @@ this.set_user_menus_and_icons = function (sign_out_f) {
              +     '<a href="javascript: qname.icon_no_login (i_qwiz)">'
              +        '<strong>' + qqc.T ('No thanks') + '</strong>'
              +     '</a>'
-             +     ' &nbsp;<span class="qwiz-remember" title="' + qqc.T ('Skip login in the future') + '"><span><input type="checkbox" /></span> ' + qqc.T ('Remember') + '</span>'
+             +     ' &nbsp;<span class="qwiz-remember" title="' + qqc.T ('Skip login in the future') + '"><label><span><input type="checkbox" /></span> ' + qqc.T ('Remember') + '</label></span>'
              +  '</div>'
              +  '<br />';
 
