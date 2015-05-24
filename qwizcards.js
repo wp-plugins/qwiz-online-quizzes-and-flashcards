@@ -352,15 +352,23 @@ function process_html () {
 // Set up [textentry] autocomplete for this card.
 function init_textentry_autocomplete (i_deck, i_card) {
 
-   $ ('.qdeck_textentry_autocomplete').autocomplete ({
-      minLength:     3,
+   // Set minlength for autocomplete suggestions for this card.
+   var card = deckdata[i_deck].cards[i_card];
+   var minlength = card.textentry_minlength;
+   if (card.all_choices[0].length < minlength) {
+      minlength = card.all_choices[0].length;
+   }
+   //$ ('#textentry-qdeck' + i_deck).autocomplete ('option', 'minLength', minlength);
+
+   $ ('#textentry-qdeck' + i_deck).autocomplete ({
+      minLength:     minlength,
       source:        find_matching_terms,
       close:         menu_closed,
       open:          menu_shown,
       select:        item_selected
    });
 
-   $ ('.qdeck_textentry_autocomplete').keyup (menu_closed);
+   $ ('#textentry-qdeck' + i_deck).keyup (menu_closed);
 
    // Gray out "Check answer"/"Flip" button, but leave enabled -- click will
    // print alert rather than do flip.  Also provide alert text as title.
@@ -396,8 +404,6 @@ function init_textentry_autocomplete (i_deck, i_card) {
    // (1) default or specific to this flashcard deck; plus (2) additional terms
    // for this deck, if any; and (3) specified entries for this [textentry].
    // Singular or plural in each case.
-   var card = deckdata[i_deck].cards[i_card];
-
    var singular_plural;
    if (card.textentry_plural_b) {
       singular_plural = 'plural';
@@ -446,13 +452,6 @@ function init_textentry_autocomplete (i_deck, i_card) {
          console.log ('[init_textentry_autocomplete] current_card_textentry_terms_metaphones[i_deck].slice (' + i_start + '): ', current_card_textentry_terms_metaphones[i_deck].slice (i_start));
       }
    }
-
-   // Set minlength for autocomplete suggestions for this card.
-   var minlength = card.textentry_minlength;
-   if (card.all_choices[0].length < minlength) {
-      minlength = card.all_choices[0].length;
-   }
-   $ ('#textentry-qdeck' + i_deck).autocomplete ('option', 'minLength', minlength);
 
    // Set placeholder now.
    var placeholder;
@@ -826,7 +825,7 @@ function process_textentry (i_deck, i_card, htm, opening_tags) {
    // Replace [textentry] with input textbox and (hidden, initially) hint button.
    // Placeholder will be set later (in init_textentry_autocomplete ()).
    var input_and_button_htm =   '<div class="qcard_textentry">\n'
-                              +    '<input type="text" id="textentry-qdeck' + i_deck + '" class="qcard_textentry qdeck_textentry_autocomplete" onfocus="' + qname + '.set_textentry_i_deck (this)" />\n'
+                              +    '<input type="text" id="textentry-qdeck' + i_deck + '" class="qcard_textentry" onfocus="' + qname + '.set_textentry_i_deck (this)" />\n'
                               +    '<button id="textentry_hint-qdeck' + i_deck + '" class="qbutton textentry_hint" onclick="' + qname + '.textentry_hint (' + i_deck + ')" disabled>'
                               +        T ('Hint')
                               +    '</button>\n'

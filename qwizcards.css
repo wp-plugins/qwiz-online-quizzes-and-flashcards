@@ -156,12 +156,17 @@ div.qcard_card {
    position:            relative;
 }
 
-.qcard_textentry {
+div.qcard_textentry {
    display:             inline-block;
    position:            relative;
    width:               240px;
    font-weight:         bold;
    color:               blue;
+}
+
+input.qcard_textentry {
+   width:               228px;
+   padding:             5px;
 }
 
 div.card_back_textentry {
@@ -203,7 +208,7 @@ input.qcard_textentry:-ms-input-placeholder {
 
 button.textentry_hint {
    position:            absolute;
-   right:               2px;
+   right:               0px;
    top:                 50%;
    transform:           translateY(-50%);
    font-size:           11px;
