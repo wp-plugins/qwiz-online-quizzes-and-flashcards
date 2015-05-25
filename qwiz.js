@@ -1854,7 +1854,7 @@ function display_question (i_qwiz, i_question) {
             placeholder = T ('Type a character');
          } else {
             minlength = Math.max (minlength, 3);
-            placeholder = T ('Type %s+ chars, then select from list');
+            placeholder = T ('Type %s+ letters/numbers, then select');
             placeholder = placeholder.replace ('%s', minlength);
          }
          $ ('#textentry-qwiz' + i_qwiz + '-q' + i_question).attr ('placeholder', placeholder);
@@ -3268,10 +3268,22 @@ var find_matching_terms = function (request, response) {
       if (debug[5]) {
          console.log ('[find_matching_terms] request.term:', request.term,', entry_metaphone:', entry_metaphone, ', entry_metaphone.length:', entry_metaphone.length);
       }
-      textentry_matches[textentry_i_qwiz] = $.map (current_question_textentry_terms_metaphones[textentry_i_qwiz], function (term_i) {
-         if ((entry_metaphone != '' && term_i[1].indexOf (entry_metaphone) === 0)
-                            || term_i[0].toLowerCase ().indexOf (entry) === 0) {
-            if (debug[5]) {
+      textentry_matches[textentry_i_qwiz] 
+            = $.map (current_question_textentry_terms_metaphones[textentry_i_qwiz], 
+                     function (term_i) {
+         var ok_f;
+         if (entry_metaphone == '') {
+
+            // A number, or perhaps other non-alpha characters.  Match similar
+            // terms.
+            ok_f = term_i[1] == '' 
+                             || term_i[0].toLowerCase ().indexOf (entry) === 0;
+         } else {
+            ok_f = term_i[1].indexOf (entry_metaphone) === 0
+                             || term_i[0].toLowerCase ().indexOf (entry) === 0;
+         }
+         if (ok_f) {
+            if (debug[6]) {
                console.log ('[find_matching_terms] term_i:', term_i);
             }
             return term_i[0];
