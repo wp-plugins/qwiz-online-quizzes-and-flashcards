@@ -5,6 +5,8 @@
  * Check that attributes have a value given in double quotes.
  * textentry minlength= option.
  * Set textentry minlength for short answer choices.
+ * Let zero-length entry metaphones match zero-length term metaphones.
+ * Required-input textentry "Check answer" text changes with entry state.
  *
  * Version 2.29 2015-04-26
  * topic= implemented.
@@ -358,9 +360,9 @@ function init_textentry_autocomplete (i_deck, i_card) {
    if (card.all_choices[0].length < minlength) {
       minlength = card.all_choices[0].length;
    }
-   //$ ('#textentry-qdeck' + i_deck).autocomplete ('option', 'minLength', minlength);
 
-   $ ('#textentry-qdeck' + i_deck).autocomplete ({
+   var $textentry = $ ('#textentry-qdeck' + i_deck);
+   $textentry.autocomplete ({
       minLength:     minlength,
       source:        find_matching_terms,
       close:         menu_closed,
@@ -368,7 +370,7 @@ function init_textentry_autocomplete (i_deck, i_card) {
       select:        item_selected
    });
 
-   $ ('#textentry-qdeck' + i_deck).keyup (menu_closed);
+   $textentry.keyup (menu_closed);
 
    // Gray out "Check answer"/"Flip" button, but leave enabled -- click will
    // print alert rather than do flip.  Also provide alert text as title.
@@ -453,16 +455,25 @@ function init_textentry_autocomplete (i_deck, i_card) {
       }
    }
 
-   // Set placeholder now.
+   // Set placeholder now.  Also reset "Check answer" button.
    var placeholder;
+   var check_answer;
    if (minlength <= 1) {
-      placeholder = T ('Type a character, then select from list');
+      placeholder = T ('Type a letter/number, then select');
+      check_answer = T ('Type a letter');
    } else {
       minlength = Math.max (minlength, 3);
       placeholder = T ('Type %s+ letters/numbers, then select');
       placeholder = placeholder.replace ('%s', minlength);
+
+      check_answer = T ('Type %s+ letters');
+      check_answer = check_answer.replace ('%s', minlength);
    }
-   $ ('#textentry-qdeck' + i_deck).attr ('placeholder', placeholder);
+   $textentry.attr ('placeholder', placeholder);
+   $ ('button.flip-qdeck' + i_deck).html (check_answer);
+
+   // Save for this.flip ().
+   card.check_answer = check_answer;
 
    // Needed in find_matching_terms ().
    card.textentry_minlength = minlength;
@@ -1015,12 +1026,12 @@ this.textentry_hint = function (i_deck) {
    var i_card = deckdata[i_deck].i_card;
    var card = deckdata[i_deck].cards[i_card];
    var textentry_hint = card.all_choices[0].substr (0, deckdata[i_deck].textentry_n_hints);
-   var textentry_obj = $ ('#textentry-qdeck' + i_deck);
-   textentry_obj.val (textentry_hint).focus ();
+   var $textentry = $ ('#textentry-qdeck' + i_deck);
+   $textentry.val (textentry_hint).focus ();
 
    // Trigger search on entry -- handles hints that don't match anything (grays
    // "Check answer"/"Flip") and those that do.
-   textentry_obj.autocomplete ('search');
+   $textentry.autocomplete ('search');
 }
 
 
@@ -1674,6 +1685,7 @@ this.process_card = function (i_deck) {
    }
 };
 
+
 // -----------------------------------------------------------------------------
 function done (i_deck) {
 
@@ -2043,8 +2055,10 @@ this.flip = function (i_deck) {
       return;
    }
 
-   var textentry_obj = $ ('#textentry-qdeck' + i_deck);
-   var front_obj = $ ('#qcard_card-qdeck' + i_deck + ' div.front');
+   var i_card = deckdata[i_deck].i_card;
+   var card = deckdata[i_deck].cards[i_card];
+   var $textentry = $ ('#textentry-qdeck' + i_deck);
+   var $front = $ ('#qcard_card-qdeck' + i_deck + ' div.front');
 
    var set_front_back;
    if (deckdata[i_deck].showing_front_b) {
@@ -2067,12 +2081,11 @@ this.flip = function (i_deck) {
       // superscripts and subscripts (!) (shows through in Safari, Chrome,
       // "flashing" in Chrome on Mac).  Closure for setTimeout ().
       var hideFrontElements = function () {
-         front_obj.css ('visibility', 'hidden');
-         front_obj.find ('sup, sub').css ('visibility', 'hidden');
+         $front.css ('visibility', 'hidden');
+         $front.find ('sup, sub').css ('visibility', 'hidden');
       }
 
       // Hide qwiz icon/link.
-      var i_card = deckdata[i_deck].i_card;
       if (i_card == 0) {
          $ ('div.qcard_window div#icon_qdeck' + i_deck).hide ();
       }
@@ -2109,13 +2122,12 @@ this.flip = function (i_deck) {
       }
 
       // If there's a text entry box...
-      if (textentry_obj.length) {
+      if ($textentry.length) {
 
          // Hide it (shows through in Safari, Chrome, "flashing" in Chrome on
          // Mac).
-         textentry_obj.css ('visibility', 'hidden');
+         $textentry.css ('visibility', 'hidden');
 
-         var card = deckdata[i_deck].cards[i_card];
          if (card.textentry_required_b) {
 
             // Find with which choice the user textentry is associated, set card
@@ -2125,7 +2137,7 @@ this.flip = function (i_deck) {
 
             // If something entered in text box, then set back-side element to
             // what was entered.
-            var textentry = textentry_obj.val ();
+            var textentry = $textentry.val ();
             if (textentry) {
 
                // Show what was within square brackets, insert user entry.
@@ -2145,20 +2157,20 @@ this.flip = function (i_deck) {
    } else {
       set_front_back = 'front';
 
-      // "Flip"/"Check answer" button - for front, change back.
-      $ ('button.flip-qdeck' + i_deck).html (T ('Flip'));
-
+      // "Flip"/"Check answer" button - for front, change back to current
+      // setting (might be "Type 3+ letters" for required-input textentry).
+      $ ('button.flip-qdeck' + i_deck).html (card.check_answer);
    }
 
    deckdata[i_deck].el_flip.trigger ('click');
 
    // Closure for setTimeout ().
    var showFrontElements = function () {
-      if (textentry_obj.length) {
-         textentry_obj.css ('visibility', 'visible');
+      if ($textentry.length) {
+         $textentry.css ('visibility', 'visible');
       }
-      front_obj.css ('visibility', 'visible');
-      front_obj.find ('sup, sub').css ('visibility', 'visible');
+      $front.css ('visibility', 'visible');
+      $front.find ('sup, sub').css ('visibility', 'visible');
    };
 
    // Doing explicit show/hide for whole front back -- Chrome seemed to 
@@ -2239,10 +2251,16 @@ this.set_card_front_and_back = function (i_deck, i_card) {
       }
    }
 
-   // Set focus to textentry box, if there is one.  Don't do if first card and
-   // no intro (avoid scrolling page to this flashcard deck).
-   if (i_card != 0 || ! no_intro_b[i_deck]) {
-      $('#textentry-qdeck' + i_deck).focus ();
+   // Reset value of textentry box, if there is one.
+   var $textentry = $('#textentry-qdeck' + i_deck);
+   if ($textentry.length) {
+      $textentry.val ('');
+
+      // Set focus to textentry box.  Don't do if first card and no intro
+      // (avoid scrolling page to this flashcard deck).
+      if (i_card != 0 || ! no_intro_b[i_deck]) {
+         $textentry.focus ();
+      }
    }
 
    // If textentry with required input/autocomplete set up autocomplete (since
@@ -2253,8 +2271,9 @@ this.set_card_front_and_back = function (i_deck, i_card) {
    } else {
 
       // In case previous card was textentry with required input, set button
-      // title back to default, make sure flag set.
-      $ ('button.flip-qdeck' + i_deck).attr ('title', T ('Show the other side'));
+      // text and title back to defaults, and reset saved text.
+      $ ('button.flip-qdeck' + i_deck).html (T ('Flip')).attr ('title', T ('Show the other side'));
+      card.check_answer = T ('Flip');
    }
 
    // How soon does new html show?  Test.
@@ -2293,8 +2312,8 @@ function textentry_set_card_back (i_deck, card) {
 
    // See with which choice the user textentry is associated, make div for
    // feedback for that choice visible.  Hide others.
-   var textentry_obj = $ ('#textentry-qdeck' + i_deck);
-   var entry = textentry_obj.val ();
+   var $textentry = $ ('#textentry-qdeck' + i_deck);
+   var entry = $textentry.val ();
 
    // See if entry among choices; identify default choice ("*").
    var i_choice = -1;
@@ -2703,20 +2722,34 @@ function menu_shown (e) {
    if (lc_textentry_matches[textentry_i_deck].indexOf (lc_first_choice) != -1) {
       $ ('#textentry_hint-qdeck' + textentry_i_deck).attr ('disabled', true).removeClass ('qbutton').addClass ('qbutton_disabled');
    }
+
+   // Enable/disable "Flip/Check answer", and toggle button text between
+   // "Flip/Check answer" and "Type 3+ letters" or alternative.
    if (lc_textentry_matches[textentry_i_deck].indexOf (lc_entry) != -1) {
-      $ ('button.flip-qdeck' + textentry_i_deck).removeAttr ('disabled').removeClass ('qbutton_disabled').addClass ('qbutton');
+      $ ('button.flip-qdeck' + textentry_i_deck)
+         .removeAttr ('disabled')
+         .removeClass ('qbutton_disabled')
+         .addClass ('qbutton')
+         .html (T ('Flip'));
       deckdata[textentry_i_deck].check_answer_disabled_b = false;
    } else {
-      $ ('button.flip-qdeck' + textentry_i_deck).removeClass ('qbutton').addClass ('qbutton_disabled');
+      $ ('button.flip-qdeck' + textentry_i_deck)
+         .removeClass ('qbutton')
+         .addClass ('qbutton_disabled')
+         .html (card.check_answer);
       deckdata[textentry_i_deck].check_answer_disabled_b = true;
    }
 }
 
 
 // -----------------------------------------------------------------------------
-// When item selected, enable check answer.
+// When item selected, enable check answer and set text.
 function item_selected () {
-   $ ('button.flip-qdeck' + textentry_i_deck).removeAttr ('disabled').removeClass ('qbutton_disabled').addClass ('qbutton');
+   $ ('button.flip-qdeck' + textentry_i_deck)
+      .removeAttr ('disabled')
+      .removeClass ('qbutton_disabled')
+      .addClass ('qbutton')
+      .html (T ('Flip'));
    deckdata[textentry_i_deck].check_answer_disabled_b = false;
 }
 

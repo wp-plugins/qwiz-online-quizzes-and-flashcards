@@ -4,6 +4,8 @@
  * Login timeout.
  * Check that attributes have a value given in double quotes.
  * Set textentry minlength for short answer choices.
+ * Let zero-length entry metaphones match zero-length term metaphones.
+ * Required-input textentry "Check answer" text changes with entry state.
  *
  * Version 2.29 2015-04-26
  * Word-wrap normal for labels (problem in Firefox).
@@ -1776,11 +1778,18 @@ function display_question (i_qwiz, i_question) {
          check_answer_obj.find ('button.qwiz_textentry_hint').html ('Hint').hide ();
          check_answer_obj.show ();
 
-         // Set focus to textentry box, if there is one.  Don't do if first
-         // question and no intro (avoid scrolling page to this quiz).
-         if (i_question != 0 || ! no_intro_b[i_qwiz]) {
-            $ ('#textentry-qwiz' + i_qwiz + '-q' + i_question).val ('').focus ();
+         // Reset value of textentry box, if there is one.
+         var $textentry = $ ('#textentry-qwiz' + i_qwiz + '-q' + i_question);
+         if ($textentry.length) {
+            $textentry.val ('');
+            
+            // Set focus to textentry box.  Don't do if first question and no
+            // intro (avoid scrolling page to this quiz).
+            if (i_question != 0 || ! no_intro_b[i_qwiz]) {
+               $textentry.focus ();
+            }
          }
+
 
          qwizdata[i_qwiz].check_answer_disabled_b = true;
          qwizdata[i_qwiz].textentry_n_hints = 0;
@@ -1846,18 +1855,27 @@ function display_question (i_qwiz, i_question) {
          if (correct_answer_length < minlength) {
             minlength = correct_answer_length;
          }
-         $ ('#textentry-qwiz' + i_qwiz + '-q' + i_question).autocomplete ('option', 'minLength', minlength);
+         $textentry.autocomplete ('option', 'minLength', minlength);
 
-         // Also set placeholder now.
+         // Set placeholder now.  Also reset "Check answer" button.
          var placeholder;
+         var check_answer;
          if (minlength <= 1) {
-            placeholder = T ('Type a character');
+            placeholder = T ('Type a letter/number');
+            check_answer = T ('Type a letter');
          } else {
             minlength = Math.max (minlength, 3);
             placeholder = T ('Type %s+ letters/numbers, then select');
             placeholder = placeholder.replace ('%s', minlength);
+
+            check_answer = T ('Type %s+ letters');
+            check_answer = check_answer.replace ('%s', minlength);
          }
-         $ ('#textentry-qwiz' + i_qwiz + '-q' + i_question).attr ('placeholder', placeholder);
+         $textentry.attr ('placeholder', placeholder);
+         $ ('#textentry_check_answer_div-qwiz' + i_qwiz + ' button.textentry_check_answer').html (check_answer);
+
+         // Save.
+         qwizdata[i_qwiz].check_answer = check_answer;
 
          // Needed in find_matching_terms ().
          question.textentry_minlength = minlength;
@@ -3326,7 +3344,10 @@ function menu_closed (e) {
          console.log ('[menu_closed] textentry_matches[textentry_i_qwiz]: ', textentry_matches[textentry_i_qwiz]);
       }
       if (lc_textentry_matches[textentry_i_qwiz].indexOf (lc_entry) == -1) {
-         $ ('#textentry_check_answer_div-qwiz' + textentry_i_qwiz + ' button.textentry_check_answer').removeClass ('qbutton').addClass ('qbutton_disabled');
+         $ ('#textentry_check_answer_div-qwiz' + textentry_i_qwiz + ' button.textentry_check_answer')
+            .removeClass ('qbutton')
+            .addClass ('qbutton_disabled')
+            .html (qwizdata[textentry_i_qwiz].check_answer);
          qwizdata[textentry_i_qwiz].check_answer_disabled_b = true;
       }
    }
@@ -3347,13 +3368,22 @@ function menu_shown (e) {
    var i_question = qwizdata[textentry_i_qwiz].i_question;
    var lc_first_correct_answer = qwizdata[textentry_i_qwiz].textentry[i_question].first_correct_answer.toLowerCase ();
    if (lc_textentry_matches[textentry_i_qwiz].indexOf (lc_first_correct_answer) != -1) {
-      $ ('#textentry_check_answer_div-qwiz' + textentry_i_qwiz + ' button.qwiz_textentry_hint').attr ('disabled', true).removeClass ('qbutton').addClass ('qbutton_disabled');
+      $ ('#textentry_check_answer_div-qwiz' + textentry_i_qwiz + ' button.qwiz_textentry_hint')
+         .attr ('disabled', true)
+         .removeClass ('qbutton')
+         .addClass ('qbutton_disabled');
    }
    if (lc_textentry_matches[textentry_i_qwiz].indexOf (lc_entry) != -1) {
-      $ ('#textentry_check_answer_div-qwiz' + textentry_i_qwiz + ' button.textentry_check_answer').removeClass ('qbutton_disabled').addClass ('qbutton');
+      $ ('#textentry_check_answer_div-qwiz' + textentry_i_qwiz + ' button.textentry_check_answer')
+         .removeClass ('qbutton_disabled')
+         .addClass ('qbutton')
+         .html (T ('Check answer'));
       qwizdata[textentry_i_qwiz].check_answer_disabled_b = false;
    } else {
-      $ ('#textentry_check_answer_div-qwiz' + textentry_i_qwiz + ' button.textentry_check_answer').removeClass ('qbutton').addClass ('qbutton_disabled');
+      $ ('#textentry_check_answer_div-qwiz' + textentry_i_qwiz + ' button.textentry_check_answer')
+         .removeClass ('qbutton')
+         .addClass ('qbutton_disabled')
+         .html (qwizdata[textentry_i_qwiz].check_answer);
       qwizdata[textentry_i_qwiz].check_answer_disabled_b = true;
    }
 }
@@ -3455,9 +3485,12 @@ this.set_textentry_i_qwiz = function (input_el) {
 
 
 // -----------------------------------------------------------------------------
-// When item selected, enable check answer.
+// When item selected, enable check answer and set text.
 function item_selected () {
-   $ ('#textentry_check_answer_div-qwiz' + textentry_i_qwiz + ' button.textentry_check_answer').removeClass ('qbutton_disabled').addClass ('qbutton');
+   $ ('#textentry_check_answer_div-qwiz' + textentry_i_qwiz + ' button.textentry_check_answer')
+      .removeClass ('qbutton_disabled')
+      .addClass ('qbutton')
+      .html (T ('Check answer'));
    qwizdata[textentry_i_qwiz].check_answer_disabled_b = false;
 }
 
