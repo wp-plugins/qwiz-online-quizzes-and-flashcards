@@ -166,7 +166,7 @@ this.set_user_menus_and_icons = function (sign_out_f) {
       // mouseleave will work).
       // Login menu item.
       htm +=    '<br />'
-             +  '<div  onclick="qname.display_login (i_qwiz)">'
+             +  '<div>'
              +     '<a href="javascript: qname.display_login (i_qwiz)">'
              +        '<strong>' + qqc.T ('Log in') + '</strong> ' + qqc.T ('to record/get credit')
              +     '</a>'

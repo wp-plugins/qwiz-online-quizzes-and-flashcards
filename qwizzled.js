@@ -951,7 +951,7 @@ this.label_clicked = function (local_el_label_div) {
       // Selecting text within question div will involve mouseup, which we can
       // process.  First turn off any previous event handler (just want to 
       // do function call once!).
-      qwizzled_question_obj.off ('mouseup', q.target_text_selected);
+      qwizzled_question_obj.off ('mouseup');
       qwizzled_question_obj.on ('mouseup', q.target_text_selected);
    }
 }
@@ -1101,7 +1101,7 @@ this.target_text_selected = function (e) {
    }
 
    // Turn off further selects.
-   qwizzled_question_obj.off ('mouseup', q.target_text_selected);
+   qwizzled_question_obj.off ('mouseup');
 
    if (! waiting_for_target_select_b) {
       return false;

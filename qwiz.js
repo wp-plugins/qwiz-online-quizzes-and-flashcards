@@ -6,6 +6,8 @@
  * Set textentry minlength for short answer choices.
  * Let zero-length entry metaphones match zero-length term metaphones.
  * Required-input textentry "Check answer" text changes with entry state.
+ * <Enter> works for "Check answer", "Next question", and "Login".
+ * A feedback item entered after all choices is feedback for every choice.
  *
  * Version 2.29 2015-04-26
  * Word-wrap normal for labels (problem in Firefox).
@@ -164,6 +166,7 @@ debug.push (false);    // 2 - feedback html.
 debug.push (false);    // 3 - old/new html dump.
 debug.push (false);    // 4 - question tags/topics.
 debug.push (false);    // 5 - [textentry] / autocomplete.
+debug.push (false);    // 6 - Enter -> click.
 
 var $ = jQuery;
 
@@ -213,6 +216,8 @@ var Tcheck_answer_message;
 
 var qrecord_b = false;
 var q_and_a_text = '';
+
+var active_qwiz;
 
 // -----------------------------------------------------------------------------
 $ (document).ready (function () {
@@ -378,6 +383,20 @@ function process_html () {
             if (qwizzled_b) {
                init_qwizzled ($ (this), local_n_qwizzes);
             }
+
+            // Mouseenter for this quiz records it as the active qwiz.
+            $ (this).find ('div.qwiz').on ('mouseenter', 
+                                            function (e) {
+                                               if (debug[6]) {
+                                                  console.log ('[qwiz mouseenter] e.target:', e.target);
+                                               }
+
+                                               // Gets off after usermenu open/
+                                               // close.
+                                               if (e.target.tagName.toLowerCase () == 'div') {
+                                                  active_qwiz = e.target;
+                                               }
+                                            });
          }
 
          // If wrapper divs, unwrap.
@@ -387,6 +406,10 @@ function process_html () {
       }
       n_qwizzes = i_qwiz;
    });
+
+   // Set up Enter key intercept -- trigger appropriate button press
+   // (Next question, Check answer, Login).
+   init_enter_intercept ();
 
    // If any quizzes subject to recording, set user menus -- if this comes after
    // check_session_id () callback, it will properly set the menus (while the
@@ -430,24 +453,24 @@ function process_html () {
 
 
 // -----------------------------------------------------------------------------
-function init_qwizzled (content_obj, local_n_qwizzes) {
+function init_qwizzled ($content, local_n_qwizzes) {
 
    // Targets no longer draggable (from qwizzled create/edit step).
    // Also reset borders.
-   content_obj.find ('td.qwizzled_canvas .qwizzled_target').removeClass ('ui-draggable ui-draggable-handle').css ({'border-style': 'dotted', 'border-color': 'gray'});
+   $content.find ('td.qwizzled_canvas .qwizzled_target').removeClass ('ui-draggable ui-draggable-handle').css ({'border-style': 'dotted', 'border-color': 'gray'});
 
    // Remove resizing handle divs.
-   content_obj.find ('td.qwizzled_canvas .qwizzled_target div.ui-resizable-handle').remove ();
+   $content.find ('td.qwizzled_canvas .qwizzled_target div.ui-resizable-handle').remove ();
 
    // Image-linked targets need border-width.
-   content_obj.find ('div.qwizzled_image div.qwizzled_target').css ('border-width', '2px');
+   $content.find ('div.qwizzled_image div.qwizzled_target').css ('border-width', '2px');
 
    // Eliminate label borders.
-   content_obj.find ('.qwizzled_highlight_label').css ('border', 'none');
+   $content.find ('.qwizzled_highlight_label').css ('border', 'none');
 
    // Everything within label (such as <strong> or <sup>) needs to override
    // WordPress word-wrap: break-word setting.
-   content_obj.find ('.qwizzled_highlight_label *').css ('word-wrap', 'normal');
+   $content.find ('.qwizzled_highlight_label *').css ('word-wrap', 'normal');
 
    // (Setting up drag-and-drop here doesn't stick -- perhaps WordPress cancels
    // events.  Done by init_drag_and_drop () when first mouseover a qwizzled
@@ -456,7 +479,7 @@ function init_qwizzled (content_obj, local_n_qwizzes) {
    // Resize image wrappers.  Find images inside wrappers, get width, set
    // wrapper to match.  (Wrapper was small for "tight" fit during editing,
    // but here small wrapper causes image to shrink for some reason.)
-   content_obj.find ('.qwizzled_image img').each (function () {
+   $content.find ('.qwizzled_image img').each (function () {
       var img_width_px = $ (this).attr ('width');
       if (debug[0]) {
          console.log ('[init_qwizzled] img_width_px:', img_width_px);
@@ -496,7 +519,7 @@ function init_qwizzled (content_obj, local_n_qwizzes) {
       }
    }
 
-   content_obj.find ('div.qwizzled').each (function () {
+   $content.find ('div.qwizzled').each (function () {
 
       // Get qwiz number from id -- id looks like "qwiz0-q0".
       var id = $ (this).attr ('id');
@@ -510,6 +533,39 @@ function init_qwizzled (content_obj, local_n_qwizzes) {
       }
       qwizdata[i_qwiz].qwizzled[id] = $ (this).clone (true);
    });
+}
+
+
+// -----------------------------------------------------------------------------
+function init_enter_intercept () {
+
+   // For page, listen for keydown.  If Enter, trigger one of the appropriate
+   // buttons, based on which is currently visible.
+   $ ('html').on ('keydown', 
+                  function (e) {
+                     if (active_qwiz && e.keyCode == 13) {
+                        if (debug[6]) {
+                            console.log ('[init_enter_intercept] keyCode 13, active_qwiz:', active_qwiz);
+                        }
+                        var $active_qwiz = $ (active_qwiz);
+                        if ($active_qwiz.find ('div.next_button').is (':visible')) {
+                           if (debug[6]) {
+                               console.log ('[init_enter_intercept] next_button trigger');
+                           }
+                           $active_qwiz.find ('div.next_button button').trigger ('click');
+                        } else if ($active_qwiz.find ('div.textentry_check_answer_div').is (':visible')) {
+                           if (debug[6]) {
+                               console.log ('[init_enter_intercept] check_answer trigger');
+                           }
+                           $active_qwiz.find ('div.textentry_check_answer_div button.textentry_check_answer').trigger ('click');
+                        } else if ($active_qwiz.find ('div.qwiz-login').is (':visible')) {
+                           if (debug[6]) {
+                               console.log ('[init_enter_intercept] login_button trigger');
+                           }
+                           $active_qwiz.find ('div.qwiz-login button.login_button').trigger ('click');
+                        }
+                     }
+                  });
 }
 
 
@@ -1333,11 +1389,11 @@ function create_qwiz_divs (i_qwiz, qwiz_tag, htm, exit_html) {
    }
    bottom_html += '</div>';
 
-   // This qwiz closing div.
-   bottom_html += '</div>\n';
 
    // Add opening and closing html.
-   htm = top_html + progress_div_html + login_div + htm + bottom_html;
+   htm = top_html + progress_div_html + login_div
+         + htm + bottom_html
+         + '</div>\n';  // This qwiz closing div.
 
    return htm;
 }
@@ -1378,7 +1434,7 @@ function get_login_html (i_qwiz, add_team_member_f) {
      +         '</td>'
      +      '<tr>'
      +   '</table>\n'
-     +   '<button class="qbutton" onclick="' + qname + '.login (' + i_qwiz + ',' + add_team_member_f + ')">'
+     +   '<button class="qbutton login_button" onclick="' + qname + '.login (' + i_qwiz + ',' + add_team_member_f + ')">'
      +      T ('Login')
      +   '</button>'
      +   '&emsp;'
@@ -1772,11 +1828,11 @@ function display_question (i_qwiz, i_question) {
          // Show "Check answer" and "Hint" buttons.  "Check answer" starts out
          // gray (but not actually disabled, so click provides alert message).
          // Hint starts out not visible.
-         var check_answer_obj = $ ('#textentry_check_answer_div-qwiz' + i_qwiz);
-         check_answer_obj.find ('button.textentry_check_answer').removeClass ('qbutton').addClass ('qbutton_disabled');
+         var $check_answer = $ ('#textentry_check_answer_div-qwiz' + i_qwiz);
+         $check_answer.find ('button.textentry_check_answer').removeClass ('qbutton').addClass ('qbutton_disabled');
          qwizdata[i_qwiz].check_answer_disabled_b = true;
-         check_answer_obj.find ('button.qwiz_textentry_hint').html ('Hint').hide ();
-         check_answer_obj.show ();
+         $check_answer.find ('button.qwiz_textentry_hint').html ('Hint').hide ();
+         $check_answer.show ();
 
          // Reset value of textentry box, if there is one.
          var $textentry = $ ('#textentry-qwiz' + i_qwiz + '-q' + i_question);
@@ -1962,6 +2018,7 @@ function process_question (i_qwiz, i_question, htm, opening_tags) {
    var choice_next_tags  = ['[c]', '[c*]', '[x]'];
 
    var got_feedback_b = false;
+   var one_for_all_f = false;
    var feedback_divs = [];
    var i_choice_correct = 0;
    for (var i_choice=0; i_choice<n_choices; i_choice++) {
@@ -1980,13 +2037,12 @@ function process_question (i_qwiz, i_question, htm, opening_tags) {
 
          // If this is the last choice, and didn't previously get feedback
          // with choices, then may have all feedback items together following
-         // choice items (backwards compatibility).
+         // choice items (backwards compatibility) or, if only one feedback
+         // item, use same feedback for all choices.
          if (i_choice == n_choices-1 && ! got_feedback_b && n_choices != 1) {
 
-            // Assume just got feedback for the first choice.  Create an empty
-            // div for the last choice.
+            // Assume just got feedback for the first choice.
             feedback_divs[0] = r.feedback_div;
-            feedback_divs.push ('');
 
             // Look for rest.
             var n_feedback_items = 1;
@@ -2001,18 +2057,17 @@ function process_question (i_qwiz, i_question, htm, opening_tags) {
                n_feedback_items++;
             }
 
-            // Either got just one feedback item (for last choice),
-            // or should get one item for each choice.
+            // Either got just one feedback item (which we'll use for all
+            // choices), or should get one item for each choice.
             if (n_feedback_items == 1) {
 
-               // Move that item to the last choice.
-               feedback_divs[n_choices-1] = feedback_divs[0];
-               feedback_divs[0] = '';
+               // Set flag to use for all choices.
+               one_for_all_f = true;
             } else {
 
                // Check got them all.
                if (n_feedback_items != n_choices) {
-                  errmsgs.push (T ('Number of feedback items does not match number of choices') + ': qwiz ' + (1 + i_qwiz) + ', ' + T('question') + ' ' + (1 + i_question));
+                  errmsgs.push (T ('Number of feedback items is not just one (same feedback for all choices) and does not match number of choices (different feedback for each choice)') + ': qwiz ' + (1 + i_qwiz) + ', ' + T('question') + ' ' + (1 + i_question));
                } else {
 
                   // First feedback item needs to have ID updated to indicate
@@ -2038,6 +2093,9 @@ function process_question (i_qwiz, i_question, htm, opening_tags) {
 
          // No feedback given for this choice.  Record with empty "div".
          feedback_divs.push ('');
+      }
+      if (debug[2]) {
+         console.log ('[process_question] feedback_divs:', feedback_divs);
       }
 
       if (n_choices > 1) {
@@ -2106,12 +2164,21 @@ function process_question (i_qwiz, i_question, htm, opening_tags) {
    }
 
    // ..........................................................................
-   // Create canned feedback for any empty feedback items
+   // If just given one feedback item after all choices, use that feedback
+   // for all choices.  Otherwise, create canned feedback for any empty
+   // feedback items.
    for (var i_choice=0; i_choice<n_choices; i_choice++) {
-      if (! feedback_divs[i_choice]) {
-         var response = canned_feedback (i_choice == i_choice_correct);
-         feedback_divs[i_choice] = create_feedback_div_html (i_qwiz, i_question,
-                                                             i_choice, response);
+      if (one_for_all_f) {
+
+         // Reset ID to match choice.
+         feedback_divs[i_choice] = feedback_divs[0].replace (/(qwiz[0-9]+-q[0-9]+-a)[0-9]+/, '\$1' + i_choice);
+      } else {
+         if (! feedback_divs[i_choice]) {
+            var response = canned_feedback (i_choice == i_choice_correct);
+            feedback_divs[i_choice]
+                                = create_feedback_div_html (i_qwiz, i_question,
+                                                            i_choice, response);
+         }
       }
    }
 
@@ -3504,6 +3571,9 @@ this.keep_next_button_active = function () {
 
 // -----------------------------------------------------------------------------
 this.display_login = function (i_qwiz, add_team_member_f) {
+   if (debug[6]) {
+      console.log ('[display_login]');
+   }
 
    // Close menu in case came from there.
    $ ('#usermenu-qwiz' + i_qwiz).hide ();
@@ -3525,6 +3595,15 @@ this.display_login = function (i_qwiz, add_team_member_f) {
          $ ('div.qwiz div#icon_qwiz' + i_qwiz).hide ();
       }
    } else {
+
+      // Don't show textentry "Check answer" button if showing.  Record state.
+      $textentry_check_answer_div = $ ('#textentry_check_answer_div-qwiz' + i_qwiz);
+      if ($textentry_check_answer_div.is (':visible')) {
+         $textentry_check_answer_div.hide ();
+         qwizdata[i_qwiz].textentry_check_answer_show_b = true;
+      } else {
+         qwizdata[i_qwiz].textentry_check_answer_show_b = false;
+      }
 
       // Hide current question.
       $ ('#qwiz' + i_qwiz + '-q' + qwizdata[i_qwiz].i_question).hide ();
@@ -3648,6 +3727,11 @@ this.login_ok = function (i_qwiz, session_id, remember_f) {
       if (qwizdata[i_qwiz].next_button_show_b) {
          $ ('#next_button-qwiz' + i_qwiz).show ();
       }
+
+      // Show textentry "Check answer" button if was showing.
+      if (qwizdata[i_qwiz].textentry_check_answer_show_b) {
+         $ ('#textentry_check_answer_div-qwiz' + i_qwiz).show ();
+      }
    }
 }
 
@@ -3666,8 +3750,8 @@ this.login_not_ok = function (i_qwiz) {
 // -----------------------------------------------------------------------------
 this.no_login = function (i_qwiz) {
 
-   // Skip login.  Hide login, go to first question.  If checkbox checked, set
-   // cookie and local flag to skip in the future.
+   // Skip login.  Hide login.  If checkbox checked, set cookie and local flag
+   // to skip in the future.
    if ($ ('#qwiz_login-qwiz' + i_qwiz + ' input[type="checkbox"]').prop('checked')) {
       $.cookie ('qwiz_declined_login', 1, {path: '/'});
       document_qwiz_declined_login_b = true;
@@ -3677,7 +3761,24 @@ this.no_login = function (i_qwiz) {
    $ ('div.qwiz-usermenu_icon_no_intro').removeClass ('qwiz-icon-bounce');
 
    $ ('#qwiz_login-qwiz' + i_qwiz).hide ();
-   q.next_question (i_qwiz, true);
+
+   // If on intro, go to next question.  Otherwise, show current question.
+   var i_question = qwizdata[i_qwiz].i_question;
+   if (i_question == -1) {
+      q.next_question (i_qwiz, true);
+   } else {
+      $ ('#qwiz' + i_qwiz + '-q' + i_question).show ();
+
+      // Show next button if was showing.
+      if (qwizdata[i_qwiz].next_button_show_b) {
+         $ ('#next_button-qwiz' + i_qwiz).show ();
+      }
+
+      // Show textentry "Check answer" button if was showing.
+      if (qwizdata[i_qwiz].textentry_check_answer_show_b) {
+         $ ('#textentry_check_answer_div-qwiz' + i_qwiz).show ();
+      }
+   }
 }
 
 
