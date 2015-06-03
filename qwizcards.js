@@ -169,7 +169,6 @@ var Tcheck_answer_message;
 var qrecord_b = false;
 var q_and_a_text = '';
 
-var active_qdeck;
 
 // -----------------------------------------------------------------------------
 $(document).ready (function () {
@@ -333,18 +332,18 @@ function process_html () {
             // Replace content html.
             $ (this).html (new_html);
 
-            // Mouseenter for this deck records it as the active qwiz.
+            // Mouseenter for this deck records it as the active qwiz/deck.
             $ (this).find ('div.qcard_window').on ('mouseenter', 
                                       function (e) {
 
                                          // Make sure have container div.
-                                         active_qdeck = e.target;
+                                         activ = e.target;
                                          if (e.target.className.toLowerCase () != 'qcard_window') {
-                                            active_qdeck = $ (e.target).parents ('div.qcard_window')[0];
+                                            document_active_qwiz_qdeck = $ (e.target).parents ('div.qcard_window')[0];
                                          }
                                          if (debug[7]) {
                                             console.log ('[qcard_window mouseenter] e.target:', e.target);
-                                            console.log ('[qcard_window mouseenter] active_qdeck:', active_qdeck);
+                                            console.log ('[qcard_window mouseenter] document_active_qwiz_qdeck:', document_active_qwiz_qdeck);
                                          }
                                       });
 
@@ -360,7 +359,7 @@ function process_html () {
 
    // Set up Enter key intercept -- trigger appropriate button press
    // (Check answer, Login).
-   init_enter_intercept ();
+   qqc.init_enter_intercept ();
 
    // If any quizzes subject to recording, set user menus -- if this comes after
    // check_session_id () callback, it will properly set the menus (while the
@@ -371,47 +370,6 @@ function process_html () {
 
    // Set flag to display page (qwizscripts.js).
    q.processing_complete_b = true;
-}
-
-
-// -----------------------------------------------------------------------------
-function init_enter_intercept () {
-
-   // For page, listen for keydown.  If Enter, trigger one of the appropriate
-   // buttons, based on which is currently visible.
-   $ ('html').on ('keydown', 
-                  function (e) {
-                     if (debug[7]) {
-                        if (active_qdeck) {
-                            console.log ('[init_enter_intercept] e.keyCode:', e.keyCode);
-                        }
-                     }
-                     if (active_qdeck && e.keyCode == 13) {
-                        if (debug[7]) {
-                            console.log ('[init_enter_intercept] active_qdeck:', active_qdeck);
-                        }
-                        var $active_qdeck = $ (active_qdeck);
-
-                        // Do this first, because don't check visibility of
-                        // "Check answer".
-                        if ($active_qdeck.find ('div.qdeck-login').is (':visible')) {
-                           if (debug[7]) {
-                               console.log ('[init_enter_intercept] login_button trigger');
-                           }
-                           $active_qdeck.find ('div.qdeck-login button.login_button').trigger ('click');
-                        } else if ($active_qdeck.find ('div.qcard_next_buttons button.flip.qbutton').length) {
-
-                           // "Check answer button will not have "qbutton" (instead,
-                           // has "qbutton_disabled" until active.  Same button for
-                           // regular card and textentry input.
-                           if (debug[7]) {
-                               console.log ('[init_enter_intercept] Check answer trigger');
-                               console.log ('[init_enter_intercept] find:', $active_qdeck.find ('div.qcard_next_buttons button.flip'));
-                           }
-                           $active_qdeck.find ('div.qcard_next_buttons button.flip').trigger ('click');
-                        }
-                     }
-                  });
 }
 
 
@@ -2349,8 +2307,8 @@ this.set_card_front_and_back = function (i_deck, i_card) {
    }
 
    // Firefox issue: keydown event disappears after "next card" until this done.
-   if (active_qdeck) {
-      $ (active_qdeck).find ('div.focusable input').focus ().blur ();
+   if (document_active_qwiz_qdeck) {
+      $ (document_active_qwiz_qdeck).find ('div.focusable input').focus ().blur ();
    }
 
    // How soon does new html show?  Test.

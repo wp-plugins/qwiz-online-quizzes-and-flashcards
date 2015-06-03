@@ -3,6 +3,7 @@ var document_qwiz_declined_login_b  = 'not ready';
 var document_qwiz_user_logged_in_b  = 'not ready';
 var document_qwiz_remember_f        = false;
 var document_qwiz_current_login_sec = 0;
+var document_active_qwiz_qdeck = '';
 
 // =============================================================================
 // Isolate namespace.
@@ -18,7 +19,8 @@ var jjax_script_no = 0;
 var head = 'not ready';
 
 var debug = [];
-debug.push (false);    // 0 - general.
+debug[0] = false;    // general.
+debug[7] = false;    // Enter -> click.
 
 
 // -----------------------------------------------------------------------------
@@ -455,6 +457,64 @@ this.remove_tags_eols = function (htm) {
 }
 
 
+// -----------------------------------------------------------------------------
+this.init_enter_intercept = function () {
+
+   // For page, listen for keydown.  If Enter, trigger one of the appropriate
+   // buttons, based on which is currently visible.
+   $ ('html').off ();
+   $ ('html').on ('keydown',
+                  function (e) {
+                     if (document_active_qwiz_qdeck && e.keyCode == 13) {
+                        if (debug[7]) {
+                            console.log ('[init_enter_intercept] document_active_qwiz_qdeck:', document_active_qwiz_qdeck);
+                        }
+                        var $document_active_qwiz_qdeck = $ (document_active_qwiz_qdeck);
+                        if (document_active_qwiz_qdeck.className.toLowerCase () != 'qcard_window') {
+
+                           // Quiz.
+                           if ($document_active_qwiz_qdeck.find ('div.next_button').is (':visible')) {
+                              if (debug[7]) {
+                                  console.log ('[init_enter_intercept] qwiz next_button trigger');
+                              }
+                              $document_active_qwiz_qdeck.find ('div.next_button button').trigger ('click');
+                           } else if ($document_active_qwiz_qdeck.find ('div.textentry_check_answer_div').is (':visible')) {
+                              if (debug[7]) {
+                                  console.log ('[init_enter_intercept] qwiz check_answer trigger');
+                              }
+                              $document_active_qwiz_qdeck.find ('div.textentry_check_answer_div button.textentry_check_answer').trigger ('click');
+                           } else if ($document_active_qwiz_qdeck.find ('div.qwiz-login').is (':visible')) {
+                              if (debug[7]) {
+                                  console.log ('[init_enter_intercept] qwiz login_button trigger');
+                              }
+                              $document_active_qwiz_qdeck.find ('div.qwiz-login button.login_button').trigger ('click');
+                           }
+                        } else {
+
+                           // Flashcard deck.
+                           // Do login first, because don't check visibility of
+                           // "Check answer".
+                           if ($document_active_qwiz_qdeck
+                              .find ('div.qdeck-login').is (':visible')) {
+                              if (debug[7]) {
+                                  console.log ('[init_enter_intercept] qdeck login_button trigger');
+                              }
+                              $document_active_qwiz_qdeck.find ('div.qdeck-login button.login_button').trigger ('click');
+                           } else if ($document_active_qwiz_qdeck.find ('div.qcard_next_buttons button.flip.qbutton').length) {
+
+                              // "Check answer button will not have "qbutton" (instead,
+                              // has "qbutton_disabled" until active.  Same button for
+                              // regular card and textentry input.
+                              if (debug[7]) {
+                                  console.log ('[init_enter_intercept] qdeck Check answer trigger');
+                                  console.log ('[init_enter_intercept] find:', $document_active_qwiz_qdeck.find ('div.qcard_next_buttons button.flip'));
+                              }
+                              $document_active_qwiz_qdeck.find ('div.qcard_next_buttons button.flip').trigger ('click');
+                           }
+                        }
+                     }
+                  });
+}
 // -----------------------------------------------------------------------------
 this.get_attr = function (htm, attr_name, qdata) {
 

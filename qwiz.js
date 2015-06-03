@@ -165,8 +165,9 @@ debug.push (false);    // 1 - radio/choices html.
 debug.push (false);    // 2 - feedback html.
 debug.push (false);    // 3 - old/new html dump.
 debug.push (false);    // 4 - question tags/topics.
-debug.push (false);    // 5 - [textentry] / autocomplete.
-debug.push (false);    // 6 - Enter -> click.
+debug.push (false);    // 5 - unused.
+debug.push (false);    // 6 - [textentry] / autocomplete.
+debug.push (false);    // 7 - Enter -> click.
 
 var $ = jQuery;
 
@@ -216,8 +217,6 @@ var Tcheck_answer_message;
 
 var qrecord_b = false;
 var q_and_a_text = '';
-
-var active_qwiz;
 
 // -----------------------------------------------------------------------------
 $ (document).ready (function () {
@@ -387,14 +386,15 @@ function process_html () {
             // Mouseenter for this quiz records it as the active qwiz.
             $ (this).find ('div.qwiz').on ('mouseenter', 
                                             function (e) {
-                                               if (debug[6]) {
-                                                  console.log ('[qwiz mouseenter] e.target:', e.target);
-                                               }
 
                                                // Gets off after usermenu open/
                                                // close.
                                                if (e.target.tagName.toLowerCase () == 'div') {
-                                                  active_qwiz = e.target;
+                                                  document_active_qwiz_qdeck = e.target;
+                                               }
+                                               if (debug[7]) {
+                                                  console.log ('[qwiz mouseenter] e.target:', e.target);
+                                                  console.log ('[qwiz mouseenter] document_active_qwiz_qdeck:', document_active_qwiz_qdeck);
                                                }
                                             });
          }
@@ -409,7 +409,7 @@ function process_html () {
 
    // Set up Enter key intercept -- trigger appropriate button press
    // (Next question, Check answer, Login).
-   init_enter_intercept ();
+   qqc.init_enter_intercept ();
 
    // If any quizzes subject to recording, set user menus -- if this comes after
    // check_session_id () callback, it will properly set the menus (while the
@@ -533,39 +533,6 @@ function init_qwizzled ($content, local_n_qwizzes) {
       }
       qwizdata[i_qwiz].qwizzled[id] = $ (this).clone (true);
    });
-}
-
-
-// -----------------------------------------------------------------------------
-function init_enter_intercept () {
-
-   // For page, listen for keydown.  If Enter, trigger one of the appropriate
-   // buttons, based on which is currently visible.
-   $ ('html').on ('keydown', 
-                  function (e) {
-                     if (active_qwiz && e.keyCode == 13) {
-                        if (debug[6]) {
-                            console.log ('[init_enter_intercept] keyCode 13, active_qwiz:', active_qwiz);
-                        }
-                        var $active_qwiz = $ (active_qwiz);
-                        if ($active_qwiz.find ('div.next_button').is (':visible')) {
-                           if (debug[6]) {
-                               console.log ('[init_enter_intercept] next_button trigger');
-                           }
-                           $active_qwiz.find ('div.next_button button').trigger ('click');
-                        } else if ($active_qwiz.find ('div.textentry_check_answer_div').is (':visible')) {
-                           if (debug[6]) {
-                               console.log ('[init_enter_intercept] check_answer trigger');
-                           }
-                           $active_qwiz.find ('div.textentry_check_answer_div button.textentry_check_answer').trigger ('click');
-                        } else if ($active_qwiz.find ('div.qwiz-login').is (':visible')) {
-                           if (debug[6]) {
-                               console.log ('[init_enter_intercept] login_button trigger');
-                           }
-                           $active_qwiz.find ('div.qwiz-login button.login_button').trigger ('click');
-                        }
-                     }
-                  });
 }
 
 
@@ -1886,7 +1853,7 @@ function display_question (i_qwiz, i_question) {
             = textentry_answers[i_qwiz].map (function (answer) {
                                         return [answer, qqc.metaphone (answer)];
                                      });
-         if (debug[5]) {
+         if (debug[6]) {
             console.log ('[display_question] textentry_answers_metaphones: ', textentry_answers_metaphones);
          }
          current_question_textentry_terms_metaphones[i_qwiz] = current_question_textentry_terms_metaphones[i_qwiz].concat (textentry_answers_metaphones);
@@ -1895,7 +1862,7 @@ function display_question (i_qwiz, i_question) {
          current_question_textentry_terms_metaphones[i_qwiz]
             = qqc.sort_dedupe_terms_metaphones (current_question_textentry_terms_metaphones[i_qwiz]);
 
-         if (debug[5]) {
+         if (debug[6]) {
             console.log ('[display_question] current_question_textentry_terms_metaphones[i_qwiz].length: ', current_question_textentry_terms_metaphones[i_qwiz].length);
             console.log ('[display_question] current_question_textentry_terms_metaphones[i_qwiz].slice (0, 10): ', current_question_textentry_terms_metaphones[i_qwiz].slice (0, 10));
             var i_start = current_question_textentry_terms_metaphones[i_qwiz].length - 10;
@@ -3299,7 +3266,7 @@ var find_matching_terms = function (request, response) {
 
    var entry = request.term.toLowerCase ();
    var entry_metaphone = qqc.metaphone (entry);
-   if (debug[5]) {
+   if (debug[6]) {
       console.log ('[find_matching_terms] entry_metaphone; ', entry_metaphone);
    }
 
@@ -3312,13 +3279,13 @@ var find_matching_terms = function (request, response) {
    for (var i=0; i<textentry_answer_metaphones[textentry_i_qwiz].length; i++) {
       if (entry[0] == textentry_answers[textentry_i_qwiz][i][0].toLowerCase ()) {
          required_entry_length = Math.min (required_entry_length, textentry_answers[textentry_i_qwiz][i].length);
-         if (debug[5]) {
+         if (debug[6]) {
             console.log ('[find_matching_terms] entry[0]:', entry[0], ', textentry_answers[textentry_i_qwiz][i][0]:', textentry_answers[textentry_i_qwiz][i][0]);
          }
       }
       if (entry_metaphone[0] == textentry_answer_metaphones[textentry_i_qwiz][i][0]) {
          required_metaphone_length = Math.min (required_metaphone_length, textentry_answer_metaphones[textentry_i_qwiz][i].length);
-         if (debug[5]) {
+         if (debug[6]) {
             console.log ('[find_matching_terms] textentry_answer_metaphones[textentry_i_qwiz][i]:', textentry_answer_metaphones[textentry_i_qwiz][i], ', required_metaphone_length:', required_metaphone_length);
          }
       }
@@ -3338,7 +3305,7 @@ var find_matching_terms = function (request, response) {
          required_metaphone_length = 4;
       }
    }
-   if (debug[5]) {
+   if (debug[6]) {
       console.log ('[find_matching_terms] required_entry_length:', required_entry_length, ', required_metaphone_length:', required_metaphone_length);
    }
 
@@ -3350,7 +3317,7 @@ var find_matching_terms = function (request, response) {
       lc_textentry_matches[textentry_i_qwiz] = [];
 
    } else {
-      if (debug[5]) {
+      if (debug[6]) {
          console.log ('[find_matching_terms] request.term:', request.term,', entry_metaphone:', entry_metaphone, ', entry_metaphone.length:', entry_metaphone.length);
       }
       textentry_matches[textentry_i_qwiz] 
@@ -3368,7 +3335,7 @@ var find_matching_terms = function (request, response) {
                              || term_i[0].toLowerCase ().indexOf (entry) === 0;
          }
          if (ok_f) {
-            if (debug[6]) {
+            if (debug[7]) {
                console.log ('[find_matching_terms] term_i:', term_i);
             }
             return term_i[0];
@@ -3378,14 +3345,14 @@ var find_matching_terms = function (request, response) {
          = textentry_matches[textentry_i_qwiz].map (function (item) {
                                                        return item.toLowerCase ();
                                                     });
-      if (debug[5]) {
+      if (debug[6]) {
          console.log ('[find_matching_terms] textentry_matches[textentry_i_qwiz]:', textentry_matches[textentry_i_qwiz]);
       }
    }
 
    // If entry length five or more, and matches list does not include first
    // correct answer, and haven't used up hints, enable hint.
-   if (debug[5]) {
+   if (debug[6]) {
       console.log ('[find_matching_terms] deduped_entry.length: ', deduped_entry.length, ', textentry_matches[textentry_i_qwiz].length: ', textentry_matches[textentry_i_qwiz].length, ', qwizdata[textentry_i_qwiz].textentry_n_hints: ', qwizdata[textentry_i_qwiz].textentry_n_hints);
    }
    if (deduped_entry.length >= minlength && qwizdata[textentry_i_qwiz].textentry_n_hints < 5) {
@@ -3407,7 +3374,7 @@ function menu_closed (e) {
    // Do only if "Check answer" not already disabled.
    if (! qwizdata[textentry_i_qwiz].check_answer_disabled_b) {
       var lc_entry = e.target.value.toLowerCase ();
-      if (debug[5]) {
+      if (debug[6]) {
          console.log ('[menu_closed] textentry_matches[textentry_i_qwiz]: ', textentry_matches[textentry_i_qwiz]);
       }
       if (lc_textentry_matches[textentry_i_qwiz].indexOf (lc_entry) == -1) {
@@ -3545,7 +3512,7 @@ this.set_textentry_i_qwiz = function (input_el) {
    // id looks like textentry-qwiz0-q0
    var id = input_el.id;
    textentry_i_qwiz = id.match (/[0-9]+/)[0];
-   if (debug[5]) {
+   if (debug[6]) {
       console.log ('[set_textentry_i_qwiz] textentry_i_qwiz: ', textentry_i_qwiz);
    }
 }
@@ -3571,7 +3538,7 @@ this.keep_next_button_active = function () {
 
 // -----------------------------------------------------------------------------
 this.display_login = function (i_qwiz, add_team_member_f) {
-   if (debug[6]) {
+   if (debug[7]) {
       console.log ('[display_login]');
    }
 
