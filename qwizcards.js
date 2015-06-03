@@ -7,6 +7,7 @@
  * Set textentry minlength for short answer choices.
  * Let zero-length entry metaphones match zero-length term metaphones.
  * Required-input textentry "Check answer" text changes with entry state.
+ * <Enter> works for "Check answer"/"Flip back" and "Login".
  *
  * Version 2.29 2015-04-26
  * topic= implemented.
@@ -124,6 +125,7 @@ debug.push (false);    // 3 - old/new html dump.
 debug.push (false);    // 4 - card tags/topics.
 debug.push (false);    // 5 - "next" buttons, element objects.
 debug.push (false);    // 6 - [textentry] w/ required input.
+debug.push (false);    // 7 - Enter -> click.
 
 var $ = jQuery;
 
@@ -166,6 +168,8 @@ var Tcheck_answer_message;
 
 var qrecord_b = false;
 var q_and_a_text = '';
+
+var active_qdeck;
 
 // -----------------------------------------------------------------------------
 $(document).ready (function () {
@@ -328,6 +332,22 @@ function process_html () {
 
             // Replace content html.
             $ (this).html (new_html);
+
+            // Mouseenter for this deck records it as the active qwiz.
+            $ (this).find ('div.qcard_window').on ('mouseenter', 
+                                      function (e) {
+
+                                         // Make sure have container div.
+                                         active_qdeck = e.target;
+                                         if (e.target.className.toLowerCase () != 'qcard_window') {
+                                            active_qdeck = $ (e.target).parents ('div.qcard_window')[0];
+                                         }
+                                         if (debug[7]) {
+                                            console.log ('[qcard_window mouseenter] e.target:', e.target);
+                                            console.log ('[qcard_window mouseenter] active_qdeck:', active_qdeck);
+                                         }
+                                      });
+
          }
 
          // If wrapper divs, unwrap.
@@ -338,6 +358,10 @@ function process_html () {
       n_decks = i_deck;
    });
 
+   // Set up Enter key intercept -- trigger appropriate button press
+   // (Check answer, Login).
+   init_enter_intercept ();
+
    // If any quizzes subject to recording, set user menus -- if this comes after
    // check_session_id () callback, it will properly set the menus (while the
    // callback may not have worked if the html hadn't been set at that time).
@@ -347,6 +371,47 @@ function process_html () {
 
    // Set flag to display page (qwizscripts.js).
    q.processing_complete_b = true;
+}
+
+
+// -----------------------------------------------------------------------------
+function init_enter_intercept () {
+
+   // For page, listen for keydown.  If Enter, trigger one of the appropriate
+   // buttons, based on which is currently visible.
+   $ ('html').on ('keydown', 
+                  function (e) {
+                     if (debug[7]) {
+                        if (active_qdeck) {
+                            console.log ('[init_enter_intercept] e.keyCode:', e.keyCode);
+                        }
+                     }
+                     if (active_qdeck && e.keyCode == 13) {
+                        if (debug[7]) {
+                            console.log ('[init_enter_intercept] active_qdeck:', active_qdeck);
+                        }
+                        var $active_qdeck = $ (active_qdeck);
+
+                        // Do this first, because don't check visibility of
+                        // "Check answer".
+                        if ($active_qdeck.find ('div.qdeck-login').is (':visible')) {
+                           if (debug[7]) {
+                               console.log ('[init_enter_intercept] login_button trigger');
+                           }
+                           $active_qdeck.find ('div.qdeck-login button.login_button').trigger ('click');
+                        } else if ($active_qdeck.find ('div.qcard_next_buttons button.flip.qbutton').length) {
+
+                           // "Check answer button will not have "qbutton" (instead,
+                           // has "qbutton_disabled" until active.  Same button for
+                           // regular card and textentry input.
+                           if (debug[7]) {
+                               console.log ('[init_enter_intercept] Check answer trigger');
+                               console.log ('[init_enter_intercept] find:', $active_qdeck.find ('div.qcard_next_buttons button.flip'));
+                           }
+                           $active_qdeck.find ('div.qcard_next_buttons button.flip').trigger ('click');
+                        }
+                     }
+                  });
 }
 
 
@@ -1309,6 +1374,13 @@ function create_qdeck_divs (i_deck, qdeck_tag) {
    divs.push ('   </div>');
    divs.push ('   <div id="qcard_next_buttons-qdeck' + i_deck + '" class="qcard_next_buttons">');
    divs.push ('   </div>');
+
+   // Small, almost invisible, focusable element inside a div.  For Firefox issue
+   // related to keydown event --> <Enter> intercept.
+   divs.push ('   <div class="focusable">');
+   divs.push ('      <input type="text" />');
+   divs.push ('   </div>');
+
    divs.push ('</div>');
 
    return divs.join ('\n');
@@ -1612,7 +1684,7 @@ this.set_next_buttons = function (i_deck) {
    var htm = '';
 
    // "Flip" / "Check answer".
-   htm += '<button class="qbutton flip-qdeck' + i_deck + '" onclick="' + qname + '.flip (' + i_deck + ')" title="' + T ('Show the other side') + '">' + T ('Flip') + '</button> &nbsp; ';
+   htm += '<button class="qbutton flip flip-qdeck' + i_deck + '" onclick="' + qname + '.flip (' + i_deck + ')" title="' + T ('Show the other side') + '">' + T ('Flip') + '</button> &nbsp; ';
 
    // "Need more practice".  Starts out disabled, gray.
    if (deckdata[i_deck].n_to_go > 1) {
@@ -1839,7 +1911,7 @@ function get_login_html (i_deck, add_team_member_f) {
      +          '</td>'
      +       '<tr>'
      +    '</table>\n'
-     +    '<button class="qbutton" onclick="' + qname + '.login (' + i_deck + ',' + add_team_member_f + ')">'
+     +    '<button class="qbutton login_button" onclick="' + qname + '.login (' + i_deck + ',' + add_team_member_f + ')">'
      +       T ('Login')
      +    '</button>'
      +    '&emsp;' 
@@ -2274,6 +2346,11 @@ this.set_card_front_and_back = function (i_deck, i_card) {
       // text and title back to defaults, and reset saved text.
       $ ('button.flip-qdeck' + i_deck).html (T ('Flip')).attr ('title', T ('Show the other side'));
       card.check_answer = T ('Flip');
+   }
+
+   // Firefox issue: keydown event disappears after "next card" until this done.
+   if (active_qdeck) {
+      $ (active_qdeck).find ('div.focusable input').focus ().blur ();
    }
 
    // How soon does new html show?  Test.

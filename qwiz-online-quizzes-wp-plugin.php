@@ -3,7 +3,7 @@
  * Plugin Name: Qwiz - online quizzes and flashcards
  * Plugin URI: http://dkprojects.net/qwiz
  * Description: Easy online quizzes and flashcards for WordPress
- * Version: beta12 for 3.00
+ * Version: beta13 for 3.00
  * Author: Dan Kirshner
  * Author URI: http://dkprojects.net/qwiz
  * License: GPL2
