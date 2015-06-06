@@ -3,7 +3,7 @@
  * Plugin Name: Qwiz - online quizzes and flashcards
  * Plugin URI: http://dkprojects.net/qwiz
  * Description: Easy online quizzes and flashcards for WordPress
- * Version: beta14 for 3.00
+ * Version: beta15 for 3.00
  * Author: Dan Kirshner
  * Author URI: http://dkprojects.net/qwiz
  * License: GPL2
@@ -272,10 +272,6 @@ function qwiz_process_shortcodes_initially ($content) {
       if ($debug) {
          error_log ("[qwiz_process_shortcodes_initially] content:\n" . $content);
       }
-
-      // For sake of Downloads page, look for content of <code>...</code>
-      // pairs, replace smartquotes with regular quotes.
-      // DKTMP.
    }
 
    return $content;

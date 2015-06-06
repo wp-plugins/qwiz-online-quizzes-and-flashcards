@@ -468,6 +468,17 @@ this.init_enter_intercept = function () {
                      if (document_active_qwiz_qdeck && e.keyCode == 13) {
                         if (debug[7]) {
                             console.log ('[init_enter_intercept] document_active_qwiz_qdeck:', document_active_qwiz_qdeck);
+                            console.log ('[init_enter_intercept] e.target:', e.target);
+                        }
+                        // If <Enter> in <input> or <textarea> that is NOT qwiz/
+                        // qdeck-related, ignore.
+                        var tagname = e.target.tagName.toLowerCase ();
+                        if (tagname == 'input' || tagname == 'textarea') {
+                           var classname = e.target.className.toLowerCase ();
+                           if (classname.indexOf ('qwiz') == -1
+                                          && classname.indexOf ('qcard') == -1) {
+                              return false;
+                           }
                         }
                         var $document_active_qwiz_qdeck = $ (document_active_qwiz_qdeck);
                         if (document_active_qwiz_qdeck.className.toLowerCase () != 'qcard_window') {
@@ -475,7 +486,8 @@ this.init_enter_intercept = function () {
                            // Quiz.
                            if ($document_active_qwiz_qdeck.find ('div.next_button').is (':visible')) {
                               if (debug[7]) {
-                                  console.log ('[init_enter_intercept] qwiz next_button trigger');
+                                 console.log ('[init_enter_intercept] qwiz next_button trigger');
+                                 console.log ('[init_enter_intercept] $document_active_qwiz_qdeck.find (\'div.next_button button\'):', $document_active_qwiz_qdeck.find ('div.next_button button'));
                               }
                               $document_active_qwiz_qdeck.find ('div.next_button button').trigger ('click');
                            } else if ($document_active_qwiz_qdeck.find ('div.textentry_check_answer_div').is (':visible')) {

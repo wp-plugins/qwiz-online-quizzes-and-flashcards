@@ -496,6 +496,7 @@ function init_textentry_autocomplete (i_deck, i_card) {
    $ ('button.flip-qdeck' + i_deck).html (check_answer);
 
    // Save for this.flip ().
+   card.save_check_answer = check_answer;
    card.check_answer = check_answer;
 
    // Needed in find_matching_terms ().
@@ -2155,8 +2156,9 @@ this.flip = function (i_deck) {
       if ($textentry.length) {
 
          // Hide it (shows through in Safari, Chrome, "flashing" in Chrome on
-         // Mac).
-         $textentry.css ('visibility', 'hidden');
+         // Mac).  Also blur, so jQuery knows to hide suggestion list (in case
+         // flip triggered by <Enter>).
+         $textentry.blur ().css ('visibility', 'hidden');
 
          if (card.textentry_required_b) {
 
@@ -2306,7 +2308,8 @@ this.set_card_front_and_back = function (i_deck, i_card) {
       card.check_answer = T ('Flip');
    }
 
-   // Firefox issue: keydown event disappears after "next card" until this done.
+   // Firefox issue: keydown event disappears after "next card" until this is
+   // done.
    if (document_active_qwiz_qdeck) {
       $ (document_active_qwiz_qdeck).find ('div.focusable input').focus ().blur ();
    }
@@ -2766,8 +2769,10 @@ function menu_shown (e) {
          .removeClass ('qbutton_disabled')
          .addClass ('qbutton')
          .html (T ('Flip'));
+      card.check_answer = T ('Flip');  // DKTMP
       deckdata[textentry_i_deck].check_answer_disabled_b = false;
    } else {
+      card.check_answer = card.save_check_answer;
       $ ('button.flip-qdeck' + textentry_i_deck)
          .removeClass ('qbutton')
          .addClass ('qbutton_disabled')

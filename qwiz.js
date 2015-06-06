@@ -1985,7 +1985,7 @@ function process_question (i_qwiz, i_question, htm, opening_tags) {
    var choice_next_tags  = ['[c]', '[c*]', '[x]'];
 
    var got_feedback_b = false;
-   var one_for_all_f = false;
+   var i_fx = -1;
    var feedback_divs = [];
    var i_choice_correct = 0;
    for (var i_choice=0; i_choice<n_choices; i_choice++) {
@@ -2010,9 +2010,17 @@ function process_question (i_qwiz, i_question, htm, opening_tags) {
 
             // Assume just got feedback for the first choice.
             feedback_divs[0] = r.feedback_div;
+            var n_feedback_items = 1;
+
+            // If feedback given with [fx], save index.
+            if (r.fx_b) {
+               i_fx = 0;
+
+               // [fx] does not count as an "item".
+               n_feedback_items = 0;
+            }
 
             // Look for rest.
-            var n_feedback_items = 1;
             for (var i_feedback=1; i_feedback<n_choices; i_feedback++) {
                var r = process_feedback_item (choice_html, i_qwiz, i_question,
                                               i_feedback);
@@ -2021,20 +2029,35 @@ function process_question (i_qwiz, i_question, htm, opening_tags) {
                   break;
                }
                feedback_divs[i_feedback] = r.feedback_div;
-               n_feedback_items++;
+               if (r.fx_b) {
+                  if (i_fx == -1) {
+                     i_fx = i_feedback;
+                  } else {
+                     errmsgs.push (T ('Got more than one [fx]') + ': qwiz ' + (1 + i_qwiz) + ', ' + T('question') + ' ' + (1 + i_question));
+                  }
+               } else {
+
+                  // [fx] does not count as an "item".
+                  n_feedback_items++;
+               }
             }
 
-            // Either got just one feedback item (which we'll use for all
-            // choices), or should get one item for each choice.
-            if (n_feedback_items == 1) {
+            // Either got just one feedback item (which we'll interpret as
+            // applying to the last choice), or should get one item for each
+            // choice.
+            if (n_feedback_items == 1 || i_fx != -1) {
 
-               // Set flag to use for all choices.
-               one_for_all_f = true;
+               // Move that item to the last choice.
+               feedback_divs[n_choices-1] = feedback_divs[0];
+               feedback_divs[0] = '';
+               if (i_fx == 0) {
+                  i_fx = n_choices - 1;
+               }
             } else {
 
                // Check got them all.
                if (n_feedback_items != n_choices) {
-                  errmsgs.push (T ('Number of feedback items is not just one (same feedback for all choices) and does not match number of choices (different feedback for each choice)') + ': qwiz ' + (1 + i_qwiz) + ', ' + T('question') + ' ' + (1 + i_question));
+                  errmsgs.push (T ('Number of feedback items does not match number of choices') + ': qwiz ' + (1 + i_qwiz) + ', ' + T('question') + ' ' + (1 + i_question));
                } else {
 
                   // First feedback item needs to have ID updated to indicate
@@ -2046,6 +2069,13 @@ function process_question (i_qwiz, i_question, htm, opening_tags) {
 
             // Create a div for the feedback we just processed.
             got_feedback_b = true;
+            if (r.fx_b) {
+               if (i_fx == -1) {
+                  i_fx = feedback_divs.length;
+               } else {
+                  errmsgs.push (T ('Got more than one [fx]') + ': qwiz ' + (1 + i_qwiz) + ', ' + T('question') + ' ' + (1 + i_question));
+               }
+            }
             feedback_divs.push (r.feedback_div);
 
             // Check that there's not more than one feedback item accompanying
@@ -2131,20 +2161,19 @@ function process_question (i_qwiz, i_question, htm, opening_tags) {
    }
 
    // ..........................................................................
-   // If just given one feedback item after all choices, use that feedback
-   // for all choices.  Otherwise, create canned feedback for any empty
-   // feedback items.
+   // If got [fx], use that feedback for all empty feedback items except correct
+   // choice.  Otherwise, create canned feedback for any empty feedback items.
    for (var i_choice=0; i_choice<n_choices; i_choice++) {
-      if (one_for_all_f) {
+      if (! feedback_divs[i_choice]) {
+         if (i_fx != -1 && i_choice != i_choice_correct) {
 
-         // Reset ID to match choice.
-         feedback_divs[i_choice] = feedback_divs[0].replace (/(qwiz[0-9]+-q[0-9]+-a)[0-9]+/, '\$1' + i_choice);
-      } else {
-         if (! feedback_divs[i_choice]) {
+            // Reset ID to match choice.
+            feedback_divs[i_choice] = feedback_divs[i_fx].replace (/(qwiz[0-9]+-q[0-9]+-a)[0-9]+/, '\$1' + i_choice);
+         } else {
             var response = canned_feedback (i_choice == i_choice_correct);
-            feedback_divs[i_choice]
-                                = create_feedback_div_html (i_qwiz, i_question,
-                                                            i_choice, response);
+            feedback_divs[i_choice] 
+                               = create_feedback_div_html (i_qwiz, i_question,
+                                                           i_choice, response);
          }
       }
    }
@@ -2379,31 +2408,41 @@ function process_textentry (i_qwiz, i_question, htm, opening_tags) {
 // -----------------------------------------------------------------------------
 function process_feedback_item (choice_html, i_qwiz, i_question, i_choice) {
 
-   var feedback_start_tags = ['[f]'];
-   var feedback_next_tags  = ['[f]', '[x]'];
+   var feedback_start_tags = ['[f]', '[fx]'];
+   var feedback_next_tags  = ['[f]', '[fx]', '[x]'];
 
+   if (debug[2]) {
+      console.log ('[process_feedback_item] choice_html: ', choice_html);
+   }
    var feedback_item_html = parse_html_block (choice_html, feedback_start_tags,
                                               feedback_next_tags);
    var feedback_div = '';
+   var fx_b;
    if (feedback_item_html != 'NA') {
 
       // Yes.  Take out of the choice html.
       choice_html = choice_html.replace (feedback_item_html, '');
-
-      // Delete [f].
-      feedback_item_html = feedback_item_html.replace (/\[f\]/, '');
       if (debug[2]) {
          console.log ('[process_feedback_item] feedback_item_html: ', feedback_item_html);
       }
+
+      // Set flag if [fx].
+      fx_b = feedback_item_html.indexOf ('[fx]') != -1;
+
+      // Delete [f] or [fx].
+      feedback_item_html = feedback_item_html.replace (/\[fx{0,1}\]/, '');
       feedback_div = create_feedback_div_html (i_qwiz, i_question, i_choice,
                                                feedback_item_html)
    }
    if (debug[2]) {
       console.log ('[process_feedback_item] feedback_div:', feedback_div);
-      console.log ('[process_feedback_item] choice_html:', choice_html);
+      console.log ('[process_feedback_item] choice_html: ', choice_html);
+      console.log ('[process_feedback_item] fx_b:        ', fx_b);
    }
 
-   return {'feedback_div': feedback_div, 'choice_html': choice_html};
+   return {'feedback_div': feedback_div, 
+           'choice_html':  choice_html,
+           'fx_b':         fx_b};
 }
 
 
@@ -2565,7 +2604,7 @@ function process_qwizzled (i_qwiz, i_question, question_htm, opening_tags,
    var feedback_html = remaining_htm;
    var feedback_divs = [];
    var feedback_start_tags = ['[f*]', '[fx]'];
-   var feedback_next_tags = ['[f*]', '[fx]', '[x]'];
+   var feedback_next_tags =  ['[f*]', '[fx]', '[x]'];
    var i_item = 0;
    while (true) {
       var feedback_item_html 
@@ -3335,7 +3374,7 @@ var find_matching_terms = function (request, response) {
                              || term_i[0].toLowerCase ().indexOf (entry) === 0;
          }
          if (ok_f) {
-            if (debug[7]) {
+            if (debug[6]) {
                console.log ('[find_matching_terms] term_i:', term_i);
             }
             return term_i[0];
@@ -3435,9 +3474,14 @@ this.textentry_check_answer = function (i_qwiz) {
    $ ('#textentry_check_answer_div-qwiz' + i_qwiz).hide ();
 
    var i_question = qwizdata[i_qwiz].i_question;
-   var entry = $ ('#textentry-qwiz' + i_qwiz + '-q' + i_question).val ().toLowerCase ();
+   var $textentry = $ ('#textentry-qwiz' + i_qwiz + '-q' + i_question);
+
+   // Blur entry so jQuery knows to hide suggestion list -- in case "Check
+   // answer" triggered with <Enter>.
+   $textentry.blur ();
 
    // See if entry among choices; identify default choice ("*").
+   var entry = $textentry.val ().toLowerCase ();
    var i_choice = -1;
    var correct_b = false;
    var n_choices = qwizdata[i_qwiz].textentry[i_question].choices.length;
@@ -3538,9 +3582,6 @@ this.keep_next_button_active = function () {
 
 // -----------------------------------------------------------------------------
 this.display_login = function (i_qwiz, add_team_member_f) {
-   if (debug[7]) {
-      console.log ('[display_login]');
-   }
 
    // Close menu in case came from there.
    $ ('#usermenu-qwiz' + i_qwiz).hide ();
