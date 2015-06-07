@@ -165,6 +165,7 @@ var textentry_matches = {};
 var lc_textentry_matches = {};
 
 var Tcheck_answer_message;
+var show_hint_timeout;
 
 var qrecord_b = false;
 var q_and_a_text = '';
@@ -181,7 +182,7 @@ $(document).ready (function () {
    // div.container.  Apparently themes can change this; these have come up so far.
    // Body default for stand-alone use.
    content = qqc.get_qwiz_param ('content', 'body');
-   Tcheck_answer_message = T ('Enter your best guess - eventually we\'ll provide suggestions or offer a hint');
+   Tcheck_answer_message = T ("Need help?  Try the \"hint\" button");
 
    process_html ();
 
@@ -395,12 +396,6 @@ function init_textentry_autocomplete (i_deck, i_card) {
 
    $textentry.keyup (menu_closed);
 
-   // Gray out "Check answer"/"Flip" button, but leave enabled -- click will
-   // print alert rather than do flip.  Also provide alert text as title.
-   $ ('button.flip-qdeck' + i_deck).removeClass ('qbutton').addClass ('qbutton_disabled').attr ('title', Tcheck_answer_message);
-   deckdata[i_deck].check_answer_disabled_b = true;
-   deckdata[i_deck].textentry_n_hints = 0;
-
    // Use terms given with [terms]...[/terms] for this flashcard deck; otherwise
    // load default terms if haven't done so already.
    if (deckdata[i_deck].terms) {
@@ -501,6 +496,22 @@ function init_textentry_autocomplete (i_deck, i_card) {
 
    // Needed in find_matching_terms ().
    card.textentry_minlength = minlength;
+
+   // Gray out "Check answer"/"Flip" button, but leave enabled -- click will
+   // print alert rather than do flip.  Also provide alert text as title.
+   $ ('button.flip-qdeck' + i_deck).removeClass ('qbutton').addClass ('qbutton_disabled').attr ('title', Tcheck_answer_message);
+   deckdata[i_deck].check_answer_disabled_b = true;
+   deckdata[i_deck].textentry_n_hints = 0;
+
+   // Set timer to show hint button in a while.  Closure.
+   var show_hint_button = function () {
+      $ ('#textentry_hint-qdeck' + i_deck)
+         .removeAttr ('disabled')
+         .addClass ('qbutton')
+         .removeClass ('qbutton_disabled')
+         .show ();
+   }
+   show_hint_timeout = setTimeout (show_hint_button, qqc.get_qwiz_param ('hint_timeout_sec', 20)*1000);
 }
 
 
@@ -1042,10 +1053,11 @@ function process_feedback_item (choice_html) {
 // -----------------------------------------------------------------------------
 // Provide first letters of first correct answer as hint, up to five letters.
 this.textentry_hint = function (i_deck) {
-   deckdata[i_deck].textentry_n_hints++;
 
-   // Disable hint button, reset label.
-   $ ('#textentry_hint-qdeck' + i_deck).attr ('disabled', true).removeClass ('qbutton').addClass ('qbutton_disabled').html ('Add.<br />hint');
+   // Cancel any previous timer.
+   clearTimeout (show_hint_timeout);
+
+   deckdata[i_deck].textentry_n_hints++;
 
    var i_card = deckdata[i_deck].i_card;
    var card = deckdata[i_deck].cards[i_card];
@@ -1056,6 +1068,22 @@ this.textentry_hint = function (i_deck) {
    // Trigger search on entry -- handles hints that don't match anything (grays
    // "Check answer"/"Flip") and those that do.
    $textentry.autocomplete ('search');
+
+   // Disable hint button, reset label.
+   $ ('#textentry_hint-qdeck' + i_deck)
+      .attr ('disabled', true)
+      .removeClass ('qbutton')
+      .addClass ('qbutton_disabled')
+      .html ('Another<br />hint');
+
+   // But set timer to show again.  Closure.
+   var show_hint_button = function () {
+      $ ('#textentry_hint-qdeck' + i_deck)
+         .removeAttr ('disabled')
+         .addClass ('qbutton')
+         .removeClass ('qbutton_disabled');
+   }
+   show_hint_timeout = setTimeout (show_hint_button, qqc.get_qwiz_param ('hint_timeout_sec', 20)*1000);
 }
 
 
@@ -2083,6 +2111,12 @@ this.flip = function (i_deck) {
 
    if (deckdata[i_deck].check_answer_disabled_b) {
       alert (Tcheck_answer_message);
+
+      // Show hint button.
+      $ ('#textentry_hint-qdeck' + i_deck)
+         .removeAttr ('disabled')
+         .removeClass ('qbutton_disabled')
+         .addClass ('qbutton').show ();
       return;
    }
 
@@ -2717,7 +2751,10 @@ var find_matching_terms = function (request, response) {
       var lc_first_choice = card.all_choices[0];
       if (typeof (lc_textentry_matches[textentry_i_deck]) == 'undefined'
             || lc_textentry_matches[textentry_i_deck].indexOf (lc_first_choice) == -1) {
-         $ ('#textentry_hint-qdeck' + textentry_i_deck).removeAttr ('disabled').removeClass ('qbutton_disabled').addClass ('qbutton').show ();
+         $ ('#textentry_hint-qdeck' + textentry_i_deck)
+            .removeAttr ('disabled')
+            .removeClass ('qbutton_disabled')
+            .addClass ('qbutton').show ();
       }
    }
    response (textentry_matches[textentry_i_deck]);
@@ -2758,7 +2795,10 @@ function menu_shown (e) {
    var card = deckdata[textentry_i_deck].cards[i_card];
    var lc_first_choice = card.all_choices[0];
    if (lc_textentry_matches[textentry_i_deck].indexOf (lc_first_choice) != -1) {
-      $ ('#textentry_hint-qdeck' + textentry_i_deck).attr ('disabled', true).removeClass ('qbutton').addClass ('qbutton_disabled');
+      $ ('#textentry_hint-qdeck' + textentry_i_deck)
+         .attr ('disabled', true)
+         .removeClass ('qbutton')
+         .addClass ('qbutton_disabled');
    }
 
    // Enable/disable "Flip/Check answer", and toggle button text between

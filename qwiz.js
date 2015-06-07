@@ -7,7 +7,7 @@
  * Let zero-length entry metaphones match zero-length term metaphones.
  * Required-input textentry "Check answer" text changes with entry state.
  * <Enter> works for "Check answer", "Next question", and "Login".
- * A feedback item entered after all choices is feedback for every choice.
+ * [fx] feedback applies to all incorrect choices.
  *
  * Version 2.29 2015-04-26
  * Word-wrap normal for labels (problem in Firefox).
@@ -214,6 +214,7 @@ var lc_textentry_matches = {};
 var textentry_i_qwiz;
 
 var Tcheck_answer_message;
+var show_hint_timeout;
 
 var qrecord_b = false;
 var q_and_a_text = '';
@@ -232,7 +233,7 @@ $ (document).ready (function () {
    // div.container.  Apparently themes can change this; these have come up so far.
    // Body default for stand-alone use.
    content = qqc.get_qwiz_param ('content', 'body');
-   Tcheck_answer_message = T ('Enter your best guess - eventually we\'ll provide suggestions or offer a hint');
+   Tcheck_answer_message = T ("Need help?  Try the \"hint\" button");
 
    process_html ();
 
@@ -1792,27 +1793,6 @@ function display_question (i_qwiz, i_question) {
             }
          }
 
-         // Show "Check answer" and "Hint" buttons.  "Check answer" starts out
-         // gray (but not actually disabled, so click provides alert message).
-         // Hint starts out not visible.
-         var $check_answer = $ ('#textentry_check_answer_div-qwiz' + i_qwiz);
-         $check_answer.find ('button.textentry_check_answer').removeClass ('qbutton').addClass ('qbutton_disabled');
-         qwizdata[i_qwiz].check_answer_disabled_b = true;
-         $check_answer.find ('button.qwiz_textentry_hint').html ('Hint').hide ();
-         $check_answer.show ();
-
-         // Reset value of textentry box, if there is one.
-         var $textentry = $ ('#textentry-qwiz' + i_qwiz + '-q' + i_question);
-         if ($textentry.length) {
-            $textentry.val ('');
-            
-            // Set focus to textentry box.  Don't do if first question and no
-            // intro (avoid scrolling page to this quiz).
-            if (i_question != 0 || ! no_intro_b[i_qwiz]) {
-               $textentry.focus ();
-            }
-         }
-
 
          qwizdata[i_qwiz].check_answer_disabled_b = true;
          qwizdata[i_qwiz].textentry_n_hints = 0;
@@ -1878,6 +1858,7 @@ function display_question (i_qwiz, i_question) {
          if (correct_answer_length < minlength) {
             minlength = correct_answer_length;
          }
+         var $textentry = $ ('#textentry-qwiz' + i_qwiz + '-q' + i_question);
          $textentry.autocomplete ('option', 'minLength', minlength);
 
          // Set placeholder now.  Also reset "Check answer" button.
@@ -1902,6 +1883,35 @@ function display_question (i_qwiz, i_question) {
 
          // Needed in find_matching_terms ().
          question.textentry_minlength = minlength;
+
+         // Show "Check answer" and "Hint" buttons.  "Check answer" starts out
+         // gray (but not actually disabled, so click provides alert message).
+         var $check_answer = $ ('#textentry_check_answer_div-qwiz' + i_qwiz);
+         $check_answer.find ('button.textentry_check_answer').removeClass ('qbutton').addClass ('qbutton_disabled');
+         qwizdata[i_qwiz].check_answer_disabled_b = true;
+         $check_answer.show ();
+
+         // Hint starts out not visible.  Set timer to show in a while.
+         // Closure for setTimeout ().
+         var show_hint_button = function () {
+            $check_answer.find ('button.qwiz_textentry_hint')
+               .removeAttr ('disabled')
+               .html ('Hint').show ();
+         }
+         $check_answer.find ('button.qwiz_textentry_hint').html ('Hint').hide ();
+         show_hint_timeout = setTimeout (show_hint_button, qqc.get_qwiz_param ('hint_timeout_sec', 20)*1000);
+
+
+         // Reset value of textentry box, if there is one.
+         if ($textentry.length) {
+            $textentry.val ('');
+            
+            // Set focus to textentry box.  Don't do if first question and no
+            // intro (avoid scrolling page to this quiz).
+            if (i_question != 0 || ! no_intro_b[i_qwiz]) {
+               $textentry.focus ();
+            }
+         }
       } else {
 
          // ....................................................................
@@ -2083,7 +2093,7 @@ function process_question (i_qwiz, i_question, htm, opening_tags) {
             var r = process_feedback_item (choice_html, i_qwiz, i_question,
                                            i_feedback);
             if (r.feedback_div) {
-               errmsgs.push (T ('More than one feedback shortcode [f] given with choice') + ': qwiz ' + (1 + i_qwiz) + ', ' + T ('question') + ' ' + (1 + i_question) + ', ' + T ('choice') + ' ' + (1 + i_choice));
+               errmsgs.push (T ('More than one feedback shortcode [f] or [fx] given with a choice') + ': qwiz ' + (1 + i_qwiz) + ', ' + T ('question') + ' ' + (1 + i_question) + ', ' + T ('choice') + ' ' + (1 + i_choice));
             }
          }
       } else {
@@ -3398,7 +3408,10 @@ var find_matching_terms = function (request, response) {
       var lc_first_correct_answer = qwizdata[textentry_i_qwiz].textentry[i_question].first_correct_answer.toLowerCase ();
       if (typeof (lc_textentry_matches[textentry_i_qwiz]) == 'undefined'
             || lc_textentry_matches[textentry_i_qwiz].indexOf (lc_first_correct_answer) == -1) {
-         $ ('#textentry_check_answer_div-qwiz' + textentry_i_qwiz + ' button.qwiz_textentry_hint').removeAttr ('disabled').removeClass ('qbutton_disabled').addClass ('qbutton').show ();
+         $ ('#textentry_check_answer_div-qwiz' + textentry_i_qwiz + ' button.qwiz_textentry_hint')
+            .removeAttr ('disabled')
+            .removeClass ('qbutton_disabled')
+            .addClass ('qbutton').show ();
       }
    }
    response (textentry_matches[textentry_i_qwiz]);
@@ -3467,6 +3480,12 @@ this.textentry_check_answer = function (i_qwiz) {
 
    if (qwizdata[i_qwiz].check_answer_disabled_b) {
       alert (Tcheck_answer_message);
+
+      // Show hint button.
+      $ ('#textentry_check_answer_div-qwiz' + i_qwiz + ' button.qwiz_textentry_hint')
+         .removeAttr ('disabled')
+         .removeClass ('qbutton_disabled')
+         .addClass ('qbutton').show ();
       return;
    }
 
@@ -3534,8 +3553,12 @@ this.textentry_check_answer = function (i_qwiz) {
 
 
 // -----------------------------------------------------------------------------
-// Provide first letters of first correct answer as hint, up to five letters.
+// Provide first letters of first correct answer as hint.
 this.textentry_hint = function (i_qwiz) {
+
+   // Cancel any previous timer.
+   clearTimeout (show_hint_timeout);
+
    qwizdata[i_qwiz].textentry_n_hints++;
 
    var i_question = qwizdata[i_qwiz].i_question;
@@ -3545,7 +3568,20 @@ this.textentry_hint = function (i_qwiz) {
    $ ('#textentry-qwiz' + i_qwiz + '-q' + i_question).val (textentry_hint_val).focus ().trigger ('keydown');
 
    // Disable hint button, reset label.
-   $ ('#textentry_check_answer_div-qwiz' + i_qwiz + ' button.qwiz_textentry_hint').attr ('disabled', true).removeClass ('qbutton').addClass ('qbutton_disabled').html ('Add. hint');
+   $ ('#textentry_check_answer_div-qwiz' + i_qwiz + ' button.qwiz_textentry_hint').attr ('disabled', true)
+      .removeClass ('qbutton')
+      .addClass ('qbutton_disabled')
+      .html ('Another hint');
+
+   // But set timer to show again.  Closure.
+   var $check_answer = $ ('#textentry_check_answer_div-qwiz' + i_qwiz);
+   var show_hint_button = function () {
+      $check_answer.find ('button.qwiz_textentry_hint')
+         .removeAttr ('disabled')
+         .addClass ('qbutton')
+         .removeClass ('qbutton_disabled');
+   }
+   show_hint_timeout = setTimeout (show_hint_button, qqc.get_qwiz_param ('hint_timeout_sec', 20)*1000);
 }
 
 
