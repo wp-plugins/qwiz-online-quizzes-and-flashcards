@@ -1,5 +1,5 @@
 /*
- * Version 3.00 2015-??-??
+ * Version 2.30 2015-06-??
  * Team login.
  * Login timeout.
  * Check that attributes have a value given in double quotes.
@@ -8,6 +8,7 @@
  * Let zero-length entry metaphones match zero-length term metaphones.
  * Required-input textentry "Check answer" text changes with entry state.
  * <Enter> works for "Check answer"/"Flip back" and "Login".
+ * Hint button appears after timeout, or after gray "Check answer" click.
  *
  * Version 2.29 2015-04-26
  * topic= implemented.
@@ -135,6 +136,7 @@ var qqc;
 q.processing_complete_b = false;
 
 var content;
+var hint_timeout_sec;
 var errmsgs = [];
 
 var n_decks = 0;
@@ -182,6 +184,7 @@ $(document).ready (function () {
    // div.container.  Apparently themes can change this; these have come up so far.
    // Body default for stand-alone use.
    content = qqc.get_qwiz_param ('content', 'body');
+   hint_timeout_sec = qqc.get_qwiz_param ('hint_timeout_sec', 20);
    Tcheck_answer_message = T ("Need help?  Try the \"hint\" button");
 
    process_html ();
@@ -511,7 +514,9 @@ function init_textentry_autocomplete (i_deck, i_card) {
          .removeClass ('qbutton_disabled')
          .show ();
    }
-   show_hint_timeout = setTimeout (show_hint_button, qqc.get_qwiz_param ('hint_timeout_sec', 20)*1000);
+   if (hint_timeout_sec >= 0) {
+      show_hint_timeout = setTimeout (show_hint_button, hint_timeout_sec*1000);
+   }
 }
 
 
@@ -1083,7 +1088,9 @@ this.textentry_hint = function (i_deck) {
          .addClass ('qbutton')
          .removeClass ('qbutton_disabled');
    }
-   show_hint_timeout = setTimeout (show_hint_button, qqc.get_qwiz_param ('hint_timeout_sec', 20)*1000);
+   if (hint_timeout_sec >= 0) {
+      show_hint_timeout = setTimeout (show_hint_button, hint_timeout_sec*1000);
+   }
 }
 
 

@@ -3,13 +3,13 @@
  * Plugin Name: Qwiz - online quizzes and flashcards
  * Plugin URI: http://dkprojects.net/qwiz
  * Description: Easy online quizzes and flashcards for WordPress
- * Version: beta16 for 3.00
+ * Version: beta1 for 2.30
  * Author: Dan Kirshner
  * Author URI: http://dkprojects.net/qwiz
  * License: GPL2
  */
 
-/*  Copyright 2014  Dan Kirshner  (email : dan_kirshner@yahoo.com)
+/*  Copyright 2015  Dan Kirshner  (email : dan_kirshner@yahoo.com)
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License, version 2, as
@@ -50,17 +50,18 @@ function add_qwiz_js_and_style () {
    $qwiz_qcards_common   = qwiz_plugin_url ('qwiz_qcards_common.js');
    $jquery_ui            = qwiz_plugin_url ('jquery-ui.min.js');
    $jquery_ui_touchpunch = qwiz_plugin_url ('jquery.ui.touch-punch.min.js');
-   wp_enqueue_script ('qwiz_handle',                 $qwiz,                 array (), '3.00', true);
-   wp_enqueue_script ('qwizcards_handle',            $qwizcards,            array (), '3.00', true);
-   wp_enqueue_script ('qwiz_qcards_common_handle',   $qwiz_qcards_common,   array (), '3.00', true);
-   wp_enqueue_script ('jquery_ui_handle',            $jquery_ui,            array (), '3.00', true);
-   wp_enqueue_script ('jquery_ui_touchpunch_handle', $jquery_ui_touchpunch, array (), '3.00', true);
+   wp_enqueue_script ('qwiz_handle',                 $qwiz,                 array (), '2.30', true);
+   wp_enqueue_script ('qwizcards_handle',            $qwizcards,            array (), '2.30', true);
+   wp_enqueue_script ('qwiz_qcards_common_handle',   $qwiz_qcards_common,   array (), '2.30', true);
+   wp_enqueue_script ('jquery_ui_handle',            $jquery_ui,            array (), '2.30', true);
+   wp_enqueue_script ('jquery_ui_touchpunch_handle', $jquery_ui_touchpunch, array (), '2.30', true);
 
    // Options/parameters.  Set default content option.
    $plugin_url = qwiz_plugin_url ( '/');
    $options = get_option ('qwiz_options');
    $icon_qwiz         = $options['icon_qwiz'];
    $content           = $options['content'];
+   $hint_timeout_sec  = $options['hint_timeout_sec'];
    $translate_strings = $options['translate_strings'];
 
    // Default for content div selector.
@@ -92,12 +93,13 @@ function add_qwiz_js_and_style () {
    $beta = isset ($_SESSION['qwiz_beta']);
 
    $qwiz_params = array (
-      'T'          => $qwiz_T, 
-      'url'        => $plugin_url, 
-      'icon_qwiz'  => $icon_qwiz,
-      'content'    => $content,
-      'beta'       => $beta,
-      'server_loc' => '//dkprojects.net/qwiz/admin'
+      'T'                => $qwiz_T, 
+      'url'              => $plugin_url, 
+      'icon_qwiz'        => $icon_qwiz,
+      'content'          => $content,
+      'beta'             => $beta,
+      'server_loc'       => '//dkprojects.net/qwiz/admin',
+      'hint_timeout_sec' => $hint_timeout_sec
    );
    wp_localize_script ('qwiz_handle',      'qwiz_params', $qwiz_params);
    wp_localize_script ('qwizcards_handle', 'qwiz_params', $qwiz_params);

@@ -74,7 +74,7 @@ var qname = 'qwizzled';
 
 // Debug settings.
 var debug = [];
-debug.push (true );    // 0 - general.
+debug.push (false);    // 0 - general.
 debug.push (false);    // 1 - htm detail in parse_html_block ().
 debug.push (false);    // 2 - Preliminary checks.
 
@@ -341,7 +341,7 @@ function add_style () {
    // Want to beat TinyMCE toolbars at 999.
    s.push ('   z-index:         1000;');
    s.push ('   left:            750px;');
-   s.push ('   top:             300px;');
+   s.push ('   top:             250px;');
    s.push ('   border:          2px solid rgba(79, 112, 153, 1);');
    s.push ('}');
 

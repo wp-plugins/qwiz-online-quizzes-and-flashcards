@@ -1,5 +1,5 @@
 /*
- * Version 3.00 2015-??-??
+ * Version 2.30 2015-06-??
  * Team login.
  * Login timeout.
  * Check that attributes have a value given in double quotes.
@@ -8,6 +8,7 @@
  * Required-input textentry "Check answer" text changes with entry state.
  * <Enter> works for "Check answer", "Next question", and "Login".
  * [fx] feedback applies to all incorrect choices.
+ * Hint button appears after timeout, or after gray "Check answer" click.
  *
  * Version 2.29 2015-04-26
  * Word-wrap normal for labels (problem in Firefox).
@@ -177,6 +178,7 @@ var qqc;
 q.processing_complete_b = false;
 
 var content;
+var hint_timeout_sec;
 var correct;
 var incorrect;
 var errmsgs = [];
@@ -233,6 +235,7 @@ $ (document).ready (function () {
    // div.container.  Apparently themes can change this; these have come up so far.
    // Body default for stand-alone use.
    content = qqc.get_qwiz_param ('content', 'body');
+   hint_timeout_sec = qqc.get_qwiz_param ('hint_timeout_sec', 20);
    Tcheck_answer_message = T ("Need help?  Try the \"hint\" button");
 
    process_html ();
@@ -1899,7 +1902,9 @@ function display_question (i_qwiz, i_question) {
                .html ('Hint').show ();
          }
          $check_answer.find ('button.qwiz_textentry_hint').html ('Hint').hide ();
-         show_hint_timeout = setTimeout (show_hint_button, qqc.get_qwiz_param ('hint_timeout_sec', 20)*1000);
+         if (hint_timeout_sec >= 0) {
+            show_hint_timeout = setTimeout (show_hint_button, hint_timeout_sec*1000);
+         }
 
 
          // Reset value of textentry box, if there is one.
@@ -3581,7 +3586,9 @@ this.textentry_hint = function (i_qwiz) {
          .addClass ('qbutton')
          .removeClass ('qbutton_disabled');
    }
-   show_hint_timeout = setTimeout (show_hint_button, qqc.get_qwiz_param ('hint_timeout_sec', 20)*1000);
+   if (hint_timeout_sec >= 0) {
+      show_hint_timeout = setTimeout (show_hint_button, hint_timeout_sec*1000);
+   }
 }
 
 
