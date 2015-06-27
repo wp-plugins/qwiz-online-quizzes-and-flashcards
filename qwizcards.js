@@ -1,5 +1,16 @@
 /*
- * Version 2.29 2015-04-19
+ * Version 2.30 2015-06-26
+ * Team login.
+ * Login timeout.
+ * Check that attributes have a value given in double quotes.
+ * textentry minlength= option.
+ * Set textentry minlength for short answer choices.
+ * Let zero-length entry metaphones match zero-length term metaphones.
+ * Required-input textentry "Check answer" text changes with entry state.
+ * <Enter> works for "Check answer"/"Flip back" and "Login".
+ * Hint button appears after timeout, or after gray "Check answer" click.
+ *
+ * Version 2.29 2015-04-26
  * topic= implemented.
  * Recording implemented.
  *
@@ -115,6 +126,7 @@ debug.push (false);    // 3 - old/new html dump.
 debug.push (false);    // 4 - card tags/topics.
 debug.push (false);    // 5 - "next" buttons, element objects.
 debug.push (false);    // 6 - [textentry] w/ required input.
+debug.push (false);    // 7 - Enter -> click.
 
 var $ = jQuery;
 
@@ -124,6 +136,7 @@ var qqc;
 q.processing_complete_b = false;
 
 var content;
+var hint_timeout_sec;
 var errmsgs = [];
 
 var n_decks = 0;
@@ -154,9 +167,11 @@ var textentry_matches = {};
 var lc_textentry_matches = {};
 
 var Tcheck_answer_message;
+var show_hint_timeout;
 
 var qrecord_b = false;
 var q_and_a_text = '';
+
 
 // -----------------------------------------------------------------------------
 $(document).ready (function () {
@@ -169,7 +184,8 @@ $(document).ready (function () {
    // div.container.  Apparently themes can change this; these have come up so far.
    // Body default for stand-alone use.
    content = qqc.get_qwiz_param ('content', 'body');
-   Tcheck_answer_message = T ('Enter your best guess - eventually we\'ll provide suggestions or offer a hint');
+   hint_timeout_sec = qqc.get_qwiz_param ('hint_timeout_sec', 20);
+   Tcheck_answer_message = T ("Need help?  Try the \"hint\" button");
 
    process_html ();
 
@@ -179,47 +195,6 @@ $(document).ready (function () {
    }
 
    if (n_decks) {
-
-      // If any decks subject to recording, see if user logged in (may need
-      // to wait for check_session_id () to return).  Mark "start" time for
-      // decks that have no intro or are single-question.
-      if (qrecord_b) {
-
-         // Data for closure for setTimeout ().
-         var i_tries = 0;
-         var qrecord_ids = [];
-         for (var i_deck=0; i_deck<n_decks; i_deck++) {
-            if (no_intro_b[i_deck] || deckdata[i_deck].n_cards == 1) {
-               if (deckdata[i_deck].qrecord_id) {
-                  qrecord_ids.push (deckdata[i_deck].qrecord_id);
-               }
-            }
-         }
-         qrecord_ids = qrecord_ids.join ('\t');
-
-         // Closure.
-         var mark_start = function () {
-            i_tries++;
-            if (   i_tries < 100
-                && (   typeof (document_qwiz_user_logged_in_b) == 'undefined'
-                    || document_qwiz_user_logged_in_b          == 'not ready')) {
-               if (debug[6]) {
-                  console.log ('[mark_start] i_tries:', i_tries);
-               }
-               setTimeout (mark_start, 100);
-            } else {
-               if (debug[6]) {
-                  console.log ('[mark_start] document_qwiz_user_logged_in_b:', document_qwiz_user_logged_in_b);
-               }
-               if (document_qwiz_user_logged_in_b) {
-                  var now_sec = new Date ().getTime ()/1000.0;
-                  var data = {type: 'start', now_sec: now_sec};
-                  qqc.jjax (qname, i_deck, qrecord_ids, 'record_qcard', data);
-               }
-            }
-         }
-         mark_start ();
-      }
       for (var i_deck=0; i_deck<n_decks; i_deck++) {
          init_element_pointers (i_deck);
          init_card_order (i_deck);
@@ -232,6 +207,12 @@ $(document).ready (function () {
          set_header (i_deck, 'front', true);
          if (no_intro_b[i_deck] || deckdata[i_deck].n_cards == 1) {
             q.set_next_buttons (i_deck);
+
+            // For decks that have no intro or are single-card, set boolean to
+            // record "start" time when first interact with deck (in flip ()).
+            if (deckdata[i_deck].qrecord_id) {
+               deckdata[i_deck].record_start_b = true;
+            }
             q.process_card (i_deck);
          } else {
             deckdata[i_deck].el_qcard_card_front.html (deckdata[i_deck].intro_html);
@@ -354,6 +335,22 @@ function process_html () {
 
             // Replace content html.
             $ (this).html (new_html);
+
+            // Mouseenter for this deck records it as the active qwiz/deck.
+            $ (this).find ('div.qcard_window').on ('mouseenter', 
+                                      function (e) {
+
+                                         // Make sure have container div.
+                                         activ = e.target;
+                                         if (e.target.className.toLowerCase () != 'qcard_window') {
+                                            document_active_qwiz_qdeck = $ (e.target).parents ('div.qcard_window')[0];
+                                         }
+                                         if (debug[7]) {
+                                            console.log ('[qcard_window mouseenter] e.target:', e.target);
+                                            console.log ('[qcard_window mouseenter] document_active_qwiz_qdeck:', document_active_qwiz_qdeck);
+                                         }
+                                      });
+
          }
 
          // If wrapper divs, unwrap.
@@ -363,6 +360,10 @@ function process_html () {
       }
       n_decks = i_deck;
    });
+
+   // Set up Enter key intercept -- trigger appropriate button press
+   // (Check answer, Login).
+   qqc.init_enter_intercept ();
 
    // If any quizzes subject to recording, set user menus -- if this comes after
    // check_session_id () callback, it will properly set the menus (while the
@@ -380,21 +381,23 @@ function process_html () {
 // Set up [textentry] autocomplete for this card.
 function init_textentry_autocomplete (i_deck, i_card) {
 
-   $ ('.qdeck_textentry_autocomplete').autocomplete ({
-      minLength:     3,
+   // Set minlength for autocomplete suggestions for this card.
+   var card = deckdata[i_deck].cards[i_card];
+   var minlength = card.textentry_minlength;
+   if (card.all_choices[0].length < minlength) {
+      minlength = card.all_choices[0].length;
+   }
+
+   var $textentry = $ ('#textentry-qdeck' + i_deck);
+   $textentry.autocomplete ({
+      minLength:     minlength,
       source:        find_matching_terms,
       close:         menu_closed,
       open:          menu_shown,
       select:        item_selected
    });
 
-   $ ('.qdeck_textentry_autocomplete').keyup (menu_closed);
-
-   // Gray out "Check answer"/"Flip" button, but leave enabled -- click will
-   // print alert rather than do flip.  Also provide alert text as title.
-   $ ('button.flip-qdeck' + i_deck).removeClass ('qbutton').addClass ('qbutton_disabled').attr ('title', Tcheck_answer_message);
-   deckdata[i_deck].check_answer_disabled_b = true;
-   deckdata[i_deck].textentry_n_hints = 0;
+   $textentry.keyup (menu_closed);
 
    // Use terms given with [terms]...[/terms] for this flashcard deck; otherwise
    // load default terms if haven't done so already.
@@ -424,8 +427,6 @@ function init_textentry_autocomplete (i_deck, i_card) {
    // (1) default or specific to this flashcard deck; plus (2) additional terms
    // for this deck, if any; and (3) specified entries for this [textentry].
    // Singular or plural in each case.
-   var card = deckdata[i_deck].cards[i_card];
-
    var singular_plural;
    if (card.textentry_plural_b) {
       singular_plural = 'plural';
@@ -458,7 +459,7 @@ function init_textentry_autocomplete (i_deck, i_card) {
                                   return [answer, qqc.metaphone (answer)];
                                });
    if (debug[6]) {
-      console.log ('[display_question] textentry_answers_metaphones: ', textentry_answers_metaphones);
+      console.log ('[init_textentry_autocomplete] textentry_answers_metaphones: ', textentry_answers_metaphones);
    }
    current_card_textentry_terms_metaphones[i_deck] = current_card_textentry_terms_metaphones[i_deck].concat (textentry_answers_metaphones);
 
@@ -467,12 +468,54 @@ function init_textentry_autocomplete (i_deck, i_card) {
       = qqc.sort_dedupe_terms_metaphones (current_card_textentry_terms_metaphones[i_deck]);
 
    if (debug[6]) {
-      console.log ('[display_question] current_card_textentry_terms_metaphones[i_deck].length: ', current_card_textentry_terms_metaphones[i_deck].length);
-      console.log ('[display_question] current_card_textentry_terms_metaphones[i_deck].slice (0, 10): ', current_card_textentry_terms_metaphones[i_deck].slice (0, 10));
+      console.log ('[init_textentry_autocomplete] current_card_textentry_terms_metaphones[i_deck].length: ', current_card_textentry_terms_metaphones[i_deck].length);
+      console.log ('[init_textentry_autocomplete] current_card_textentry_terms_metaphones[i_deck].slice (0, 10): ', current_card_textentry_terms_metaphones[i_deck].slice (0, 10));
       var i_start = current_card_textentry_terms_metaphones[i_deck].length - 10;
       if (i_start > 0) {
-         console.log ('[display_question] current_card_textentry_terms_metaphones[i_deck].slice (' + i_start + '): ', current_card_textentry_terms_metaphones[i_deck].slice (i_start));
+         console.log ('[init_textentry_autocomplete] current_card_textentry_terms_metaphones[i_deck].slice (' + i_start + '): ', current_card_textentry_terms_metaphones[i_deck].slice (i_start));
       }
+   }
+
+   // Set placeholder now.  Also reset "Check answer" button.
+   var placeholder;
+   var check_answer;
+   if (minlength <= 1) {
+      placeholder = T ('Type a letter/number, then select');
+      check_answer = T ('Type a letter');
+   } else {
+      minlength = Math.max (minlength, 3);
+      placeholder = T ('Type %s+ letters/numbers, then select');
+      placeholder = placeholder.replace ('%s', minlength);
+
+      check_answer = T ('Type %s+ letters');
+      check_answer = check_answer.replace ('%s', minlength);
+   }
+   $textentry.attr ('placeholder', placeholder);
+   $ ('button.flip-qdeck' + i_deck).html (check_answer);
+
+   // Save for this.flip ().
+   card.save_check_answer = check_answer;
+   card.check_answer = check_answer;
+
+   // Needed in find_matching_terms ().
+   card.textentry_minlength = minlength;
+
+   // Gray out "Check answer"/"Flip" button, but leave enabled -- click will
+   // print alert rather than do flip.  Also provide alert text as title.
+   $ ('button.flip-qdeck' + i_deck).removeClass ('qbutton').addClass ('qbutton_disabled').attr ('title', Tcheck_answer_message);
+   deckdata[i_deck].check_answer_disabled_b = true;
+   deckdata[i_deck].textentry_n_hints = 0;
+
+   // Set timer to show hint button in a while.  Closure.
+   var show_hint_button = function () {
+      $ ('#textentry_hint-qdeck' + i_deck)
+         .removeAttr ('disabled')
+         .addClass ('qbutton')
+         .removeClass ('qbutton_disabled')
+         .show ();
+   }
+   if (hint_timeout_sec >= 0) {
+      show_hint_timeout = setTimeout (show_hint_button, hint_timeout_sec*1000);
    }
 }
 
@@ -510,13 +553,13 @@ function process_qdeck_pair (htm, i_deck) {
       console.log ('[process_qdeck_pair] qdeck_tag: ', qdeck_tag);
       console.log ('[process_qdeck_pair] attributes: ', attributes);
    }
-   var qrecord_id = qqc.get_attr (attributes, 'qrecord_id');
+   var qrecord_id = get_attr (attributes, 'qrecord_id');
    if (qrecord_id) {
       deckdata[i_deck].qrecord_id = qrecord_id;
       deckdata[i_deck].q_and_a_text = {};
 
-      // If haven't checked already, see if user already logged in (get session id
-      // in cookie, see if still valid).
+      // If haven't checked already, see if user already logged in (get session
+      // ID in cookie, see if still valid).
       if (! qrecord_b) {
          qrecord_b = true;
          if (typeof (document_qwiz_user_logged_in_b) == 'undefined'
@@ -810,8 +853,9 @@ function process_textentry (i_deck, i_card, htm, opening_tags) {
    // Start with any opening tags that preceded "[q]" tag.
    var card_front_html = opening_tags + htm;
 
-   // Look for [textentry], see if plurals specified..
+   // Look for [textentry], see if plurals specified or minlength specified.
    var textentry_plural_b = false;
+   var textentry_minlength = 3;
    var m = htm.match (/\[textentry([^\]]*)\]/m);
    if (! m) {
       errmsgs.push (T ('Free-form input choices [c] or [c*] card does not have [textentry]'));
@@ -822,13 +866,17 @@ function process_textentry (i_deck, i_card, htm, opening_tags) {
          // Look for "plural=" attribute.  Match regular double-quote, or
          // left- or right-double-quote.
          attributes = qqc.replace_smart_quotes (attributes);
-         textentry_plural_b = qqc.get_attr (attributes, 'plural') == 'true';
+         textentry_plural_b = get_attr (attributes, 'plural') == 'true';
+
+         // "minlength=" attribute.
+         textentry_minlength = get_attr (attributes, 'minlength');
       }
    }
 
    // Replace [textentry] with input textbox and (hidden, initially) hint button.
+   // Placeholder will be set later (in init_textentry_autocomplete ()).
    var input_and_button_htm =   '<div class="qcard_textentry">\n'
-                              +    '<input type="text" id="textentry-qdeck' + i_deck + '" class="qcard_textentry qdeck_textentry_autocomplete" placeholder="' + T ('Type chars, then select from list') + '" onfocus="' + qname + '.set_textentry_i_deck (this)" />\n'
+                              +    '<input type="text" id="textentry-qdeck' + i_deck + '" class="qcard_textentry" onfocus="' + qname + '.set_textentry_i_deck (this)" />\n'
                               +    '<button id="textentry_hint-qdeck' + i_deck + '" class="qbutton textentry_hint" onclick="' + qname + '.textentry_hint (' + i_deck + ')" disabled>'
                               +        T ('Hint')
                               +    '</button>\n'
@@ -866,6 +914,7 @@ function process_textentry (i_deck, i_card, htm, opening_tags) {
    // this.flip () > textentry_set_card_back () depending on text entered.
    card.choices = [];
    card.textentry_plural_b = textentry_plural_b;
+   card.textentry_minlength = textentry_minlength;
    card.feedback_htmls = [];
    card.all_choices = [];
    card.card_back = '';
@@ -1009,20 +1058,39 @@ function process_feedback_item (choice_html) {
 // -----------------------------------------------------------------------------
 // Provide first letters of first correct answer as hint, up to five letters.
 this.textentry_hint = function (i_deck) {
-   deckdata[i_deck].textentry_n_hints++;
 
-   // Disable hint button, reset label.
-   $ ('#textentry_hint-qdeck' + i_deck).attr ('disabled', true).removeClass ('qbutton').addClass ('qbutton_disabled').html ('Add.<br />hint');
+   // Cancel any previous timer.
+   clearTimeout (show_hint_timeout);
+
+   deckdata[i_deck].textentry_n_hints++;
 
    var i_card = deckdata[i_deck].i_card;
    var card = deckdata[i_deck].cards[i_card];
    var textentry_hint = card.all_choices[0].substr (0, deckdata[i_deck].textentry_n_hints);
-   var textentry_obj = $ ('#textentry-qdeck' + i_deck);
-   textentry_obj.val (textentry_hint).focus ();
+   var $textentry = $ ('#textentry-qdeck' + i_deck);
+   $textentry.val (textentry_hint).focus ();
 
    // Trigger search on entry -- handles hints that don't match anything (grays
    // "Check answer"/"Flip") and those that do.
-   textentry_obj.autocomplete ('search');
+   $textentry.autocomplete ('search');
+
+   // Disable hint button, reset label.
+   $ ('#textentry_hint-qdeck' + i_deck)
+      .attr ('disabled', true)
+      .removeClass ('qbutton')
+      .addClass ('qbutton_disabled')
+      .html ('Another<br />hint');
+
+   // But set timer to show again.  Closure.
+   var show_hint_button = function () {
+      $ ('#textentry_hint-qdeck' + i_deck)
+         .removeAttr ('disabled')
+         .addClass ('qbutton')
+         .removeClass ('qbutton_disabled');
+   }
+   if (hint_timeout_sec >= 0) {
+      show_hint_timeout = setTimeout (show_hint_button, hint_timeout_sec*1000);
+   }
 }
 
 
@@ -1237,7 +1305,7 @@ function create_qdeck_divs (i_deck, qdeck_tag) {
       }
 
       // If "random=..." present, parse out true/false.
-      var random = qqc.get_attr (attributes, 'random');
+      var random = get_attr (attributes, 'random');
       deckdata[i_deck].random_b = random == 'true';
       if (debug[0]) {
          console.log ('[create_qdeck_divs] random:', random, ', random_b:', deckdata[i_deck].random_b);
@@ -1300,6 +1368,13 @@ function create_qdeck_divs (i_deck, qdeck_tag) {
    divs.push ('   </div>');
    divs.push ('   <div id="qcard_next_buttons-qdeck' + i_deck + '" class="qcard_next_buttons">');
    divs.push ('   </div>');
+
+   // Small, almost invisible, focusable element inside a div.  For Firefox issue
+   // related to keydown event --> <Enter> intercept.
+   divs.push ('   <div class="focusable">');
+   divs.push ('      <input type="text" />');
+   divs.push ('   </div>');
+
    divs.push ('</div>');
 
    return divs.join ('\n');
@@ -1328,7 +1403,7 @@ function process_topics (i_deck, card_tags) {
 
          // Look for "topic=" attribute.
          attributes = qqc.replace_smart_quotes (attributes);
-         var card_topics = qqc.get_attr (attributes, 'topic');
+         var card_topics = get_attr (attributes, 'topic');
          if (card_topics) {
             if (debug[4]) {
                console.log ('[process_topics] card_topics: ', card_topics);
@@ -1425,6 +1500,32 @@ this.start_deck = function (i_deck) {
           || (   typeof (document_qwiz_declined_login_b) != 'undefined'
               && document_qwiz_declined_login_b)) {
          if (user_logged_in_b) {
+
+            // If more than __ minutes since last login, confirm // continue.
+            var now_sec = new Date ().getTime ()/1000.0;
+            var login_timeout_min = qqc.get_qwiz_param ('login_timeout_min', 40);
+            if (now_sec > document_qwiz_current_login_sec + login_timeout_min*60) {
+               if (confirm (T ('You are logged in as') + ' ' + document_qwiz_username + '.\n' + T ('Do you want to continue?  (Click "Cancel" to sign out)'))) {
+                  document_qwiz_current_login_sec = now_sec;
+               } else {
+                  q.sign_out ();
+               }
+            }
+
+            // If logged in as team, check if want to continue as team.
+            if (typeof (document_qwiz_team_b) != 'undefined' && document_qwiz_team_b) {
+               if (! confirm (T ('You are logged in as team') + ': ' + document_qwiz_username + '.\n' + T ('Do you want to continue as this team?'))) {
+
+                  // No.  Reset document global flags and user menu.
+                  document_qwiz_session_id = document_qwiz_session_id.split (';')[0];
+                  document_qwiz_username   = document_qwiz_username.split ('; ')[0];
+                  document_qwiz_team_b     = false;
+                  qqc.set_user_menus_and_icons ();
+                  var msg = T ('OK.  Only %s is logged in now');
+                  msg = msg.replace ('%s', document_qwiz_username);
+                  alert (msg)
+               }
+            }
             var now_sec = new Date ().getTime ()/1000.0;
             var data = {type: 'start', now_sec: now_sec};
             qqc.jjax (qname, i_deck, deckdata[i_deck].qrecord_id, 'record_qcard', data);
@@ -1577,7 +1678,7 @@ this.set_next_buttons = function (i_deck) {
    var htm = '';
 
    // "Flip" / "Check answer".
-   htm += '<button class="qbutton flip-qdeck' + i_deck + '" onclick="' + qname + '.flip (' + i_deck + ')" title="' + T ('Show the other side') + '">' + T ('Flip') + '</button> &nbsp; ';
+   htm += '<button class="qbutton flip flip-qdeck' + i_deck + '" onclick="' + qname + '.flip (' + i_deck + ')" title="' + T ('Show the other side') + '">' + T ('Flip') + '</button> &nbsp; ';
 
    // "Need more practice".  Starts out disabled, gray.
    if (deckdata[i_deck].n_to_go > 1) {
@@ -1649,6 +1750,7 @@ this.process_card = function (i_deck) {
       }
    }
 };
+
 
 // -----------------------------------------------------------------------------
 function done (i_deck) {
@@ -1742,17 +1844,21 @@ function display_progress (i_deck) {
 
 
 // -----------------------------------------------------------------------------
-this.display_login = function (i_deck) {
+this.display_login = function (i_deck, add_team_member_f) {
 
-   // Close menu in case came from there, and stop any bouncing icons (no-intro
-   // quizzes/flashcard decks) bouncing.
+   // Close menu in case came from there.
    $ ('#usermenu-qdeck' + i_deck).hide ();
-   $ ('div.qwiz-usermenu_icon_no_intro').removeClass ('qwiz-icon-bounce');
+
+   if (! add_team_member_f) {
+
+      // Stop any bouncing icons (no-intro quizzes/flashcard decks) bouncing.
+      $ ('div.qwiz-usermenu_icon_no_intro').removeClass ('qwiz-icon-bounce');
+   }
 
    if (deckdata[i_deck].showing_front_b) {
-      deckdata[i_deck].el_qcard_card_front.html (get_login_html (i_deck));
+      deckdata[i_deck].el_qcard_card_front.html (get_login_html (i_deck, add_team_member_f));
    } else {
-      deckdata[i_deck].el_qcard_card_back.html (get_login_html (i_deck));
+      deckdata[i_deck].el_qcard_card_back.html (get_login_html (i_deck, add_team_member_f));
    }
 
    // Hide buttons.
@@ -1764,16 +1870,24 @@ this.display_login = function (i_deck) {
 
 
 // -----------------------------------------------------------------------------
-function get_login_html (i_deck) {
+function get_login_html (i_deck, add_team_member_f) {
 
+   add_team_member_f = add_team_member_f ? 1 : 0;
    var onfocus = 'onfocus="jQuery (\'#qdeck_login-qdeck' + i_deck + ' p.login_error\').css (\'visibility\', \'hidden\')"';
 
    var login_html =
        '<div id="qdeck_login-qdeck' + i_deck + '" class="qdeck-login">\n'
-     +    '<p>'
-     +       '<strong>' + T ('Record score/credit?') + '</strong>'
-     +    '</p>\n'
-     +    '<table border="0" align="center">'
+     +    '<p>';
+   if (add_team_member_f) {
+      login_html +=
+             '<strong>' + T ('Add team member') + '</strong>';
+   } else {
+      login_html +=
+             '<strong>' + T ('Record score/credit?') + '</strong>';
+   }
+   login_html +=
+          '</p>\n'
+     +    '<table border="0" align="center" style="width: auto;">'
      +       '<tr>'
      +          '<td>'
      +             '<label for="qdeck_username-qdeck' + i_deck + '">'+ T ('User name') + '</label>'
@@ -1791,24 +1905,25 @@ function get_login_html (i_deck) {
      +          '</td>'
      +       '<tr>'
      +    '</table>\n'
-     +    '<table border="0" align="center">'
-     +       '<tr>'
-     +          '<td class="qdeck-remember">'
-     +             '<button class="qbutton" onclick="' + qname + '.login (' + i_deck + ')">'
-     +                T ('Login')
-     +             '</button>'
-     +          '</td>'
-     +          '<td class="qdeck-remember">'
-     +             '<button class="qbutton" onclick="' + qname + '.no_login (' + i_deck + ', true)">'
-     +                T ('No thanks')
-     +             '</button>'
-     +             '<br />'
-     +             '<span class="qdeck-remember" title="' + T ('Skip login in the future') + '"><span><input type="checkbox" /></span> ' + T ('Remember') + '</span>'
-     +          '</td>'
-     +       '<tr>'
-     +    '</table>\n'
-     +    '<p class="login_error">'
-     +       'Login incorrect.&nbsp; Please try again'
+     +    '<button class="qbutton login_button" onclick="' + qname + '.login (' + i_deck + ',' + add_team_member_f + ')">'
+     +       T ('Login')
+     +    '</button>'
+     +    '&emsp;' 
+     +    '<button class="qbutton" onclick="' + qname + '.no_login (' + i_deck + ',' + add_team_member_f + ')">';
+   if (add_team_member_f) {
+      login_html +=
+             T ('Cancel')
+     +    '</button>';
+   } else {
+      login_html +=
+             T ('No thanks')
+     +    '</button>'
+     +    '<br />'
+     +    '<span class="qdeck-remember" title="' + T ('Save preference (do not use on shared computer)') + '"><label><span><input type="checkbox" /></span> ' + T ('Remember') + '</label></span>';
+   }
+   login_html +=
+          '<p class="login_error">'
+     +       T ('Login incorrect. Please try again')
      +    '</p>\n'
      + '</div>\n';
 
@@ -1817,7 +1932,9 @@ function get_login_html (i_deck) {
 
 
 // -----------------------------------------------------------------------------
-this.login = function (i_deck) {
+this.login = function (i_deck, add_team_member_f) {
+
+   add_team_member_f = add_team_member_f ? 1 : 0;
 
    // In case previously declined login option, unset cookie and local flag.
    $.removeCookie ('qdeck_declined_login', {path: '/'});
@@ -1831,7 +1948,16 @@ this.login = function (i_deck) {
       username_obj.focus ();
       return;
    }
-   document_qwiz_username = username;
+
+   if (add_team_member_f) {
+
+      // Check if this username already on team list.
+      var usernames = document_qwiz_username.split ('; ');
+      if (usernames.indexOf (username) != -1) {
+         alert ('User ' + username + ' is already on your team.');
+         return false;
+      }
+   }
 
    var password_obj = $ ('#qdeck_password-qdeck' + i_deck);
    var password = password_obj.val ();
@@ -1844,22 +1970,42 @@ this.login = function (i_deck) {
    // We'll send "SHA3" of password.
    var sha3_password = CryptoJS.SHA3 (password).toString ();
 
+   var remember_f;
+   if (add_team_member_f) {
+      remember_f = document_qwiz_remember_f;
+   } else {
+
+      // Pass state of "Remember" checkbox.
+      remember_f = $ ('#qdeck_login-qdeck' + i_deck + ' input[type="checkbox"]').prop('checked') ? 1 : 0;
+      document_qwiz_remember_f = remember_f;
+   }
+
    // Do jjax call.  First disable login button, show spinner.  DKTMP
-   var data = {username: username, sha3_password: sha3_password};
+   var data = {username: username, sha3_password: sha3_password, remember_f: remember_f, add_team_member_f: add_team_member_f};
+   if (add_team_member_f) {
+      data.previous_username = document_qwiz_username;
+   }
    qqc.jjax (qname, i_deck, deckdata[i_deck].qrecord_id, 'login', data);
 }
 
 
 // -----------------------------------------------------------------------------
-this.login_ok = function (i_deck, session_id) {
+this.login_ok = function (i_deck, session_id, remember_f) {
 
-   // Success.  Create session cookie.  Valid just for this session, good for
-   // whole site.  Value set by server.  Callback script also saves session ID
-   // as global (document) variable document_qwiz_session_id.
-   $.cookie ('qwiz_session_id', session_id, {path: '/'});
+   // Success.  Create session cookie, valid for this session, or -- if flag
+   // set -- 1 day, good for whole site.  Value set by server.  Callback 
+   // script also saves session ID as global (document) variable
+   // document_qwiz_session_id.
+   var options = {path: '/'};
+   if (remember_f == 1) {
+      options.expires = 1;
+   }
+   $.cookie ('qwiz_session_id', document_qwiz_session_id, options);
+   
 
-   // Set flag.
+   // Set flag, record time.
    document_qwiz_user_logged_in_b = true;
+   document_qwiz_current_login_sec = new Date ().getTime ()/1000.0;
 
    // Set user menus.
    qqc.set_user_menus_and_icons ();
@@ -1908,13 +2054,15 @@ this.login_not_ok = function (i_deck) {
 
 
 // -----------------------------------------------------------------------------
-this.no_login = function (i_deck) {
+this.no_login = function (i_deck, add_team_member_f) {
 
    // Skip login.  Hide login, go to first question.  If checkbox checked, set
    // cookie and local flag to skip in the future.
-   if ($ ('#qdeck_login-qdeck' + i_deck + ' input[type="checkbox"]').prop('checked')) {
-      $.cookie ('qwiz_declined_login', 1, {path: '/'});
-      document_qwiz_declined_login_b = true;
+   if (! add_team_member_f) {
+      if ($ ('#qdeck_login-qdeck' + i_deck + ' input[type="checkbox"]').prop('checked')) {
+         $.cookie ('qwiz_declined_login', 1, {path: '/'});
+         document_qwiz_declined_login_b = true;
+      }
    }
 
    // Stop any bouncing icons (no-intro quizzes) bouncing.
@@ -1970,30 +2118,46 @@ this.flip = function (i_deck) {
 
    if (deckdata[i_deck].check_answer_disabled_b) {
       alert (Tcheck_answer_message);
+
+      // Show hint button.
+      $ ('#textentry_hint-qdeck' + i_deck)
+         .removeAttr ('disabled')
+         .removeClass ('qbutton_disabled')
+         .addClass ('qbutton').show ();
       return;
    }
 
-   var textentry_obj = $ ('#textentry-qdeck' + i_deck);
-   var front_obj = $ ('#qcard_card-qdeck' + i_deck + ' div.front');
+   var i_card = deckdata[i_deck].i_card;
+   var card = deckdata[i_deck].cards[i_card];
+   var $textentry = $ ('#textentry-qdeck' + i_deck);
+   var $front = $ ('#qcard_card-qdeck' + i_deck + ' div.front');
 
    var set_front_back;
    if (deckdata[i_deck].showing_front_b) {
 
       // If recording, count number of flips (front-to-back only).
-      if (deckdata[i_deck].qrecord_id) {
+      if (deckdata[i_deck].qrecord_id && document_qwiz_user_logged_in_b) {
          deckdata[i_deck].n_flips++;
+
+         // If this is first interaction with no-intro, single-card deck, record
+         // as start time.  
+         if (deckdata[i_deck].record_start_b && document_qwiz_user_logged_in_b) {
+            deckdata[i_deck].record_start_b = false;
+            var now_sec = new Date ().getTime ()/1000.0;
+            var data = {type: 'start', now_sec: now_sec};
+            qqc.jjax (qname, i_deck, deckdata[i_deck].qrecord_id, 'record_qcard', data);
+         }
       }
 
       // Hide whole thing (Chrome randomly ignoring backface-visibility?),
       // superscripts and subscripts (!) (shows through in Safari, Chrome,
       // "flashing" in Chrome on Mac).  Closure for setTimeout ().
       var hideFrontElements = function () {
-         front_obj.css ('visibility', 'hidden');
-         front_obj.find ('sup, sub').css ('visibility', 'hidden');
+         $front.css ('visibility', 'hidden');
+         $front.find ('sup, sub').css ('visibility', 'hidden');
       }
 
       // Hide qwiz icon/link.
-      var i_card = deckdata[i_deck].i_card;
       if (i_card == 0) {
          $ ('div.qcard_window div#icon_qdeck' + i_deck).hide ();
       }
@@ -2030,13 +2194,13 @@ this.flip = function (i_deck) {
       }
 
       // If there's a text entry box...
-      if (textentry_obj.length) {
+      if ($textentry.length) {
 
          // Hide it (shows through in Safari, Chrome, "flashing" in Chrome on
-         // Mac).
-         textentry_obj.css ('visibility', 'hidden');
+         // Mac).  Also blur, so jQuery knows to hide suggestion list (in case
+         // flip triggered by <Enter>).
+         $textentry.blur ().css ('visibility', 'hidden');
 
-         var card = deckdata[i_deck].cards[i_card];
          if (card.textentry_required_b) {
 
             // Find with which choice the user textentry is associated, set card
@@ -2046,7 +2210,7 @@ this.flip = function (i_deck) {
 
             // If something entered in text box, then set back-side element to
             // what was entered.
-            var textentry = textentry_obj.val ();
+            var textentry = $textentry.val ();
             if (textentry) {
 
                // Show what was within square brackets, insert user entry.
@@ -2066,20 +2230,20 @@ this.flip = function (i_deck) {
    } else {
       set_front_back = 'front';
 
-      // "Flip"/"Check answer" button - for front, change back.
-      $ ('button.flip-qdeck' + i_deck).html (T ('Flip'));
-
+      // "Flip"/"Check answer" button - for front, change back to current
+      // setting (might be "Type 3+ letters" for required-input textentry).
+      $ ('button.flip-qdeck' + i_deck).html (card.check_answer);
    }
 
    deckdata[i_deck].el_flip.trigger ('click');
 
    // Closure for setTimeout ().
    var showFrontElements = function () {
-      if (textentry_obj.length) {
-         textentry_obj.css ('visibility', 'visible');
+      if ($textentry.length) {
+         $textentry.css ('visibility', 'visible');
       }
-      front_obj.css ('visibility', 'visible');
-      front_obj.find ('sup, sub').css ('visibility', 'visible');
+      $front.css ('visibility', 'visible');
+      $front.find ('sup, sub').css ('visibility', 'visible');
    };
 
    // Doing explicit show/hide for whole front back -- Chrome seemed to 
@@ -2160,10 +2324,16 @@ this.set_card_front_and_back = function (i_deck, i_card) {
       }
    }
 
-   // Set focus to textentry box, if there is one.  Don't do if first card and
-   // no intro (avoid scrolling page to this flashcard deck).
-   if (i_card != 0 || ! no_intro_b[i_deck]) {
-      $('#textentry-qdeck' + i_deck).focus ();
+   // Reset value of textentry box, if there is one.
+   var $textentry = $('#textentry-qdeck' + i_deck);
+   if ($textentry.length) {
+      $textentry.val ('');
+
+      // Set focus to textentry box.  Don't do if first card and no intro
+      // (avoid scrolling page to this flashcard deck).
+      if (i_card != 0 || ! no_intro_b[i_deck]) {
+         $textentry.focus ();
+      }
    }
 
    // If textentry with required input/autocomplete set up autocomplete (since
@@ -2174,8 +2344,15 @@ this.set_card_front_and_back = function (i_deck, i_card) {
    } else {
 
       // In case previous card was textentry with required input, set button
-      // title back to default, make sure flag set.
-      $ ('button.flip-qdeck' + i_deck).attr ('title', T ('Show the other side'));
+      // text and title back to defaults, and reset saved text.
+      $ ('button.flip-qdeck' + i_deck).html (T ('Flip')).attr ('title', T ('Show the other side'));
+      card.check_answer = T ('Flip');
+   }
+
+   // Firefox issue: keydown event disappears after "next card" until this is
+   // done.
+   if (document_active_qwiz_qdeck) {
+      $ (document_active_qwiz_qdeck).find ('div.focusable input').focus ().blur ();
    }
 
    // How soon does new html show?  Test.
@@ -2214,8 +2391,8 @@ function textentry_set_card_back (i_deck, card) {
 
    // See with which choice the user textentry is associated, make div for
    // feedback for that choice visible.  Hide others.
-   var textentry_obj = $ ('#textentry-qdeck' + i_deck);
-   var entry = textentry_obj.val ();
+   var $textentry = $ ('#textentry-qdeck' + i_deck);
+   var entry = $textentry.val ();
 
    // See if entry among choices; identify default choice ("*").
    var i_choice = -1;
@@ -2496,6 +2673,9 @@ var find_matching_terms = function (request, response) {
    // answer metaphone that matches.
    var required_entry_length = 100;
    var required_metaphone_length = 100;
+   var i_card = deckdata[textentry_i_deck].i_card;
+   var card = deckdata[textentry_i_deck].cards[i_card];
+   var minlength = card.textentry_minlength;
    for (var i=0; i<textentry_answer_metaphones[textentry_i_deck].length; i++) {
       if (entry[0] == textentry_answers[textentry_i_deck][i][0].toLowerCase ()) {
          required_entry_length = Math.min (required_entry_length, textentry_answers[textentry_i_deck][i].length);
@@ -2506,13 +2686,15 @@ var find_matching_terms = function (request, response) {
       if (entry_metaphone[0] == textentry_answer_metaphones[textentry_i_deck][i][0]) {
          required_metaphone_length = Math.min (required_metaphone_length, textentry_answer_metaphones[textentry_i_deck][i].length);
          if (debug[6]) {
-            console.log ('[find_matching_terms] textentry_answer_metaphones[textentry_i_deck][i]:', textentry_answer_metaphones[textentry_i_deck][i], ', required_metaphone_length:', required_metaphone_length);
+            console.log ('[find_matching_terms] textentry_answer_metaphones[textentry_i_deck][' + i + ']:', textentry_answer_metaphones[textentry_i_deck][i], ', textentry_answers[textentry_i_deck][' + i + '][0]:', textentry_answers[textentry_i_deck][i][0], ', required_metaphone_length:', required_metaphone_length);
          }
       }
    }
-   if (required_entry_length != 100) {
+   if (required_entry_length == 100) {
+      required_entry_length = minlength;
+   } else {
       required_entry_length -= 2;
-      required_entry_length = Math.min (5, required_entry_length);
+      required_entry_length = Math.min (minlength, required_entry_length);
    }
 
    if (required_metaphone_length != 100) {
@@ -2537,8 +2719,21 @@ var find_matching_terms = function (request, response) {
       if (debug[6]) {
          console.log ('[find_matching_terms] request.term:', request.term, entry_metaphone, entry_metaphone.length);
       }
-      textentry_matches[textentry_i_deck] = $.map (current_card_textentry_terms_metaphones[textentry_i_deck], function (term_i) {
-         if (term_i[1].indexOf (entry_metaphone) === 0 || term_i[0].toLowerCase ().indexOf (entry) === 0) {
+      textentry_matches[textentry_i_deck] 
+            = $.map (current_card_textentry_terms_metaphones[textentry_i_deck], 
+                     function (term_i) {
+         var ok_f;
+         if (entry_metaphone == '') {
+
+            // A number, or perhaps other non-alpha characters.  Match similar
+            // terms.
+            ok_f = term_i[1] == '' 
+                             || term_i[0].toLowerCase ().indexOf (entry) === 0;
+         } else {
+            ok_f = term_i[1].indexOf (entry_metaphone) === 0
+                             || term_i[0].toLowerCase ().indexOf (entry) === 0;
+         }
+         if (ok_f) {
             if (debug[6]) {
                console.log ('[find_matching_terms] term_i:', term_i);
             }
@@ -2559,12 +2754,14 @@ var find_matching_terms = function (request, response) {
    if (debug[6]) {
       console.log ('[find_matching_terms] deduped_entry.length: ', deduped_entry.length, ', textentry_matches[textentry_i_deck].length: ', textentry_matches[textentry_i_deck].length, ', deckdata[textentry_i_deck].textentry_n_hints: ', deckdata[textentry_i_deck].textentry_n_hints);
    }
-   if (deduped_entry.length >= 5 && deckdata[textentry_i_deck].textentry_n_hints < 5) {
-      var i_card = deckdata[textentry_i_deck].i_card;
-      var card = deckdata[textentry_i_deck].cards[i_card];
+   if (deduped_entry.length >= minlength && deckdata[textentry_i_deck].textentry_n_hints < 5) {
       var lc_first_choice = card.all_choices[0];
-      if (lc_textentry_matches[textentry_i_deck].indexOf (lc_first_choice) == -1) {
-         $ ('#textentry_hint-qdeck' + textentry_i_deck).removeAttr ('disabled').removeClass ('qbutton_disabled').addClass ('qbutton').show ();
+      if (typeof (lc_textentry_matches[textentry_i_deck]) == 'undefined'
+            || lc_textentry_matches[textentry_i_deck].indexOf (lc_first_choice) == -1) {
+         $ ('#textentry_hint-qdeck' + textentry_i_deck)
+            .removeAttr ('disabled')
+            .removeClass ('qbutton_disabled')
+            .addClass ('qbutton').show ();
       }
    }
    response (textentry_matches[textentry_i_deck]);
@@ -2605,22 +2802,41 @@ function menu_shown (e) {
    var card = deckdata[textentry_i_deck].cards[i_card];
    var lc_first_choice = card.all_choices[0];
    if (lc_textentry_matches[textentry_i_deck].indexOf (lc_first_choice) != -1) {
-      $ ('#textentry_hint-qdeck' + textentry_i_deck).attr ('disabled', true).removeClass ('qbutton').addClass ('qbutton_disabled');
+      $ ('#textentry_hint-qdeck' + textentry_i_deck)
+         .attr ('disabled', true)
+         .removeClass ('qbutton')
+         .addClass ('qbutton_disabled');
    }
+
+   // Enable/disable "Flip/Check answer", and toggle button text between
+   // "Flip/Check answer" and "Type 3+ letters" or alternative.
    if (lc_textentry_matches[textentry_i_deck].indexOf (lc_entry) != -1) {
-      $ ('button.flip-qdeck' + textentry_i_deck).removeAttr ('disabled').removeClass ('qbutton_disabled').addClass ('qbutton');
+      $ ('button.flip-qdeck' + textentry_i_deck)
+         .removeAttr ('disabled')
+         .removeClass ('qbutton_disabled')
+         .addClass ('qbutton')
+         .html (T ('Flip'));
+      card.check_answer = T ('Flip');  // DKTMP
       deckdata[textentry_i_deck].check_answer_disabled_b = false;
    } else {
-      $ ('button.flip-qdeck' + textentry_i_deck).removeClass ('qbutton').addClass ('qbutton_disabled');
+      card.check_answer = card.save_check_answer;
+      $ ('button.flip-qdeck' + textentry_i_deck)
+         .removeClass ('qbutton')
+         .addClass ('qbutton_disabled')
+         .html (card.check_answer);
       deckdata[textentry_i_deck].check_answer_disabled_b = true;
    }
 }
 
 
 // -----------------------------------------------------------------------------
-// When item selected, enable check answer.
+// When item selected, enable check answer and set text.
 function item_selected () {
-   $ ('button.flip-qdeck' + textentry_i_deck).removeAttr ('disabled').removeClass ('qbutton_disabled').addClass ('qbutton');
+   $ ('button.flip-qdeck' + textentry_i_deck)
+      .removeAttr ('disabled')
+      .removeClass ('qbutton_disabled')
+      .addClass ('qbutton')
+      .html (T ('Flip'));
    deckdata[textentry_i_deck].check_answer_disabled_b = false;
 }
 
@@ -2630,6 +2846,15 @@ this.keep_next_button_active = function () {
    next_button_active_b = true;
    $ ('button.got_it').attr ('disabled', false).removeClass ('qbutton_disabled').addClass ('qbutton');
 
+}
+
+
+// -----------------------------------------------------------------------------
+function get_attr (htm, attr_name) {
+   var attr_value = qqc.get_attr (htm, attr_name, deckdata);
+   errmsgs = errmsgs.concat (deckdata.additional_errmsgs);
+
+   return attr_value;
 }
 
 

@@ -52,21 +52,31 @@ function qwiz_admin_init () {
    add_settings_field ('qwiz-icon_qwiz-field', 'Display Qwiz icon/link', 
                        'icon_qwiz_field_input', 'qwiz-options-page', 
                        'qwiz-icon_qwiz-section');
+
+   // ........................................................................
+   // Hint timeout.
+   add_settings_section ('qwiz-hint_timeout-section', 
+                         'Free-format input - time till "Hint" button shown',
+                         'qwiz_hint_timeout_text', 'qwiz-options-page');
+
+   add_settings_field ('qwiz-hint_timeout-field', 'Seconds until shown',
+                       'qwiz_hint_timeout_field_input', 'qwiz-options-page', 
+                       'qwiz-hint_timeout-section');
+
    // ........................................................................
    // Strings and "translations" (substitutions).
    // Args: 1: ID for section.  2: section title (printed on page).  
    // 3: function to display section intro/text.  4: Page name (matches 
    // do_settings_sections () call).
-   add_settings_section ('qwiz-translate_strings-section', 
-                         'Customize button labels, etc.',
+   $title =   '<input name="Submit" type="submit" value="Save changes" />'
+            . '<br /><br />'
+            . 'Customize button labels, etc.';
+   add_settings_section ('qwiz-translate_strings-section', $title,
                          'qwiz_translate_strings_text', 'qwiz-options-page');
 
    // Args 1: ID for field.  2: title.  3: function to display field input.
    // 4: page name.  5: ID of section (first arg to add_settings_section ()).
-
-   $title = 'Current string; new string (semicolon-separated pair each line)'
-            . '<br /><br /><br />'
-            . '<input name="Submit" type="submit" value="Save changes" />';
+   $title = 'Current string; new string (semicolon-separated pair each line)';
    add_settings_field ('qwiz-translate_strings-field', $title,
                        'qwiz_translate_strings_field_input', 'qwiz-options-page', 
                        'qwiz-translate_strings-section');
@@ -76,8 +86,10 @@ function qwiz_admin_init () {
    // Args: 1: ID for section.  2: section title (printed on page).  
    // 3: function to display section intro/text.  4: Page name (matches 
    // do_settings_sections () call).
-   add_settings_section ('qwiz-content-section', 
-                         'HTML element that contains quiz and flashcard content (shortcodes, etc.)',
+   $title = '<input name="Submit" type="submit" value="Save changes" />'
+            . '<br /><br />'
+            . 'HTML element that contains quiz and flashcard content (shortcodes, etc.)';
+   add_settings_section ('qwiz-content-section', $title,
                          'qwiz_content_text', 'qwiz-options-page');
 
    // Args 1: ID for field.  2: title.  3: function to display field input.
@@ -132,6 +144,10 @@ function qwiz_options_validate ($options) {
       $new_icon_qwiz = 'Icon and link';
    }
    $options['icon_qwiz'] = $new_icon_qwiz;
+
+   // ............................................
+   // Hint timeout.
+   $options['hint_timeout_sec'] = $options['hint_timeout_sec_select'];
 
    // ............................................
    // Check "translate_strings".
@@ -242,9 +258,11 @@ function qwiz_options_validate ($options) {
 
    // ............................................
    // Download beta version: if checkbox set, do now.
-   $qwiz_download_beta = $options['qwiz_download_beta'];
-   if ($qwiz_download_beta) {
-      qwiz_download_unzip_beta ();
+   if (isset ($options['qwiz_download_beta'])) {
+      $qwiz_download_beta = $options['qwiz_download_beta'];
+      if ($qwiz_download_beta) {
+         qwiz_download_unzip_beta ();
+      }
    }
 
    // Don't leave set (although checkbox defaults to not checked).
@@ -432,6 +450,48 @@ function icon_qwiz_field_input () {
       $selected = $icon_qwiz == $value ? 'selected' : '';
       print    '<option value = "' . $value . '" ' . $selected . ">\n";
       print       $value;
+      print    "</option>\n";
+   }
+
+   print "</select>\n";
+}
+
+
+// -----------------------------------------------------------------------------
+function qwiz_hint_timeout_text () {
+   print '<p>';
+   print 'On a free-format-entry quiz question or flashcard, the default is to ';
+   print 'show the "Hint" button after 20 seconds if the user does nothing. ';
+   print '(The "Hint" button will be shown if the user types three or more ';
+   print 'characters without matching a suggestion term.)';
+   print '</p>';
+}
+
+
+function qwiz_hint_timeout_field_input () {
+
+   // Get the options array from the WordPress database.
+   $options = get_option ('qwiz_options');
+
+   $hint_timeout_sec = $options['hint_timeout_sec'];
+
+   // Default.
+   if ($hint_timeout_sec == '') {
+      $hint_timeout_sec = 20;
+   }
+
+   // Form field to input new value.
+   print '<select id="qwiz_hint_timeout_qwiz" name="qwiz_options[hint_timeout_sec_select]">' . "\n";
+
+   $select_displays = array ('Never', 'Always show', 2, 3, 5, 10, 15, 20, 30, 60);
+   $select_values   = array (     -1,             0, 2, 3, 5, 10, 15, 20, 30, 60);
+   $n_select_options = count ($select_displays);
+   for ($i_opt=0; $i_opt<$n_select_options; $i_opt++) {
+      $display = $select_displays[$i_opt];
+      $value   = $select_values[$i_opt];
+      $selected = $hint_timeout_sec == $value ? 'selected' : '';
+      print    '<option value="' . $value . '" ' . $selected . ">\n";
+      print       $display;
       print    "</option>\n";
    }
 

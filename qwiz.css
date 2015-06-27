@@ -151,13 +151,6 @@ div.qwiz-usermenu div {
    border:              none;
 }
 
-.qwiz-login td.qwiz-remember {
-   position:            relative;
-   border:              none;
-   text-align:          center;
-   vertical-align:      top;
-}
-
 span.qwiz-remember {
    position:            relative;
    font-size:           80%;

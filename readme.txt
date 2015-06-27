@@ -2,7 +2,7 @@
 Contributors: dan_kirshner
 Tags: interactive quiz, quiz, flashcards, labeled diagrams
 Tested up to: 4.2
-Stable tag: 2.29
+Stable tag: 2.30
 License: GPL2
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
@@ -19,6 +19,21 @@ Activate the plugin through the 'Plugins' menu in WordPress
 == Screenshots ==
 
 == Changelog ==
+
+= 2.30 =
+2015-06-26
+Team login.
+Login timeout.
+Check that attributes have a value given in double quotes.
+Set textentry minlength for short answer choices.
+Let zero-length entry metaphones match zero-length term metaphones.
+Required-input textentry "Check answer" text changes with entry state.
+<Enter> works for "Check answer", "Next question", and "Login".
+[fx] feedback applies to all incorrect choices.
+Hint button appears after timeout, or after gray "Check answer" click.
+Qwiz settings option for hint-button timeout.
+On re-do of a labeled diagram, restore previously-correctly-placed labels.
+Fix bug - labeled diagrams - "Next" button not showing.
 
 = 2.29 =
 2015-04-26

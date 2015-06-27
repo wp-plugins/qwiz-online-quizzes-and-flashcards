@@ -74,7 +74,7 @@ var qname = 'qwizzled';
 
 // Debug settings.
 var debug = [];
-debug.push (true );    // 0 - general.
+debug.push (false);    // 0 - general.
 debug.push (false);    // 1 - htm detail in parse_html_block ().
 debug.push (false);    // 2 - Preliminary checks.
 
@@ -340,8 +340,8 @@ function add_style () {
 
    // Want to beat TinyMCE toolbars at 999.
    s.push ('   z-index:         1000;');
-   s.push ('   left:            750px;');
-   s.push ('   top:             300px;');
+   s.push ('   right:           125px;');
+   s.push ('   top:             250px;');
    s.push ('   border:          2px solid rgba(79, 112, 153, 1);');
    s.push ('}');
 
@@ -951,7 +951,7 @@ this.label_clicked = function (local_el_label_div) {
       // Selecting text within question div will involve mouseup, which we can
       // process.  First turn off any previous event handler (just want to 
       // do function call once!).
-      qwizzled_question_obj.off ('mouseup', q.target_text_selected);
+      qwizzled_question_obj.off ('mouseup');
       qwizzled_question_obj.on ('mouseup', q.target_text_selected);
    }
 }
@@ -1101,7 +1101,7 @@ this.target_text_selected = function (e) {
    }
 
    // Turn off further selects.
-   qwizzled_question_obj.off ('mouseup', q.target_text_selected);
+   qwizzled_question_obj.off ('mouseup');
 
    if (! waiting_for_target_select_b) {
       return false;
@@ -1544,7 +1544,7 @@ function set_mult_targets_indicator (label_obj) {
 
       // Increment.  Remove existing class, add incremented.
       var current_class = m[0];
-      var n_targets = parseInt (m[1]);
+      var n_targets = parseInt (m[1], 10);
       if (debug[0]) {
          console.log ('[set_mult_targets_indicator] current_class:', current_class, ', n_targets:', n_targets);
       }
@@ -1692,7 +1692,8 @@ function process_notwrapped_questions (qwiz_html, question_start_tags) {
 
       // Need to avoid [q]s already inside qwizzled_question divs.  Method will
       // be to see what comes first, <div class="qwizzled_question"... or [q].
-      // If <div... first, move past the next [q] (which is inside the div).
+      // If <div... first, set search position past the next [q] (which is
+      // inside the div).
       var qwizzled_question_div_pos = qwiz_html.substr (ipos).search ('<div class="qwizzled_question">'); 
       if (qwizzled_question_div_pos != -1) {
          var q_pos = qwiz_html.substr (ipos).search (/\[q[ \]]/);
@@ -1734,7 +1735,7 @@ function process_notwrapped_questions (qwiz_html, question_start_tags) {
       var canvas_div = '<div class="qwizzled_canvas">'
                        + canvas_div_content
                        + '<div style="clear: both;"></div>'
-                       + '</div>';
+                       + '</div> <!-- close qwizzled_canvas -->';
       new_question_html = new_question_html.replace (canvas_div_content, canvas_div);
       if (debug[0]) {
          console.log ('[process_notwrapped_questions] new_question_html:', new_question_html);
@@ -1812,7 +1813,7 @@ function process_question (question_html, doing_wrapped_b) {
                        +    question_html 
                        +    '<div class="qwizzled_question_bottom_border_title" title="' + T ('End of labeled-diagram question') +'">'
                        +    '</div>'
-                       + '</div>'
+                       + '</div> <!-- close qwizzled_question -->'
                        + comment_html;
       }
    }
@@ -2397,7 +2398,7 @@ function T (string) {
 function time_id () {
    var now = new Date ();
    var now_millisec = now.getTime ();
-   return parseInt (now_millisec / 1000.0);
+   return parseInt (now_millisec / 1000.0, 10);
 }
 
 

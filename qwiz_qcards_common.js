@@ -1,6 +1,9 @@
 // Document globals.
-var document_qwiz_declined_login_b = 'not ready';
-var document_qwiz_user_logged_in_b = 'not ready';
+var document_qwiz_declined_login_b  = 'not ready';
+var document_qwiz_user_logged_in_b  = 'not ready';
+var document_qwiz_remember_f        = false;
+var document_qwiz_current_login_sec = 0;
+var document_active_qwiz_qdeck = '';
 
 // =============================================================================
 // Isolate namespace.
@@ -16,7 +19,8 @@ var jjax_script_no = 0;
 var head = 'not ready';
 
 var debug = [];
-debug.push (false);    // 0 - general.
+debug[0] = false;    // general.
+debug[7] = false;    // Enter -> click.
 
 
 // -----------------------------------------------------------------------------
@@ -131,6 +135,13 @@ this.set_user_menus_and_icons = function (sign_out_f) {
              +     qqc.T ('Logged in as') + ' <strong>' + document_qwiz_username + '</strong>'
              +  '</div>';
 
+      // Menu item for additional team-member login.
+      htm +=    '<div>'
+             +     '<a href="javascript: qname.display_login (i_qwiz, 1)">'
+             +         qqc.T ('Add team member')
+             +     '</a>'
+             +  '</div>';
+
       // Menu item for records.
       htm +=    '<div>'
              +      qqc.T ('My scores')
@@ -146,16 +157,18 @@ this.set_user_menus_and_icons = function (sign_out_f) {
 
       icon_color = 'green';
 
-      // Logged in.  No animation for no-intro quizzes icon.
+      // Since logged in, no animation for no-intro quizzes icon.
       $ ('div.qwiz-usermenu_icon_no_intro').removeClass ('qwiz-icon-bounce');
+
    } else {
 
+      // Not logged in.
       // Note: breaks before and after items -- make logged-out menu as big as
       // logged-in menu, so when click "Sign out" cursor is still on menu (and
       // mouseleave will work).
-      // Not logged in: login menu item.
+      // Login menu item.
       htm +=    '<br />'
-             +  '<div  onclick="qname.display_login (i_qwiz)">'
+             +  '<div>'
              +     '<a href="javascript: qname.display_login (i_qwiz)">'
              +        '<strong>' + qqc.T ('Log in') + '</strong> ' + qqc.T ('to record/get credit')
              +     '</a>'
@@ -166,7 +179,7 @@ this.set_user_menus_and_icons = function (sign_out_f) {
              +     '<a href="javascript: qname.icon_no_login (i_qwiz)">'
              +        '<strong>' + qqc.T ('No thanks') + '</strong>'
              +     '</a>'
-             +     ' &nbsp;<span class="qwiz-remember" title="' + qqc.T ('Skip login in the future') + '"><span><input type="checkbox" /></span> ' + qqc.T ('Remember') + '</span>'
+             +     ' &nbsp;<span class="qwiz-remember" title="' + qqc.T ('Skip login in the future') + '"><label><span><input type="checkbox" /></span> ' + qqc.T ('Remember') + '</label></span>'
              +  '</div>'
              +  '<br />';
 
@@ -445,16 +458,91 @@ this.remove_tags_eols = function (htm) {
 
 
 // -----------------------------------------------------------------------------
-this.get_attr = function (htm, attr_name) {
+this.init_enter_intercept = function () {
 
+   // For page, listen for keydown.  If Enter, trigger one of the appropriate
+   // buttons, based on which is currently visible.
+   $ ('html').off ();
+   $ ('html').on ('keydown',
+                  function (e) {
+                     if (document_active_qwiz_qdeck && e.keyCode == 13) {
+                        if (debug[7]) {
+                            console.log ('[init_enter_intercept] document_active_qwiz_qdeck:', document_active_qwiz_qdeck);
+                            console.log ('[init_enter_intercept] e.target:', e.target);
+                        }
+                        // If <Enter> in <input> or <textarea> that is NOT qwiz/
+                        // qdeck-related, ignore.
+                        var tagname = e.target.tagName.toLowerCase ();
+                        if (tagname == 'input' || tagname == 'textarea') {
+                           var classname = e.target.className.toLowerCase ();
+                           if (classname.indexOf ('qwiz') == -1
+                                          && classname.indexOf ('qcard') == -1) {
+                              return false;
+                           }
+                        }
+                        var $document_active_qwiz_qdeck = $ (document_active_qwiz_qdeck);
+                        if (document_active_qwiz_qdeck.className.toLowerCase () != 'qcard_window') {
+
+                           // Quiz.
+                           if ($document_active_qwiz_qdeck.find ('div.next_button').is (':visible')) {
+                              if (debug[7]) {
+                                 console.log ('[init_enter_intercept] qwiz next_button trigger');
+                                 console.log ('[init_enter_intercept] $document_active_qwiz_qdeck.find (\'div.next_button button\'):', $document_active_qwiz_qdeck.find ('div.next_button button'));
+                              }
+                              $document_active_qwiz_qdeck.find ('div.next_button button').trigger ('click');
+                           } else if ($document_active_qwiz_qdeck.find ('div.textentry_check_answer_div').is (':visible')) {
+                              if (debug[7]) {
+                                  console.log ('[init_enter_intercept] qwiz check_answer trigger');
+                              }
+                              $document_active_qwiz_qdeck.find ('div.textentry_check_answer_div button.textentry_check_answer').trigger ('click');
+                           } else if ($document_active_qwiz_qdeck.find ('div.qwiz-login').is (':visible')) {
+                              if (debug[7]) {
+                                  console.log ('[init_enter_intercept] qwiz login_button trigger');
+                              }
+                              $document_active_qwiz_qdeck.find ('div.qwiz-login button.login_button').trigger ('click');
+                           }
+                        } else {
+
+                           // Flashcard deck.
+                           // Do login first, because don't check visibility of
+                           // "Check answer".
+                           if ($document_active_qwiz_qdeck
+                              .find ('div.qdeck-login').is (':visible')) {
+                              if (debug[7]) {
+                                  console.log ('[init_enter_intercept] qdeck login_button trigger');
+                              }
+                              $document_active_qwiz_qdeck.find ('div.qdeck-login button.login_button').trigger ('click');
+                           } else if ($document_active_qwiz_qdeck.find ('div.qcard_next_buttons button.flip.qbutton').length) {
+
+                              // "Check answer button will not have "qbutton" (instead,
+                              // has "qbutton_disabled" until active.  Same button for
+                              // regular card and textentry input.
+                              if (debug[7]) {
+                                  console.log ('[init_enter_intercept] qdeck Check answer trigger');
+                                  console.log ('[init_enter_intercept] find:', $document_active_qwiz_qdeck.find ('div.qcard_next_buttons button.flip'));
+                              }
+                              $document_active_qwiz_qdeck.find ('div.qcard_next_buttons button.flip').trigger ('click');
+                           }
+                        }
+                     }
+                  });
+}
+// -----------------------------------------------------------------------------
+this.get_attr = function (htm, attr_name, qdata) {
+
+   qdata.additional_errmsgs = [];
    var attr_value = '';
 
    // get_attr () is always preceded by replace_smart_quotes (), so can just
    // handle regular quotes.
-   var attr_re = new RegExp (attr_name + '\\s*=\\s*"([^"]+)"', 'm');
+   var attr_re = new RegExp (attr_name + '\\s*=\\s*("([^"]+)")*', 'm');
    var attr_match = htm.match (attr_re);
    if (attr_match) {
-      attr_value = qqc.trim (attr_match[1]);
+      if (attr_match[2]) {
+         attr_value = qqc.trim (attr_match[2]);
+      } else {
+         qdata.additional_errmsgs.push (qqc.T ('Did not get value (inside double quotation marks) with') + ' ' + attr_name + qqc.T (' in') + ' ' + htm);
+      }
    }
 
    return attr_value;
