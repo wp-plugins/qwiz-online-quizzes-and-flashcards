@@ -1,0 +1,487 @@
+/* The "canvas" for each item: question, answers (choices), feedback. */
+.qcard_window {
+   position:            relative;
+}
+
+.qcard_progress {
+   position:            relative;
+   text-align:          right;
+}
+
+.qcard_progress p {
+   font-size:           90%;
+   color:               gray;
+   margin:              0px !important;
+}
+
+.qwiz-usermenu_icon {
+   visibility:      hidden;
+   float:           right;
+   margin-top:      -2px;
+   margin-left:     3px;
+   transform:       scale(1.0, 0.65);
+   -webkit-transform: scale(1.0, 0.65);
+}
+
+.qwiz-icon-bounce {
+   animation-name:                    icon-bounce;
+   animation-duration:                3.5s;
+   animation-iteration-count:         infinite;
+
+   -webkit-animation-name:            icon-bounce;
+   -webkit-animation-duration:        3.5s;
+   -webkit-animation-iteration-count: infinite;
+}
+@keyframes icon-bounce {
+   from {
+      margin-top:   -2px;
+   } 7% {
+      margin-top:   -10px;
+   } 15% {
+      margin-top:   -2px;
+   } 22% {
+      margin-top:   -7px;
+   } 30% {
+      margin-top:   -2px;
+   } 37% {
+      margin-top:   -7px;
+   } 50% {
+      margin-top:   -2px;
+   } to {
+      margin-top:   -2px;
+   }
+}
+
+@-webkit-keyframes icon-bounce {
+   from {
+      margin-top:   -2px;
+   } 7% {
+      margin-top:   -10px;
+   } 15% {
+      margin-top:   -2px;
+   } 22% {
+      margin-top:   -7px;
+   } 30% {
+      margin-top:   -2px;
+   } 37% {
+      margin-top:   -7px;
+   } 50% {
+      margin-top:   -2px;
+   } to {
+      margin-top:   -2px;
+   }
+}
+
+div.qdeck-usermenu {
+   position:        absolute;
+   display:         none;
+
+   /* Keep in front of labels. */
+   z-index:         3;
+
+   top:             2px;
+   right:           0px;
+   background:      white;
+   padding:         5px;
+   border:          2px solid rgba(79, 112, 153, 1);
+   box-shadow:      -3px 3px 2px gray;
+   text-align:      left;
+}
+
+div.qdeck-usermenu div {
+   padding-bottom:  5px;
+}
+
+.qdeck-login {
+   text-align:          center;
+   font-weight:         normal;
+}
+
+.qdeck-login p {
+   margin-bottom:       6px;
+}
+
+.qdeck-login input {
+   padding:             3px;
+}
+
+.qdeck-login table {
+   width:               auto;
+   text-align:          center;
+}
+
+.qdeck-login td {
+   border:              none;
+}
+
+span.qdeck-remember {
+   position:            relative;
+   font-size:           80%;
+}
+
+span.qdeck-remember span {
+   position:            relative;
+   top:                 2px;
+}
+
+span.qdeck-remember input[type=checkbox] {
+   transform:           scale(0.8);
+   -webkit-transform:   scale(0.8);
+}
+
+.qdeck-login p.login_error {
+   visibility:          hidden;
+   color:               red;
+   font-weight:         bold;
+   text-align:          center;
+}
+
+
+div.qcard_header {
+   color:               white;
+   background:          black;
+   margin:              0px;
+   padding:             0px;
+}
+
+/* Any sub-elements of header have zero margin. */
+div.qcard_header * {
+   margin:              0px !important;
+                    /* top right bot left */
+   padding:             0px 5px 0px 5px !important;
+}
+
+/* Card */
+div.qcard_card {
+   position:            relative;
+}
+
+div.qcard_textentry {
+   display:             inline-block;
+   position:            relative;
+   width:               240px;
+   font-weight:         bold;
+   color:               blue;
+}
+
+input.qcard_textentry {
+   width:               228px;
+   padding:             5px;
+}
+
+div.card_back_textentry {
+   position:            absolute;
+   top:                 0px;
+   left:                0px;
+   visibility:          hidden;
+}
+
+.back_qcard_textentry {
+   font-weight:         bold;
+   color:               blue;
+}
+
+input.qcard_textentry::-webkit-input-placeholder {
+   font-size:           83%;
+   font-weight:         normal;
+   color:               gray;
+}
+
+input.qcard_textentry::-moz-placeholder {
+   font-size:           83%;
+   font-weight:         normal;
+   color:               gray;
+}
+
+/* Older versions of Firefox */
+input.qcard_textentry:-moz-placeholder {
+   font-size:           83%;
+   font-weight:         normal;
+   color:               gray;
+}
+
+input.qcard_textentry:-ms-input-placeholder {
+   font-size:           83%;
+   font-weight:         normal;
+   color:               gray;
+}
+
+button.textentry_hint {
+   position:            absolute;
+   right:               0px;
+   top:                 50%;
+   transform:           translateY(-50%);
+   font-size:           11px;
+   line-spacing:        90%;
+                    /* top right bot left */
+   padding:             2px 2px 1px 2px;
+   border-radius:       5px;
+   display:             none;
+}
+
+.back_textentry_p {
+   margin-top:          0px;
+}
+
+table.qcard_table {
+   border-collapse:     separate;
+}
+
+div.qcard_card .front {
+   min-height:          280px;
+}
+
+div.qcard_card td.center {
+   position:            relative;
+   padding:             5px;
+   text-align:          center;
+   vertical-align:      middle;
+   font-size:           12pt;
+   font-weight:         bold;
+}
+
+div.qcard_card img {
+   border:              0px;
+   box-shadow:          none;
+}
+
+p.topic_list {
+   font-weight:         normal;
+   text-align:          left;
+   margin-left:         2em !important;
+   text-indent:         -2em;
+}
+
+div.icon_qdeck {
+   position:        absolute;
+   left:            2px;
+   bottom:          2px;
+   width:           16px;
+   height:          16px;
+   line-height:     0px;
+}
+
+img.icon_qdeck {
+   opacity:         0.4;
+}
+
+img.icon_qdeck:hover {
+   opacity:         1.0;
+}
+
+div.qcard_card .back .center {
+   background-image: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAf4AAAE2CAIAAAAPtmerAAAACXBIWXMAAA7EAAAOxAGVKw4bAAAEnklEQVR4nO3YMW1AMRQEwTgyf3ix9Mm8sLCLnUFw1Ra3ZuYHgJLf1wMAuE36AXKkHyBH+gFypB8gR/oBcqQfIEf6AXKkHyBH+gFypB8gR/oBcqQfIEf6AXKkHyBH+gFypB8gR/oBcqQfIEf6AXKkHyBH+gFypB8gR/oBcqQfIEf6AXKkHyBH+gFypB8gR/oBcqQfIEf6AXKkHyBH+gFypB8gR/oBcqQfIEf6AXKkHyBH+gFypB8gR/oBcqQfIEf6AXKkHyBH+gFypB8gR/oBcqQfIGf//P293gDAVWtmXm8A4CqHD0CO9APkSD9AjvQD5Eg/QI70A+RIP0CO9APkSD9AjvQD5Eg/QI70A+RIP0CO9APkSD9AjvQD5Eg/QI70A+RIP0CO9APkSD9AjvQD5Eg/QI70A+Ts883rDQBctWakH6DF4QOQI/0AOdIPkCP9ADnSD5Aj/QA50g+QI/0AOdIPkCP9ADnSD5Aj/QA50g+QI/0AOdIPkCP9ADnSD5Aj/QA50g+QI/0AOdIPkCP9ADnSD5Aj/QA5+3zzegMAV60Z6QdocfgA5Eg/QI70A+RIP0CO9APkSD9AjvQD5Eg/QI70A+RIP0CO9APkSD9AjvQD5Eg/QI70A+RIP0CO9APkSD9AjvQD5Eg/QI70A+RIP0CO9APkSD9Azj7fvN4AwFVrRvoBWhw+ADnSD5Aj/QA50g+QI/0AOdIPkCP9ADnSD5Aj/QA50g+QI/0AOdIPkCP9ADnSD5Aj/QA50g+QI/0AOdIPkCP9ADnSD5Aj/QA50g+QI/0AOdIPkLPPN683AHDVmpF+gBaHD0CO9APkSD9AjvQD5Eg/QI70A+RIP0CO9APkSD9AjvQD5Eg/QI70A+RIP0CO9APkSD9AjvQD5Eg/QI70A+RIP0CO9APkSD9AjvQD5Eg/QI70A+Ts883rDQBctWakH6DF4QOQI/0AOdIPkCP9ADnSD5Aj/QA50g+QI/0AOdIPkCP9ADnSD5Aj/QA50g+QI/0AOdIPkCP9ADnSD5Aj/QA50g+QI/0AOdIPkCP9ADnSD5Aj/QA5+3zzegMAV60Z6QdocfgA5Eg/QI70A+RIP0CO9APkSD9AjvQD5Eg/QI70A+RIP0CO9APkSD9AjvQD5Eg/QI70A+RIP0CO9APkSD9AjvQD5Eg/QI70A+RIP0CO9APkSD9Azj7fvN4AwFVrRvoBWhw+ADnSD5Aj/QA50g+QI/0AOdIPkCP9ADnSD5Aj/QA50g+QI/0AOdIPkCP9ADnSD5Aj/QA50g+QI/0AOdIPkCP9ADnSD5Aj/QA50g+QI/0AOdIPkLPPN683AHDVmpF+gBaHD0CO9APkSD9AjvQD5Eg/QI70A+RIP0CO9APkSD9AjvQD5Eg/QI70A+RIP0CO9APkSD9AjvQD5Eg/QI70A+RIP0CO9APkSD9AjvQD5Eg/QI70A+Ts883rDQBctWakH6DF4QOQI/0AOdIPkCP9ADnSD5Aj/QA50g+QI/0AOdIPkCP9ADnSD5Aj/QA50g+QI/0AOdIPkCP9ADnSD5Aj/QA50g+QI/0AOdIPkCP9ADnSD5Aj/QA5/8mNPTHI1j+2AAAAAElFTkSuQmCC);
+   background-repeat:   no-repeat;
+   background-size:     contain;
+   background-position: center;
+   min-height:          280px;
+   line-height:         25px;
+   font-size:           12pt;
+}
+div.qcard_card button.cbutton {
+   display:          none;
+}
+.qcard_next_buttons {
+   position:            relative;
+   margin-top:          5px;
+   text-align:          center;
+}
+.qbutton {
+   margin-bottom: 2px;
+   border-top: 1px solid #96d1f8;
+   background: #65a9d7;
+   background: -webkit-gradient(linear, left top, left bottom, from(#3e779d), to(#65a9d7));
+   background: -webkit-linear-gradient(top, #3e779d, #65a9d7);
+   background: -moz-linear-gradient(top, #3e779d, #65a9d7);
+   background: -ms-linear-gradient(top, #3e779d, #65a9d7);
+   background: -o-linear-gradient(top, #3e779d, #65a9d7);
+   padding: 3px 3px;
+   -webkit-border-radius: 8px;
+   -moz-border-radius: 8px;
+   border-radius: 8px;
+   -webkit-box-shadow: rgba(0,0,0,1) 0 1px 0;
+   -moz-box-shadow: rgba(0,0,0,1) 0 1px 0;
+   box-shadow: rgba(0,0,0,1) 0 1px 0;
+   text-shadow: rgba(0,0,0,.4) 0 1px 0;
+   color: white;
+   font-size: 14px;
+   font-weight: bold;
+   font-family: arial, verdana, sans-serif;
+   text-decoration: none;
+   vertical-align: middle;
+}
+.qbutton_disabled {
+   margin-bottom: 2px;
+   border-top: 1px solid #cccccc;
+   background: #cccccc;
+   padding: 3px 3px;
+   -webkit-border-radius: 8px;
+   -moz-border-radius: 8px;
+   border-radius: 8px;
+   -webkit-box-shadow: none;
+   -moz-box-shadow: none;
+   box-shadow: none;
+   text-shadow: none;
+   color: #e6e6e6;
+   font-size: 14px;
+   font-weight: bold;
+   font-family: arial, verdana, sans-serif;
+   text-decoration: none;
+   vertical-align: middle;
+}
+.qcard_next_buttons .qbutton:hover {
+   border-top-color: #28597a;
+   background: #28597a;
+   color: #ccc;
+}
+.qcard_next_buttons .qbutton:active {
+   border-top-color: #1b435e;
+   background: #1b435e;
+}
+.clear {
+   clear:               both;
+}
+
+div.focusable {
+   width:               5px;
+   height:              2px;
+   overflow:            hidden;
+}
+div.focusable input {
+   border:              0px;
+   background:          none;
+}
+
+// flipCard_v2.css.
+div.fc_card-container img{
+        position: static !important;
+}
+/* === CARD CONTAINER === */
+div.card-container {
+   position: relative;
+   display: block;
+   padding: 0;
+   margin: 0;
+        
+   -webkit-perspective: 1000px;
+      -moz-perspective: 1000px;
+        -o-perspective: 1000px;
+       -ms-perspective: 1000px;
+           perspective: 1000px;
+}
+/* === CARD === */
+.card-container .card {
+   border-radius: 0px;
+   width: 100%;
+   height: 100%;
+   position: absolute;
+   display: inline-block;
+   padding: 0;
+   margin: 0;
+   -webkit-transition: -webkit-transform .7s;
+    -moz-transition: -moz-transform .7s;
+      -o-transition: -o-transform .7s;
+     -ms-transition: -o-transform .7s;
+         transition: transform .7s;
+   -webkit-transform-style: preserve-3d;
+      -moz-transform-style: preserve-3d;
+        -o-transform-style: preserve-3d;
+       -ms-transform-style: preserve-3d;
+           transform-style: preserve-3d;
+}
+/* === STYLE FOR THE FRONT & BACK SIDE === */
+.card-container .card>div{	
+   border-radius: 0px;
+   
+   height: 100%;
+   width: 100%;
+   position: absolute;
+   background: #FFFFFF;
+   text-align: center;
+   
+   margin: 0;
+   -webkit-box-sizing:border-box;
+      -moz-box-sizing:border-box;
+       -ms-box-sizing:border-box;
+           box-sizing:border-box;
+   -webkit-backface-visibility: hidden;
+      -moz-backface-visibility: hidden;
+        -o-backface-visibility: hidden;
+       -ms-backface-visibility: hidden;
+           backface-visibility: hidden;
+}
+/* === BEGINNING EFFECT === */
+.card-container .card[data-direction="top"] .back, .card-container .card[data-direction="bottom"] .back{
+   -webkit-transform: rotateX(180deg);
+      -moz-transform: rotateX(180deg);
+        -o-transform: rotateX(180deg);
+       -ms-transform: rotateX(180deg);
+           transform: rotateX(180deg);
+}
+.card-container .card[data-direction="right"] .back, .card-container .card[data-direction="left"] .back{
+        -webkit-transform: rotateY(180deg);
+         -moz-transform: rotateY(180deg);
+           -o-transform: rotateY(180deg);
+          -ms-transform: rotateY(180deg);
+              transform: rotateY(180deg);
+}
+/* === EFFECT DIRECTIONS === */
+.flipping-right {
+ -webkit-transform: rotateY(180deg);
+    -moz-transform: rotateY(180deg);
+      -o-transform: rotateY(180deg);
+     -ms-transform: rotateY(180deg);
+         transform: rotateY(180deg);
+}
+.flipping-left {
+   -webkit-transform: rotateY(-180deg);
+    -moz-transform: rotateY(-180deg);
+      -o-transform: rotateY(-180deg);
+     -ms-transform: rotateY(-180deg);
+         transform: rotateY(-180deg);
+}
+.flipping-top {
+   -webkit-transform: rotateX(180deg);
+      -moz-transform: rotateX(180deg);
+        -o-transform: rotateX(180deg);
+       -ms-transform: rotateX(180deg);
+           transform: rotateX(180deg);
+}
+.flipping-bottom {
+   -webkit-transform: rotateX(-180deg);
+    -moz-transform: rotateX(-180deg);
+      -o-transform: rotateX(-180deg);
+     -ms-transform: rotateX(-180deg);
+         transform: rotateX(-180deg);
+}
+.noCSS3Container{
+        -webkit-perspective: none !important;
+           -moz-perspective: none !important;
+                 -o-perspective: none !important;
+            -ms-perspective: none !important;
+                        perspective: none !important; 
+}
+.noCSS3Card{
+   -webkit-transition: none !important;
+      -moz-transition: none !important;
+        -o-transition: none !important;
+       -ms-transition: none !important;
+                    transition: none !important;
+   -webkit-transform-style: none !important;
+      -moz-transform-style: none !important;
+        -o-transform-style: none !important;
+       -ms-transform-style: none !important;
+           transform-style: none !important;
+}
+.noCSS3Sides{
+   -webkit-backface-visibility: visible !important;
+      -moz-backface-visibility: visible !important;
+        -o-backface-visibility: visible !important;
+       -ms-backface-visibility: visible !important;
+           backface-visibility: visible !important;
+   -webkit-transform: none !important;
+      -moz-transform: none !important;
+        -o-transform: none !important;
+       -ms-transform: none !important;
+           transform: none !important;
+}
