@@ -3,7 +3,7 @@
  * Plugin Name: Qwiz - online quizzes and flashcards
  * Plugin URI: http://dkprojects.net/qwiz
  * Description: Easy online quizzes and flashcards for WordPress
- * Version: 2.30
+ * Version: 2.31
  * Author: Dan Kirshner
  * Author URI: http://dkprojects.net/qwiz
  * License: GPL2
@@ -50,11 +50,11 @@ function add_qwiz_js_and_style () {
    $qwiz_qcards_common   = qwiz_plugin_url ('qwiz_qcards_common.js');
    $jquery_ui            = qwiz_plugin_url ('jquery-ui.min.js');
    $jquery_ui_touchpunch = qwiz_plugin_url ('jquery.ui.touch-punch.min.js');
-   wp_enqueue_script ('qwiz_handle',                 $qwiz,                 array (), '2.30', true);
-   wp_enqueue_script ('qwizcards_handle',            $qwizcards,            array (), '2.30', true);
-   wp_enqueue_script ('qwiz_qcards_common_handle',   $qwiz_qcards_common,   array (), '2.30', true);
-   wp_enqueue_script ('jquery_ui_handle',            $jquery_ui,            array (), '2.30', true);
-   wp_enqueue_script ('jquery_ui_touchpunch_handle', $jquery_ui_touchpunch, array (), '2.30', true);
+   wp_enqueue_script ('qwiz_handle',                 $qwiz,                 array (), '2.31', true);
+   wp_enqueue_script ('qwizcards_handle',            $qwizcards,            array (), '2.31', true);
+   wp_enqueue_script ('qwiz_qcards_common_handle',   $qwiz_qcards_common,   array (), '2.31', true);
+   wp_enqueue_script ('jquery_ui_handle',            $jquery_ui,            array (), '2.31', true);
+   wp_enqueue_script ('jquery_ui_touchpunch_handle', $jquery_ui_touchpunch, array (), '2.31', true);
 
    // Options/parameters.  Set default content option.
    $plugin_url = qwiz_plugin_url ( '/');

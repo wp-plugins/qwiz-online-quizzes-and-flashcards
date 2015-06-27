@@ -1,4 +1,7 @@
 /*
+ * Version 2.31 2015-06-27
+ * Fix bug - labels were getting pre-placed after "Take quiz again".
+ *
  * Version 2.30 2015-06-26
  * Team login.
  * Login timeout.
@@ -538,7 +541,7 @@ function init_qwizzled ($content, local_n_qwizzes) {
    // Set up object.
    for (var i_qwiz=n_qwizzes; i_qwiz<n_qwizzes+local_n_qwizzes; i_qwiz++) {
       if (qwizdata[i_qwiz].qwizzled_b) {
-         qwizdata[i_qwiz].qwizzled = {};
+         qwizdata[i_qwiz].$qwizzled = {};
 
          // See if this qwiz that has one or more labeled diagrams has non-
          // default width.
@@ -554,17 +557,17 @@ function init_qwizzled ($content, local_n_qwizzes) {
 
    $content.find ('div.qwizzled').each (function () {
 
-      // Get qwiz number from id -- id looks like "qwiz0-q0".
-      var id = $ (this).attr ('id');
+      // Get qwiz number from ID -- ID looks like "qwiz0-q0".
+      var qwizq_id = $ (this).attr ('id');
       if (debug[0]) {
-         console.log ('[init_qwizzled] id:', id);
+         console.log ('[init_qwizzled] qwizq_id:', qwizq_id);
       }
-      var fields = id.split ('-');
+      var fields = qwizq_id.split ('-');
       var i_qwiz     = parseInt (fields[0].substr (4), 10);
       if (debug[0]) {
          console.log ('                i_qwiz:', i_qwiz);
       }
-      qwizdata[i_qwiz].qwizzled[id] = $ (this).clone (true);
+      qwizdata[i_qwiz].$qwizzled[qwizq_id] = $ (this).clone (true);
    });
 }
 
@@ -746,8 +749,11 @@ this.label_dropped = function ($target, $label) {
          // correctly-placed on first try.  (Last-filled target doesn't count,
          // since it's the only choice left!)
          var target_id = $target.attr ('id');
-         if (! qwizdata[i_qwiz].correct_on_try1[target_id]) {
-            qwizdata[i_qwiz].correct_on_try1[target_id] = 1;
+         if (typeof (qwizdata[i_qwiz].correct_on_try1[i_question]) == 'undefined') {
+            qwizdata[i_qwiz].correct_on_try1[i_question] = {};
+         }
+         if (! qwizdata[i_qwiz].correct_on_try1[i_question][target_id]) {
+            qwizdata[i_qwiz].correct_on_try1[i_question][target_id] = 1;
          }
 
          // Update progress bar.
@@ -775,7 +781,10 @@ this.label_dropped = function ($target, $label) {
 
       // Record that label was not correctly placed on first try.
       var target_id = $target.attr ('id');
-      qwizdata[i_qwiz].correct_on_try1[target_id] = -1;
+      if (typeof (qwizdata[i_qwiz].correct_on_try1[i_question]) == 'undefined') {
+         qwizdata[i_qwiz].correct_on_try1[i_question] = {};
+      }
+      qwizdata[i_qwiz].correct_on_try1[i_question][target_id] = -1;
    }
 
    // If recording, record all label placements -- correct and incorrect.
@@ -811,12 +820,12 @@ this.label_dropped = function ($target, $label) {
 
 
 // -----------------------------------------------------------------------------
-function place_labels (i_qwiz, qwizq_id) {
+function place_labels (i_qwiz, i_question, qwizq_id) {
 
    // On this time around, put in place those labels that were correctly
    // placed on a target on the first try in the previous go-around.
-   for (var target_id in qwizdata[i_qwiz].correct_on_try1) {
-      if (qwizdata[i_qwiz].correct_on_try1[target_id] == 1) {
+   for (var target_id in qwizdata[i_qwiz].correct_on_try1[i_question]) {
+      if (qwizdata[i_qwiz].correct_on_try1[i_question][target_id] == 1) {
          var $target = $ ('div#' + qwizq_id + ' div#' + target_id);
          if ($target.length == 0) {
             $target = $ ('div#' + qwizq_id + ' span#' + target_id).first ();
@@ -847,7 +856,7 @@ function place_labels (i_qwiz, qwizq_id) {
       } else {
 
          // New chance at correct-on-first-try for others.
-         qwizdata[i_qwiz].correct_on_try1[target_id] = 0;
+         qwizdata[i_qwiz].correct_on_try1[i_question][target_id] = 0;
       }
    }
 
@@ -1234,7 +1243,11 @@ function process_qwiz_pair (htm, i_qwiz) {
                                              questions_html[i_question],
                                              q_opening_tags[i_question],
                                              question_tags[i_question]);
-            qwizdata[i_qwiz].correct_on_try1 = {};
+            if (qwizdata[i_qwiz].correct_on_try1) {
+               qwizdata[i_qwiz].correct_on_try1[i_question] = {};
+            } else {
+               qwizdata[i_qwiz].correct_on_try1 = [];
+            }
          } else {
 
             // Error: didn't find choices or labels.
@@ -1626,12 +1639,15 @@ this.restart_quiz = function (i_qwiz) {
    qwizdata[i_qwiz].n_incorrect = 0;
 
    // Reset qwizzled divs to original state (cloned in init_qwizzled ()).
-   for (var qwizzled_div_id in qwizdata[i_qwiz].qwizzled) {
-      $ ('div#' + qwizzled_div_id).replaceWith (qwizdata[i_qwiz].qwizzled[qwizzled_div_id]);
+   for (var qwizzled_div_id in qwizdata[i_qwiz].$qwizzled) {
+      $ ('div#' + qwizzled_div_id).replaceWith (qwizdata[i_qwiz].$qwizzled[qwizzled_div_id]);
 
       // For reasons beyond me, it's necessary to re-initialize the cloned
       // object.
-      qwizdata[i_qwiz].qwizzled[qwizzled_div_id] = $ ('div#' + qwizzled_div_id).clone (true);
+      qwizdata[i_qwiz].$qwizzled[qwizzled_div_id] = $ ('div#' + qwizzled_div_id).clone (true);
+   }
+   if (qwizdata[i_qwiz].qwizzled_b) {
+      qwizdata[i_qwiz].correct_on_try1 = [];
    }
 
 
@@ -1817,16 +1833,13 @@ function display_question (i_qwiz, i_question) {
       qwizdata[i_qwiz].n_label_attempts = 0;
 
       if ($qwizq.data ('answered_correctly') == 0) {
-         $qwizq.replaceWith (qwizdata[i_qwiz].qwizzled[qwizq_id]);
+         $qwizq.replaceWith (qwizdata[i_qwiz].$qwizzled[qwizq_id]);
 
          // Need to reset.
          var $qwizq = $ ('div#' + qwizq_id);
 
          // As in restart_quiz (), re-initialize the cloned object.
-         qwizdata[i_qwiz].qwizzled[qwizq_id] = $ ('div#' + qwizq_id).clone (true);
-         if (debug[0]) {
-            console.log ('[display_question] qwizq_id:', qwizq_id);
-         }
+         qwizdata[i_qwiz].$qwizzled[qwizq_id] = $ ('div#' + qwizq_id).clone (true);
 
          // Also, put into place labels that were previously placed correctly.
          // These delays (to make sure any asynchronous preliminaries get done
@@ -1837,10 +1850,7 @@ function display_question (i_qwiz, i_question) {
          setTimeout (delay_init_drag_and_drop, 100);
 
          var delay_place_labels = function () {
-            if (debug[8]) {
-               console.log ('[delay_place_labels]');
-            }
-            place_labels (i_qwiz, qwizq_id);
+            place_labels (i_qwiz, i_question, qwizq_id);
          };
          setTimeout (delay_place_labels, 200);
       }

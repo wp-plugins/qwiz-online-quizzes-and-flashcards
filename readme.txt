@@ -20,6 +20,10 @@ Activate the plugin through the 'Plugins' menu in WordPress
 
 == Changelog ==
 
+= 2.31 =
+2015-06-27
+Fix bug - labels were getting pre-placed after "Take quiz again".
+
 = 2.30 =
 2015-06-26
 Team login.
