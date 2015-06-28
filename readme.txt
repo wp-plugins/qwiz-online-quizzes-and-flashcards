@@ -1,4 +1,4 @@
-=== Qwiz - online quizzes and flashcards ===
+=== Qwizcards - online quizzes and flashcards ===
 Contributors: dan_kirshner
 Tags: interactive quiz, quiz, flashcards, labeled diagrams
 Tested up to: 4.2
@@ -6,11 +6,11 @@ Stable tag: 2.31
 License: GPL2
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
-Qwiz lets you create quizzes and flashcard decks using simple shortcodes (such as "[q]" for a question) that you include in your page/post.
+Qwizcards lets you create quizzes and flashcard decks using simple shortcodes (such as "[q]" for a question) that you include in your page/post.
 
 
 == Description ==
-Easy online quizzes and flashcards for WordPress - use simple shortcodes (such as "[q]" for a question) in your page or post.  See http://dkprojects.net/qwiz
+Easy online quizzes and flashcards for WordPress - use simple shortcodes (such as "[q]" for a question) in your page or post.  See http://qwizcards.com
 
 == Installation ==
 Upload 'qwiz-online-qwizzes-wp-plugin.php' to your plugins directory ('.../wp-content/plugins').

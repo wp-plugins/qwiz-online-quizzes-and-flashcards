@@ -1,11 +1,11 @@
 <?php
 /**
- * Plugin Name: Qwiz - online quizzes and flashcards
- * Plugin URI: http://dkprojects.net/qwiz
+ * Plugin Name: Qwizcards - online quizzes and flashcards
+ * Plugin URI: http://qwizcards.com
  * Description: Easy online quizzes and flashcards for WordPress
  * Version: 2.31
  * Author: Dan Kirshner
- * Author URI: http://dkprojects.net/qwiz
+ * Author URI: http://qwizcards.com
  * License: GPL2
  */
 
@@ -98,7 +98,7 @@ function add_qwiz_js_and_style () {
       'icon_qwiz'        => $icon_qwiz,
       'content'          => $content,
       'beta'             => $beta,
-      'server_loc'       => '//dkprojects.net/qwiz/admin',
+      'server_loc'       => '//qwizcards.com/admin',
       'hint_timeout_sec' => $hint_timeout_sec
    );
    wp_localize_script ('qwiz_handle',      'qwiz_params', $qwiz_params);
@@ -216,7 +216,7 @@ function qwiz_admin_bar_item ($wp_admin_bar) {
 
    $args = array (
       'id'     => 'qwiz_menu',
-      'title'  => 'Qwiz'
+      'title'  => 'Qwizcards'
    );
    $wp_admin_bar->add_node ($args);
 
