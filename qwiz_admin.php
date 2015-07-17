@@ -5,7 +5,7 @@ function qwiz_admin () {
    // Args: 1: Page title.  2: Menu title.  3: Capability required by user for
    // menu option to be available.  4: Menu id name.  5: Function to print
    // content for page.
-   add_options_page ('Qwiz', 'Qwiz', 'manage_options', 
+   add_options_page ('Qwizcards', 'Qwizcards', 'manage_options', 
                      'qwiz-online-quizzes-and-flashcards-admin', 'qwiz_options');
 }
 
@@ -15,7 +15,7 @@ function qwiz_options () {
       wp_die( __( 'You do not have sufficient permissions to access this page.' ) );
    }
    print '<div class="wrap">' . "\n";
-   print    '<h2>Qwiz options</h2>' . "\n";
+   print    '<h2>Qwizcards options</h2>' . "\n";
    print    '<form action="options.php" method="post">' . "\n";
 
                 // Output nonce, action, and option_page fields for this settings
@@ -44,12 +44,12 @@ function qwiz_admin_init () {
    // Args: 1: ID for section.  2: section title (printed on page).  
    // 3: function to display section intro/text.  4: Page name (matches 
    // do_settings_sections () call).
-   add_settings_section ('qwiz-icon_qwiz-section', 'First-card Qwiz icon/link',
+   add_settings_section ('qwiz-icon_qwiz-section', 'Qwizcards icon/link',
                          'icon_qwiz_text', 'qwiz-options-page');
 
    // Args 1: ID for field.  2: title.  3: function to display field input.
    // 4: page name.  5: ID of section (first arg to add_settings_section ()).
-   add_settings_field ('qwiz-icon_qwiz-field', 'Display Qwiz icon/link', 
+   add_settings_field ('qwiz-icon_qwiz-field', 'Display Qwizcards icon/link', 
                        'icon_qwiz_field_input', 'qwiz-options-page', 
                        'qwiz-icon_qwiz-section');
 
@@ -94,14 +94,14 @@ function qwiz_admin_init () {
 
    // Args 1: ID for field.  2: title.  3: function to display field input.
    // 4: page name.  5: ID of section (first arg to add_settings_section ()).
-   add_settings_field ('qwiz-content-field', 'Qwiz-content HTML<br />element(s)', 
+   add_settings_field ('qwiz-content-field', 'Qwizcards-content<br />HTML element(s)', 
                        'qwiz_content_field_input', 'qwiz-options-page', 
                        'qwiz-content-section');
 
    // ........................................................................
    // Use beta version.
    add_settings_section ('qwiz-use_beta-section',
-                         'Test or deploy beta version of Qwiz plugin',
+                         'Test or deploy beta version of Qwizcards plugin',
                          'qwiz_use_beta_text', 'qwiz-options-page');
 
    add_settings_field ('qwiz-use_beta-field', 'Test or deploy beta, or use installed release',
@@ -111,7 +111,7 @@ function qwiz_admin_init () {
    // ........................................................................
    // Download current beta version.
    add_settings_section ('qwiz-download_beta-section',
-                         'Download beta version of Qwiz plugin',
+                         'Download beta version of Qwizcards plugin',
                          'qwiz_download_beta_text', 'qwiz-options-page');
 
    add_settings_field ('qwiz-download_beta-field', 'Download',
@@ -197,7 +197,7 @@ function qwiz_options_validate ($options) {
                // translated.
                if ($old_string != "Check answer" && ! array_key_exists ($old_string, $qwiz_T)) {
                   add_settings_error ('qwiz-content-section', 'qwiz-translate_strings-errmsg3',
-                                      'Custom labels line' . ($i + 1) . ': could not find current string ("' . $old_string . '") in list of strings.  Either incorrectly entered or missing from list (see languages/strings_to_translate.php in the Qwiz plugin directory).');
+                                      'Custom labels line' . ($i + 1) . ': could not find current string ("' . $old_string . '") in list of strings.  Either incorrectly entered or missing from list (see languages/strings_to_translate.php in the Qwizcards plugin directory).');
                }
 
                // Append to array (even if not in list: no harm, but allows
@@ -421,8 +421,8 @@ function qwiz_cp_R ($source_dir, $dest_dir) {
 // -----------------------------------------------------------------------------
 function icon_qwiz_text () {
    print '<p>';
-   print 'The Qwiz icon appears on the first or introductory card/page ';
-   print 'of a quiz or a flashcard deck.  It provides a link to the Qwiz ';
+   print 'The Qwizcards icon appears on the first or introductory card/page ';
+   print 'of a quiz or a flashcard deck.  It provides a link to the Qwizcards ';
    print 'website. ';
    print '</p>';
 }
@@ -517,7 +517,7 @@ function qwiz_translate_strings_text () {
    print 'Note also: while one could translate the plugin to another language ';
    print 'in this manner, there actually is a standard WordPress ';
    print '"internationalization" method; see the languages directory in the ';
-   print 'Qwiz plugin directory.';
+   print 'Qwizcards plugin directory.';
    print '</p>';
    print '<p>';
    print 'Example: to replace the Flashcard button "Need more practice" ';
@@ -547,7 +547,7 @@ function qwiz_translate_strings_field_input () {
 // -----------------------------------------------------------------------------
 function qwiz_content_text () {
    print '<p>';
-   print 'The Qwiz "content" HTML element identifies the "container" for quiz ';
+   print 'The Qwizcards "content" HTML element identifies the "container" for quiz ';
    print 'and flashcard deck shortcodes, etc.  In WordPress, this is where ';
    print 'page and post content appears.  The default setting includes divs ';
    print 'having class "entry-content", "post-content", or "container". ';
@@ -558,9 +558,9 @@ function qwiz_content_text () {
    print 'Note: pages that include excerpts from several pages or posts ';
    print '(including the results of a search) include multiple such HTML ';
    print 'elements, which may contain incomplete quizzes or flashcard decks. ';
-   print 'The Qwiz plugin handles this, but will be confused if it thinks ';
+   print 'The Qwizcards plugin handles this, but will be confused if it thinks ';
    print 'the excerpts are all part of the same page or post. ';
-   print 'So don\'t define "body" to be the Qwiz-content HTML element!';
+   print 'So don\'t define "body" to be the Qwizcards-content HTML element!';
    print '</p>';
    print '<p>';
    print 'HTML elements are entered CSS-fashion, such as div.class or div#id. Examples:<br />';
@@ -659,7 +659,7 @@ function qwiz_download_beta_field_input () {
 // -----------------------------------------------------------------------------
 function qwiz_revert_text () {
 
-   print 'Switch back to an earlier version of the Qwiz plugin';
+   print 'Switch back to an earlier version of the Qwizcards plugin';
 }
 
 function qwiz_revert_field_input () {

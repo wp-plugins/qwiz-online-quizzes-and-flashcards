@@ -1,5 +1,15 @@
 /*
- * Version 2.30 2015-06-??
+ * Version 2.32 2015-07-??
+ * Fix - <Enter> not working for login.
+ * Mouseenter starts timer for show hint on first question of no-intro quiz.
+ * Start timer for show hint on question 1 of no-intro quiz on mouseenter.
+ * Check if quiz registered.
+ * Check if user will get credit for quiz.
+ *
+ * Version 2.31 2015-06-27
+ * Fix bug - labels were getting pre-placed after "Take quiz again".
+ *
+ * Version 2.30 2015-06-26
  * Team login.
  * Login timeout.
  * Check that attributes have a value given in double quotes.
@@ -9,6 +19,8 @@
  * <Enter> works for "Check answer", "Next question", and "Login".
  * [fx] feedback applies to all incorrect choices.
  * Hint button appears after timeout, or after gray "Check answer" click.
+ * On re-do of a labeled diagram, restore previously-correctly-placed labels.
+ * Fix bug - labeled diagrams - "Next" button not showing.
  *
  * Version 2.29 2015-04-26
  * Word-wrap normal for labels (problem in Firefox).
@@ -169,6 +181,7 @@ debug.push (false);    // 4 - question tags/topics.
 debug.push (false);    // 5 - unused.
 debug.push (false);    // 6 - [textentry] / autocomplete.
 debug.push (false);    // 7 - Enter -> click.
+debug.push (false);    // 8 - init_drag_and_drop.
 
 var $ = jQuery;
 
@@ -216,7 +229,7 @@ var lc_textentry_matches = {};
 var textentry_i_qwiz;
 
 var Tcheck_answer_message;
-var show_hint_timeout;
+var show_hint_timeout = {};
 
 var qrecord_b = false;
 var q_and_a_text = '';
@@ -382,7 +395,7 @@ function process_html () {
             $ (this).html (new_htm);
 
             // If any labeled diagrams in this content div, do prep: targets
-            // no longer draggable, targets, size image wrappers.
+            // no longer draggable, size image wrappers.
             if (qwizzled_b) {
                init_qwizzled ($ (this), local_n_qwizzes);
             }
@@ -460,8 +473,34 @@ function process_html () {
 function init_qwizzled ($content, local_n_qwizzes) {
 
    // Targets no longer draggable (from qwizzled create/edit step).
-   // Also reset borders.
-   $content.find ('td.qwizzled_canvas .qwizzled_target').removeClass ('ui-draggable ui-draggable-handle').css ({'border-style': 'dotted', 'border-color': 'gray'});
+   // Also reset borders.  Give each target a unique ID (so can see if correctly
+   // labeled on first try) -- but give text-target siblings the same ID.
+   sibs = {};
+   var t_id;
+   var ii = 0;
+   $content.find ('td.qwizzled_canvas .qwizzled_target').each (function () {
+      $ (this).removeClass ('ui-draggable ui-draggable-handle').css ({'border-style': 'dotted', 'border-color': 'gray'});
+      var classes = $ (this).attr ('class');
+      var m = classes.match (/qtarget_sib-([0-9]+)/);
+      if (m) {
+         var sib = m[1];
+         if (sibs[sib]) {
+
+            // Have already seen sibling of this target.  Use that ID.
+            t_id = sibs[sib];
+         } else {
+
+            // This is new.  Create new ID and save.
+            t_id = 't' + ii;
+            sibs[sib] = t_id;
+            ii++;
+         }
+      } else {
+         t_id = 't' + ii;
+         ii++;
+      }
+      $ (this).attr ('id', t_id);
+   });
 
    // Remove resizing handle divs.
    $content.find ('td.qwizzled_canvas .qwizzled_target div.ui-resizable-handle').remove ();
@@ -509,7 +548,7 @@ function init_qwizzled ($content, local_n_qwizzes) {
    // Set up object.
    for (var i_qwiz=n_qwizzes; i_qwiz<n_qwizzes+local_n_qwizzes; i_qwiz++) {
       if (qwizdata[i_qwiz].qwizzled_b) {
-         qwizdata[i_qwiz].qwizzled = {};
+         qwizdata[i_qwiz].$qwizzled = {};
 
          // See if this qwiz that has one or more labeled diagrams has non-
          // default width.
@@ -525,17 +564,17 @@ function init_qwizzled ($content, local_n_qwizzes) {
 
    $content.find ('div.qwizzled').each (function () {
 
-      // Get qwiz number from id -- id looks like "qwiz0-q0".
-      var id = $ (this).attr ('id');
+      // Get qwiz number from ID -- ID looks like "qwiz0-q0".
+      var qwizq_id = $ (this).attr ('id');
       if (debug[0]) {
-         console.log ('[init_qwizzled] id:', id);
+         console.log ('[init_qwizzled] qwizq_id:', qwizq_id);
       }
-      var fields = id.split ('-');
+      var fields = qwizq_id.split ('-');
       var i_qwiz     = parseInt (fields[0].substr (4), 10);
       if (debug[0]) {
          console.log ('                i_qwiz:', i_qwiz);
       }
-      qwizdata[i_qwiz].qwizzled[id] = $ (this).clone (true);
+      qwizdata[i_qwiz].$qwizzled[qwizq_id] = $ (this).clone (true);
    });
 }
 
@@ -556,7 +595,7 @@ function init_textentry_autocomplete () {
 
 
 // -----------------------------------------------------------------------------
-this.label_dragstart = function (label_obj) {
+this.label_dragstart = function ($label) {
 
    // Reset things only if flag is set indicating a label was incorrectly
    // placed.
@@ -565,49 +604,50 @@ this.label_dragstart = function (label_obj) {
       try_again_obj = '';
 
       if (debug[0]) {
-         console.log ('[label_dragstart] label_obj:', label_obj);
+         console.log ('[label_dragstart] $label:', $label);
          console.log ('[label_dragstart] local_try_again_obj:', local_try_again_obj);
-         console.log ('[label_dragstart] local_try_again_obj.label_obj.attr (\'id\'):', local_try_again_obj.label_obj.attr ('id'), ', label_obj.attr (\'id\'):', label_obj.attr ('id'));
+         console.log ('[label_dragstart] local_try_again_obj.$label.attr (\'id\'):', local_try_again_obj.$label.attr ('id'), ', $label.attr (\'id\'):', local_try_again_obj.$label.attr ('id'));
       }
 
       // Reset background of incorrectly-placed label.
-      local_try_again_obj.label_obj.find ('.qwizzled_highlight_label').css ({background: 'none'});
-      local_try_again_obj.label_obj.find ('.qwizzled_highlight_label img').css ({outline: 'none'});
+      local_try_again_obj.$label.find ('.qwizzled_highlight_label').css ({background: 'none'});
+      local_try_again_obj.$label.find ('.qwizzled_highlight_label img').css ({outline: 'none'});
 
       // If dragging a label other than the one that was incorrectly placed,
       // move the incorrectly-placed label back to list.
-      if (local_try_again_obj.label_obj.attr ('id') != label_obj.attr ('id')) {
-         local_try_again_obj.label_obj.animate ({left: '0px', top: '0px'}, {duration: 750});
+      if (local_try_again_obj.$label.attr ('id') != $label.attr ('id')) {
+         local_try_again_obj.$label.animate ({left: '0px', top: '0px'}, {duration: 750});
       }
 
       // Reset feedback.
-      local_try_again_obj.feedback_obj.hide ();
+      local_try_again_obj.$feedback.hide ();
 
       // Make target droppable again.
-      local_try_again_obj.target_obj.droppable ('option', 'disabled', false);
+      local_try_again_obj.$target.droppable ('option', 'disabled', false);
    }
 }
 
 
 // -----------------------------------------------------------------------------
-this.label_dropped = function (target_obj, label_obj) {
+this.label_dropped = function ($target, $label) {
 
    // Is this the right target?  Get the association id from the label class.
    // If no matching class, use data () (backwards compatibility).
-   var classes = label_obj.attr ('class');
-   var m = classes.match (/qtarget_assoc([0-9]*)/);
+   var classes = $label.attr ('class');
+   var m = classes.match (/qtarget_assoc([0-9]+)/);
+   var assoc_id;
    if (m) { 
-      var assoc_id = m[1];
+      assoc_id = m[1];
    } else {
-      var assoc_id = label_obj.data ('label_target_id');
+      assoc_id = $label.data ('label_target_id');
    }
    if (debug[0]) {
-      console.log ('[label_dropped] target_obj:', target_obj, ', assoc_id:', assoc_id);
+      console.log ('[label_dropped] $target:', $target, ', assoc_id:', assoc_id);
    }
 
    // Get label id (so know which feedback to show).  Looks like
    // label-qwiz0-q0-a0.  Feedback id looks like qwiz0-q0-a0x.
-   var label_id = label_obj.attr ('id');
+   var label_id = $label.attr ('id');
    var feedback_selector = '#' + label_id.substr (6);
    var fields = feedback_selector.split ('-');
    var question_selector = fields[0] + '-' + fields[1];
@@ -649,10 +689,10 @@ this.label_dropped = function (target_obj, label_obj) {
       }
    }
 
-   // Label correct placed?  That is, does the target have this id as a class?
+   // Label correctly placed?  That is, does the target have this id as a class?
    // (Note: not using id= because WordPress eats ids).
    var finished_diagram_b = false;
-   if (target_obj.hasClass ('qwizzled_target-' + assoc_id)) {
+   if ($target.hasClass ('qwizzled_target-' + assoc_id)) {
       if (debug[0]) {
          console.log ('[label_dropped] feedback_selector:', feedback_selector + 'c');
       }
@@ -660,68 +700,7 @@ this.label_dropped = function (target_obj, label_obj) {
       // Yes.  Show positive feedback for this label.
       $ (feedback_selector + 'c').show ();
 
-      // See if multiple targets for this label.
-      var multiple_targets_b = false;
-      m = classes.match (/qwizzled_n_targets([0-9]*)/);
-      if (m) {
-         multiple_targets_b = true;
-
-         // Either decrement targets remaining, or, if only one left, remove
-         // class.
-         var current_n_targets = m[0];
-         var n_targets = parseInt (m[1], 10);
-         var current_n_targets = m[0];
-         if (n_targets == 2) {
-
-            // Will be only one left.  Can treat as "normal".  Remove class.
-            label_obj.removeClass (current_n_targets);
-         } else {
-
-            // Decrement.  Set flag, remove existing class, add decremented
-            // class.
-            var new_class = 'qwizzled_n_targets' + (--n_targets);
-            label_obj.removeClass (current_n_targets).addClass (new_class);
-         }
-      }
-
-      // Do-it-myself snap to target.  Make copy of label into child of the
-      // target.  Clone false arg says do not copy events (namely, dragging
-      // effect).
-      var label_copy_obj = label_obj.clone (false);
-      label_copy_obj.appendTo (target_obj);
-      label_copy_obj.css ({position: 'absolute', left: '4px', top: '50%', height: 'auto', width: '100%', transform: 'translateY(-50%)'});
-      label_copy_obj.removeClass ('qwizzled_label_unplaced'); 
-      label_copy_obj.find ('.qwizzled_highlight_label').css ('cursor', 'default');
-
-      // Move original label back to original position.
-      label_obj.css ({left: '0px', top: '0px'});
-
-      // If not multiple targets, disable drag of original label, and remove 
-      // class to signal no re-enable.  Also remove cursor css.
-      // Gray-out (apply to children, too, in case need to overcome default),
-      // move to original position.
-      if (! multiple_targets_b) {
-         label_obj.draggable ('disable').removeClass ('qwizzled_label_unplaced'); 
-         label_obj.css ({color: 'lightgray', left: '0px', top: '0px'});
-         label_obj.find ('*').css ({color: 'lightgray'});
-         label_obj.find ('.qwizzled_highlight_label').css ('cursor', 'default');
-      }
-
-      // This target no longer droppable.  If div, just this.  If span (text
-      // target, possibly with multiple spans) find relevant siblings.
-      if (target_obj[0].tagName.toLowerCase () == 'div') {
-         target_obj.droppable ('option', 'disabled', true);
-      } else {
-         var classes = target_obj.attr ('class');
-         var m = classes.match (/qtarget_sib-[0-9]*/);
-         if (m) {
-            $ ('span.' + m[0]).droppable ('option', 'disabled', true);
-         } else {
-
-            // Backwards compatibility -- assume they're in a wrapper span.
-            target_obj.siblings ('span').andSelf ().droppable ('option', 'disabled', true);
-         }
-      }
+      place_label ($target, $label);
        
       // Increment number of labels correctly placed.  See if done with
       // diagram.
@@ -773,6 +752,17 @@ this.label_dropped = function (target_obj, label_obj) {
          }
       } else {
 
+         // Was this the first try for this target?  If so, record that was
+         // correctly-placed on first try.  (Last-filled target doesn't count,
+         // since it's the only choice left!)
+         var target_id = $target.attr ('id');
+         if (typeof (qwizdata[i_qwiz].correct_on_try1[i_question]) == 'undefined') {
+            qwizdata[i_qwiz].correct_on_try1[i_question] = {};
+         }
+         if (! qwizdata[i_qwiz].correct_on_try1[i_question][target_id]) {
+            qwizdata[i_qwiz].correct_on_try1[i_question][target_id] = 1;
+         }
+
          // Update progress bar.
          display_qwizzled_progress (i_qwiz);
       }
@@ -784,26 +774,33 @@ this.label_dropped = function (target_obj, label_obj) {
       if (debug[0]) {
          console.log ('[label_dropped] feedback_selector:', feedback_selector + 'x');
       }
-      var feedback_obj = $ (feedback_selector + 'x');
-      feedback_obj.show ();
-      label_obj.find ('.qwizzled_highlight_label').css ({background: '#FF8080'});
-      label_obj.find ('.qwizzled_highlight_label img').css ({outline: '2px solid #FF8080'});
-      try_again_obj = { label_obj: label_obj, feedback_obj:  feedback_obj,
-                        target_obj: target_obj};
+      var $feedback = $ (feedback_selector + 'x');
+      $feedback.show ();
+      $label.find ('.qwizzled_highlight_label').css ({background: '#FF8080'});
+      $label.find ('.qwizzled_highlight_label img').css ({outline: '2px solid #FF8080'});
+      try_again_obj = { $label: $label, $feedback:  $feedback,
+                        $target: $target};
 
       // Make target no longer droppable -- starting drag while over the
       // target seems to count as a "drop".  Will re-enable droppability in
       // label_dragstart ().
-      target_obj.droppable ('option', 'disabled', true);
+      $target.droppable ('option', 'disabled', true);
+
+      // Record that label was not correctly placed on first try.
+      var target_id = $target.attr ('id');
+      if (typeof (qwizdata[i_qwiz].correct_on_try1[i_question]) == 'undefined') {
+         qwizdata[i_qwiz].correct_on_try1[i_question] = {};
+      }
+      qwizdata[i_qwiz].correct_on_try1[i_question][target_id] = -1;
    }
 
    // If recording, record all label placements -- correct and incorrect.
-   // Want to record: label, droppped-in-target-for-label.
+   // Want to record: label, dropped-in-target-for-label.
    if (qwizdata[i_qwiz].qrecord_id && document_qwiz_user_logged_in_b) {
-      var label = label_obj.find ('span.qwizzled_highlight_label').html ();
+      var label = $label.find ('span.qwizzled_highlight_label').html ();
       label = qqc.remove_tags_eols (label);
 
-      var classes = target_obj.attr ('class')
+      var classes = $target.attr ('class')
       var target_assoc_id = classes.match (/qwizzled_target-([0-9]*)/)[1];
       var target_label = $ (qwizq_id).find ('div.qtarget_assoc' + target_assoc_id).find ('span.qwizzled_highlight_label').html ();
 
@@ -824,6 +821,128 @@ this.label_dropped = function (target_obj, label_obj) {
          // Reset q_and_a_text global so will retrieve for next labeled
          // diagram.
          q_and_a_text = '';
+      }
+   }
+}
+
+
+// -----------------------------------------------------------------------------
+function place_labels (i_qwiz, i_question, qwizq_id) {
+
+   // On this time around, put in place those labels that were correctly
+   // placed on a target on the first try in the previous go-around.
+   for (var target_id in qwizdata[i_qwiz].correct_on_try1[i_question]) {
+      if (qwizdata[i_qwiz].correct_on_try1[i_question][target_id] == 1) {
+         var $target = $ ('div#' + qwizq_id + ' div#' + target_id);
+         if ($target.length == 0) {
+            $target = $ ('div#' + qwizq_id + ' span#' + target_id).first ();
+         }
+
+         // Get associated label. 
+         var classes = $target.attr ('class');
+         var m = classes.match (/qwizzled_target-([0-9]+)/);
+         var assoc_id;
+         if (m) { 
+            assoc_id = m[1];
+         }
+         if (debug[0]) {
+            console.log ('[display_question] $target:', $target, ', assoc_id:', assoc_id);
+         }
+         var $label = $ ('td.qwizzled_labels div.qtarget_assoc' + assoc_id);
+
+         // Or older style...
+         if (! $label.length) {
+            $label = $ ('div#' + qwizq_id).find ('td.qwizzled_labels div.qwizzled_label[data-label_target_id="' + assoc_id + '"]');
+         }
+
+         place_label ($target, $label);
+
+         // And record "placed".
+         qwizdata[i_qwiz].n_labels_correct++;
+         qwizdata[i_qwiz].n_label_attempts++;
+      } else {
+
+         // New chance at correct-on-first-try for others.
+         qwizdata[i_qwiz].correct_on_try1[i_question][target_id] = 0;
+      }
+   }
+
+   // Update progress.
+   display_qwizzled_progress (i_qwiz);
+}
+
+
+// -----------------------------------------------------------------------------
+function place_label ($target, $label) {
+
+   // Do-it-myself snap to target.  Make copy of label into child of the
+   // target.  Clone false arg says do not copy events (namely, dragging
+   // effect).
+   var $label_copy = $label.clone (false);
+   $label_copy.appendTo ($target);
+   $label_copy.css ({position: 'absolute', left: '4px', top: '50%', height: 'auto', width: '100%', transform: 'translateY(-50%)'});
+   $label_copy.removeClass ('qwizzled_label_unplaced'); 
+   $label_copy.find ('.qwizzled_highlight_label').css ('cursor', 'default');
+
+   // Move original label back to original position.
+   $label.css ({left: '0px', top: '0px'});
+
+   // See if multiple targets for this label.
+   var multiple_targets_b = false;
+   var classes = $label.attr ('class');
+   m = classes.match (/qwizzled_n_targets([0-9]*)/);
+   if (m) {
+      multiple_targets_b = true;
+
+      // Either decrement targets remaining, or, if only one left, remove
+      // class.
+      var current_n_targets = m[0];
+      var n_targets = parseInt (m[1], 10);
+      if (n_targets == 2) {
+
+         // Will be only one left.  Can treat as "normal".  Remove class.
+         $label.removeClass (current_n_targets);
+      } else {
+
+         // Decrement.  Set flag, remove existing class, add decremented
+         // class.
+         var new_class = 'qwizzled_n_targets' + (--n_targets);
+         $label.removeClass (current_n_targets).addClass (new_class);
+      }
+   }
+
+   // If not multiple targets, disable drag of original label, and remove 
+   // class to signal no re-enable.  Also remove cursor css.
+   // Gray-out (apply to children, too, in case need to overcome default),
+   // move to original position.
+   if (! multiple_targets_b) {
+      if (debug[8]) {
+         console.log ('[place_label] (draggable disable) $label[0]:', $label[0]);
+      }
+      $label.css ({color: 'lightgray', left: '0px', top: '0px'});
+      $label.find ('*').css ({color: 'lightgray'});
+      $label.find ('.qwizzled_highlight_label').css ('cursor', 'default');
+      $label.removeClass ('qwizzled_label_unplaced');
+
+      // This if-error-do-nothing shouldn't be necessary, but won't hurt.
+      try {
+         $label.draggable ('disable');
+      } catch (e) {}
+   }
+
+   // This target no longer droppable.  If div, just this.  If span (text
+   // target, possibly with multiple spans) find relevant siblings.
+   if ($target[0].tagName.toLowerCase () == 'div') {
+      $target.droppable ('option', 'disabled', true);
+   } else {
+      var classes = $target.attr ('class');
+      var m = classes.match (/qtarget_sib-[0-9]+/);
+      if (m) {
+         $ ('span.' + m[0]).droppable ('option', 'disabled', true);
+      } else {
+
+         // Backwards compatibility -- assume they're in a wrapper span.
+         $target.siblings ('span').andSelf ().droppable ('option', 'disabled', true);
       }
    }
 }
@@ -872,6 +991,7 @@ function process_qwiz_pair (htm, i_qwiz) {
    qwizdata[i_qwiz].i_question  = -1;
    qwizdata[i_qwiz].initial_width = 500;
    qwizdata[i_qwiz].qrecord_id = false;
+   qwizdata[i_qwiz].qrecord_id_ok = 'check credit';
 
    var m = htm.match (/\[qwiz([^\]]*)\]/m);
    var qwiz_tag   = m[0];
@@ -882,12 +1002,19 @@ function process_qwiz_pair (htm, i_qwiz) {
       console.log ('[process_qwiz_pair] attributes: ', attributes);
    }
 
-   // If "qrecord_id=..." present, parse out database ID.  Set flag indicating
-   // one or more quizzes subject to recording.  Set up array to save question
-   // text.
+   // If "qrecord_id=..." present, parse out database ID.
    var qrecord_id = get_attr (attributes, 'qrecord_id');
    if (qrecord_id) {
+
+      // Set flag indicating this quiz subject to recording.  (Will get unset
+      // by check_registered returned JavaScript if not registered.)
       qwizdata[i_qwiz].qrecord_id = qrecord_id;
+
+      // Check if quiz has been registered.
+      var data = {qwiz_qdeck: 'qwiz'};
+      qqc.jjax (qname, i_qwiz, qrecord_id, 'check_registered', data);
+
+      // Set up array to save question text.
       qwizdata[i_qwiz].q_and_a_text = {};
 
       // If haven't checked already, see if user already logged in (get session
@@ -896,7 +1023,7 @@ function process_qwiz_pair (htm, i_qwiz) {
          qrecord_b = true;
          if (typeof (document_qwiz_user_logged_in_b) == 'undefined'
                               || document_qwiz_user_logged_in_b == 'not ready') {
-            qqc.check_session_id (i_qwiz, qrecord_id);
+            qqc.check_session_id (i_qwiz);
          }
       }
    }
@@ -990,12 +1117,12 @@ function process_qwiz_pair (htm, i_qwiz) {
       process_topics (i_qwiz, question_tags);
 
       // Capture any opening tags before each "[q...] tag.
-      var matches = htm.match (/(<[^\/][^>]*>\s*)*?(\[q[ \]]|<div class="qwizzled_question">)/gm);
+      var matches = htm.match (/(<[^\/][^>]*>\s*)*?(\[q[ \]]|\[<code><\/code>q)/gm);
       var q_opening_tags = [];
       var n_q_opening_tags = matches.length;
       for (var i_tag=0; i_tag<n_q_opening_tags; i_tag++) {
          var match_i = matches[i_tag];
-         match_i = match_i.replace (/\[q[ \]]|<div class="qwizzled_question">/m, '');
+         match_i = match_i.replace (/\[q[ \]]|\[<code><\/code>q|<div class="qwizzled_question">|<div class="qwizzled_canvas">/gm, '');
          q_opening_tags.push (match_i);
       }
       if (debug[0]) {
@@ -1131,6 +1258,11 @@ function process_qwiz_pair (htm, i_qwiz) {
                                              questions_html[i_question],
                                              q_opening_tags[i_question],
                                              question_tags[i_question]);
+            if (qwizdata[i_qwiz].correct_on_try1) {
+               qwizdata[i_qwiz].correct_on_try1[i_question] = {};
+            } else {
+               qwizdata[i_qwiz].correct_on_try1 = [];
+            }
          } else {
 
             // Error: didn't find choices or labels.
@@ -1347,11 +1479,11 @@ function create_qwiz_divs (i_qwiz, qwiz_tag, htm, exit_html) {
    bottom_html += '<div class="icon_qwiz" id="icon_qwiz' + i_qwiz + '" ' + style + '>';
    var icon_qwiz = qqc.get_qwiz_param ('icon_qwiz');
    if (icon_qwiz != 'Not displayed') {
-      var title = 'Qwiz - online quizzes and flashcards';
+      var title = 'Qwizcards - online quizzes and flashcards';
       if (icon_qwiz != 'Icon only') {
-         bottom_html += '<a href="//dkprojects.net/qwiz">';
+         bottom_html += '<a href="//qwizcards.com">';
       } else {
-         title += ' - dkprojects.net/qwiz';
+         title += ' - qwizcards.com';
       }
       bottom_html += '<img class="icon_qwiz" style="border: none;" title="' + title + '" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAUCAIAAAALACogAAAABnRSTlMA/wD/AP83WBt9AAAACXBIWXMAAA7EAAAOxAGVKw4bAAABP0lEQVR4nGP8//8/AymAiSTV5GhgwSZ4rcRrxRooW3futlBnJDlGND/cXzXVccFLVP0oepiwqtZJyH2wrenBtogQBgYGhsv9q15j9cO1qTDVW8JEGRgYGBi0PJ0YGBgYrjzCpuH+qv1rGBgYGHQLoaoZGBgYlOTEGRgYGB68uY+h4fXuQy8ZGBgYnLSRvXjv0UsGBgYGBRFFdA1Prm+6x8DAwBBio4XsyO37GBgYGHTkEHaixYO4mszrWTl1CjmH7iMcKe5nhdAAi4cnL6/A3HbrHgMDw56pJ0QYIOHr5JgmgzASZoOFdggDAwPDy03HRCEhs6YJEne6c0uQHYkUcXt76pL3oTqQQbxqVjay8Sh+cC5pmuuEpkFMWQZNBCNpwMDrWTmT2+5hCCu54EqtomkVLjqYwgoiuGzACWifgQDhK2rq5bcX2gAAAABJRU5ErkJggg==" />';
       if (icon_qwiz != 'Icon only') {
@@ -1409,7 +1541,7 @@ function get_login_html (i_qwiz, add_team_member_f) {
      +      T ('Login')
      +   '</button>'
      +   '&emsp;'
-     +   '<button class="qbutton" onclick="' + qname + '.no_login (' + i_qwiz + ', true)">'
+     +   '<button class="qbutton" onclick="' + qname + '.no_login (' + i_qwiz + ', true)">';
    if (add_team_member_f) {
       login_div_html +=
              T ('Cancel')
@@ -1522,12 +1654,15 @@ this.restart_quiz = function (i_qwiz) {
    qwizdata[i_qwiz].n_incorrect = 0;
 
    // Reset qwizzled divs to original state (cloned in init_qwizzled ()).
-   for (var id in qwizdata[i_qwiz].qwizzled) {
-      $ ('div#' + id).replaceWith (qwizdata[i_qwiz].qwizzled[id]);
+   for (var qwizzled_div_id in qwizdata[i_qwiz].$qwizzled) {
+      $ ('div#' + qwizzled_div_id).replaceWith (qwizdata[i_qwiz].$qwizzled[qwizzled_div_id]);
 
       // For reasons beyond me, it's necessary to re-initialize the cloned
       // object.
-      qwizdata[i_qwiz].qwizzled[id] = $ ('div#' + id).clone (true);
+      qwizdata[i_qwiz].$qwizzled[qwizzled_div_id] = $ ('div#' + qwizzled_div_id).clone (true);
+   }
+   if (qwizdata[i_qwiz].qwizzled_b) {
+      qwizdata[i_qwiz].correct_on_try1 = [];
    }
 
 
@@ -1544,7 +1679,7 @@ this.restart_quiz = function (i_qwiz) {
    }
    qwizdata[i_qwiz].i_question = -1;
    if (qwizdata[i_qwiz].qrecord_id && document_qwiz_user_logged_in_b) {
-      var data = {type: 'start'};
+      var data = {qrecord_id_ok: qwizdata[i_qwiz].qrecord_id_ok, type: 'start'};
       qqc.jjax (qname, i_qwiz, qwizdata[i_qwiz].qrecord_id, 'record_response', data);
    }
    q.next_question (i_qwiz);
@@ -1595,7 +1730,7 @@ this.next_question = function (i_qwiz, no_login_b) {
                         if (confirm (T ('You are logged in as') + ' ' + document_qwiz_username + '.\n' + T ('Do you want to continue?  (Click "Cancel" to sign out)'))) {
                            document_qwiz_current_login_sec = now_sec;
                         } else {
-                           q.sign_out ();
+                           qqc.sign_out ();
                         }
                      }
 
@@ -1614,7 +1749,7 @@ this.next_question = function (i_qwiz, no_login_b) {
                            alert (msg)
                         }
                      }
-                     var data = {type: 'start'};
+                     var data = {qrecord_id_ok: qwizdata[i_qwiz].qrecord_id_ok, type: 'start'};
                      qqc.jjax (qname, i_qwiz, qwizdata[i_qwiz].qrecord_id, 'record_response', data);
                   }
                } else {
@@ -1701,32 +1836,46 @@ function display_question (i_qwiz, i_question) {
    // "startswith."
    $ ('[id^=' + qwizq_id + ']').hide ();
 
-   var qwizq_obj = $ ('#' + qwizq_id);
-   var qwizzled_b = qwizq_obj.hasClass ('qwizzled');
+   var $qwizq = $ ('div#' + qwizq_id);
+   var qwizzled_b = $qwizq.hasClass ('qwizzled');
 
 
    // If a labeled diagram, if previously-answered incorrectly, restore state.
    if (qwizzled_b) {
-      if ($ ('#' + qwizq_id).data ('answered_correctly') == 0) {
-         $ ('div#' + qwizq_id).replaceWith (qwizdata[i_qwiz].qwizzled[qwizq_id]);
-         qwizq_obj = $ ('#' + qwizq_id);
 
-         // As in restart_quiz (), re-initialize the cloned object.
-         qwizdata[i_qwiz].qwizzled[qwizq_id] = $ ('div#' + qwizq_id).clone (true);
-         if (debug[0]) {
-            console.log ('[display_question] qwizq_id:', qwizq_id);
-         }
-      }
-
-      // Also, reset progress bar.
+      // Reset progress bar counts.
       qwizdata[i_qwiz].n_labels_correct = 0;
       qwizdata[i_qwiz].n_label_attempts = 0;
 
-      // This collects multiple spans if they're spread across a text target.
-      // If don't have qtarget_sib... just count, but de-dup sibs.
+      if ($qwizq.data ('answered_correctly') == 0) {
+         $qwizq.replaceWith (qwizdata[i_qwiz].$qwizzled[qwizq_id]);
+
+         // Need to reset.
+         var $qwizq = $ ('div#' + qwizq_id);
+
+         // As in restart_quiz (), re-initialize the cloned object.
+         qwizdata[i_qwiz].$qwizzled[qwizq_id] = $ ('div#' + qwizq_id).clone (true);
+
+         // Also, put into place labels that were previously placed correctly.
+         // These delays (to make sure any asynchronous preliminaries get done
+         // first) may not be necessary, but they won't hurt.
+         var delay_init_drag_and_drop = function () {
+            q.init_drag_and_drop ($qwizq[0]);
+         };
+         setTimeout (delay_init_drag_and_drop, 100);
+
+         var delay_place_labels = function () {
+            place_labels (i_qwiz, i_question, qwizq_id);
+         };
+         setTimeout (delay_place_labels, 200);
+      }
+
+      // This collects multiple spans (text targets) if they're spread across
+      // a text target.  If don't have qtarget_sib... just count, but de-dup
+      // sibs.
       var n_label_targets = 0;
       var target_count = {};
-      qwizq_obj.find ('div.qwizzled_target, span.qwizzled_target').each (function () {
+      $qwizq.find ('span.qwizzled_target').each (function () {
          var classes = $ (this).attr ('class');
          var m = classes.match (/qtarget_sib-[0-9]*/);
          if (m) {
@@ -1744,18 +1893,22 @@ function display_question (i_qwiz, i_question) {
             }
          }
       });
+
+      // Regular targets.  No de-dup necessary.
+      n_label_targets += $qwizq.find ('div.qwizzled_target').length;
+
       qwizdata[i_qwiz].n_label_targets = n_label_targets + Object.keys (target_count).length;
       display_qwizzled_progress (i_qwiz);
    }
 
-   qwizq_obj.show ();
+   $qwizq.show ();
 
    if (qwizzled_b) {
 
       // If layout table is wider than default qwiz width (defines border),
       // set wider for now.  Get width of table.  Add 10px for border and 
       // padding of qwiz div.
-      var table_width = 10 + qwizq_obj.find ('table.qwizzled_table').outerWidth ();
+      var table_width = 10 + $qwizq.find ('table.qwizzled_table').outerWidth ();
       if (debug[0]) {
          console.log ('[display_question] table_width:', table_width, ', initial_width:', qwizdata[i_qwiz].initial_width);
       }
@@ -1894,18 +2047,16 @@ function display_question (i_qwiz, i_question) {
          qwizdata[i_qwiz].check_answer_disabled_b = true;
          $check_answer.show ();
 
-         // Hint starts out not visible.  Set timer to show in a while.
-         // Closure for setTimeout ().
-         var show_hint_button = function () {
-            $check_answer.find ('button.qwiz_textentry_hint')
-               .removeAttr ('disabled')
-               .html ('Hint').show ();
-         }
-         $check_answer.find ('button.qwiz_textentry_hint').html ('Hint').hide ();
-         if (hint_timeout_sec >= 0) {
-            show_hint_timeout = setTimeout (show_hint_button, hint_timeout_sec*1000);
-         }
+         // Hint starts out not visible.  If first question of no-intro quiz,
+         // set up for mouseenter to start timeout.
+         if (i_question == 0 && (no_intro_b[i_qwiz]
+                                        || qwizdata[i_qwiz].n_questions == 1)) {
+            $ ('div#qwiz' + i_qwiz).attr ('onmouseenter', qname + '.start_hint_timeout (' + i_qwiz + ')');
+         } else {
 
+            // Otherwise, start timeout now (with question display).
+            q.start_hint_timeout (i_qwiz);
+         }
 
          // Reset value of textentry box, if there is one.
          if ($textentry.length) {
@@ -1933,6 +2084,30 @@ function display_question (i_qwiz, i_question) {
             $ (this).css ({'cursor': 'text', 'color': 'black'})
          });
       }
+   }
+}
+
+
+// -----------------------------------------------------------------------------
+this.start_hint_timeout = function (i_qwiz) {
+
+   // Only execute this function once for this question.
+   $ ('div#qwiz' + i_qwiz).removeAttr ('onmouseenter');
+
+   var $check_answer = $ ('#textentry_check_answer_div-qwiz' + i_qwiz);
+   if (debug[0]) {
+      console.log ('[start_hint_timeout] $check_answer.length:', $check_answer.length);
+   }
+
+   // Closure for setTimeout ().
+   var show_hint_button = function () {
+      $check_answer.find ('button.qwiz_textentry_hint')
+         .removeAttr ('disabled')
+         .html ('Hint').show ();
+   }
+   $check_answer.find ('button.qwiz_textentry_hint').html ('Hint').hide ();
+   if (hint_timeout_sec >= 0) {
+      show_hint_timeout[i_qwiz] = setTimeout (show_hint_button, hint_timeout_sec*1000);
    }
 }
 
@@ -2535,7 +2710,7 @@ function process_qwizzled (i_qwiz, i_question, question_htm, opening_tags,
    var td_labels   = '<td class="qwizzled_labels' + td_labels_add_class + '"' + td_labels_style + '>'
                    +    '<div class="qwizzled_labels_border">'
                    +        'Q-LABELS-Q'
-                   +        '<div style="clear: both;"></div>\n';
+                   +        '<div style="clear: both;"></div>\n'
                    +    '</div>'
                    + '</td>';
    var td_feedback = '<td class="qwizzled_feedback" colspan="2">QWIZZLED-FEEDBACK-Q</td>';
@@ -2690,15 +2865,15 @@ this.init_drag_and_drop = function (qwizq_elm) {
    if (debug[0]) {
       console.log ('[init_drag_and_drop] qwizq_elm:', qwizq_elm);
    }
-   var qwizq_obj = $ (qwizq_elm);
+   var $qwizq = $ (qwizq_elm);
 
    // Do this only once for this qwizzled question.  Remove attribute.
-   qwizq_obj.removeAttr ('onmouseover');
+   $qwizq.removeAttr ('onmouseover');
 
-   qwizq_obj.find ('td.qwizzled_labels div.qwizzled_label').each (function () {
-      if (debug[0]) {
-         console.log ('[init_drag_and_drop] \'td.qwizzled_labels div.qwizzled_label\':', $ (this));
-         console.log ('                       parents (\'.qwizq\':', $ (this).parents ('.qwizq'));
+   $qwizq.find ('td.qwizzled_labels div.qwizzled_label').each (function () {
+      if (debug[0] || debug[8]) {
+         console.log ('[init_drag_and_drop] \'td.qwizzled_labels div.qwizzled_label\':', $ (this)[0]);
+         //console.log ('[init_drag_and_drop]   parents (\'.qwizq\':', $ (this).parents ('.qwizq'));
       }
       $ (this).draggable ({
          containment:   $ (this).parents ('table.qwizzled_table'),
@@ -2712,7 +2887,7 @@ this.init_drag_and_drop = function (qwizq_elm) {
    });
 
    // Targets as drop zones.  Droppable when pointer over target.
-   qwizq_obj.find ('.qwizzled_target').droppable ({
+   $qwizq.find ('.qwizzled_target').droppable ({
       accept:           '.qwizzled_label',
       hoverClass:       'qwizzled_target_hover',
       drop:             function (event, ui) {
@@ -3091,7 +3266,8 @@ this.process_choice = function (feedback_id) {
    // quiz, record as start time.  
    if (qwizdata[i_qwiz].record_start_b && document_qwiz_user_logged_in_b) {
       qwizdata[i_qwiz].record_start_b = false;
-      qqc.jjax (qname, i_qwiz, qwizdata[i_qwiz].qrecord_id, 'record_response', {type: 'start'});
+      var data = {qrecord_id_ok: qwizdata[i_qwiz].qrecord_id_ok, type: 'start'};
+      qqc.jjax (qname, i_qwiz, qwizdata[i_qwiz].qrecord_id, 'record_response', data);
    }
 
    // Don't do if already disabled.
@@ -3157,6 +3333,7 @@ this.process_choice = function (feedback_id) {
                           + '\t'
                           + qqc.remove_tags_eols ($ ('#' + feedback_id).html ());
          }
+
          var data = {q_and_a_text: qwizdata[i_qwiz].q_and_a_text[i_question], i_question: i_question, type: 'multiple_choice', response: choice_text, i_choice: i_choice, correct_b: correct_b ? 1 : ''};
          qqc.jjax (qname, i_qwiz, qwizdata[i_qwiz].qrecord_id, 'record_response', data);
       }
@@ -3562,7 +3739,7 @@ this.textentry_check_answer = function (i_qwiz) {
 this.textentry_hint = function (i_qwiz) {
 
    // Cancel any previous timer.
-   clearTimeout (show_hint_timeout);
+   clearTimeout (show_hint_timeout[i_qwiz]);
 
    qwizdata[i_qwiz].textentry_n_hints++;
 
@@ -3587,7 +3764,7 @@ this.textentry_hint = function (i_qwiz) {
          .removeClass ('qbutton_disabled');
    }
    if (hint_timeout_sec >= 0) {
-      show_hint_timeout = setTimeout (show_hint_button, hint_timeout_sec*1000);
+      show_hint_timeout[i_qwiz] = setTimeout (show_hint_button, hint_timeout_sec*1000);
    }
 }
 
@@ -3753,16 +3930,22 @@ this.login_ok = function (i_qwiz, session_id, remember_f) {
    // Hide login.
    $ ('#qwiz_login-qwiz' + i_qwiz).hide ();
 
-   // If recording any quizzes, reset all start times.
+   // If recording any quizzes, reset flag to record start times on first
+   // interaction (in process_choice ()) with no-intro quizzes.
    if (qrecord_b) {
-      var qrecord_ids = [];
       for (var ii_qwiz=0; ii_qwiz<n_qwizzes; ii_qwiz++) {
+         if (no_intro_b[ii_qwiz] || qwizdata[ii_qwiz].n_questions == 1) {
+            if (qwizdata[ii_qwiz].qrecord_id) {
+               qwizdata[ii_qwiz].record_start_b = true;
+            }
+         }
+
+         // Also, set indicator to re-check whether (new?) user will get
+         // credit for each quiz.
          if (qwizdata[ii_qwiz].qrecord_id) {
-            qrecord_ids.push (qwizdata[ii_qwiz].qrecord_id);
+            qwizdata[ii_qwiz].qrecord_id_ok = 'check credit';
          }
       }
-      qrecord_ids = qrecord_ids.join ('\t');
-      qqc.jjax (qname, i_qwiz, qrecord_ids, 'record_response', {type: 'start'});
    }
 
    if (qwizdata[i_qwiz].i_question == -1) {
@@ -3861,24 +4044,17 @@ this.show_usermenu = function (i_qwiz) {
 
 
 // -----------------------------------------------------------------------------
-this.sign_out = function () {
-
-   // Delete cookie, unset flag.
-   $.removeCookie ('qwiz_session_id', {path: '/'});
-   document_qwiz_user_logged_in_b = false;
-
-   // Reset menus to reflect current (logged-out) state.  Flag to NOT start
-   // bouncing icons.
-   qqc.set_user_menus_and_icons (true);
-}
-
-
-// -----------------------------------------------------------------------------
 function get_attr (htm, attr_name) {
    var attr_value = qqc.get_attr (htm, attr_name, qwizdata);
    errmsgs = errmsgs.concat (qwizdata.additional_errmsgs);
 
    return attr_value;
+}
+
+
+// -----------------------------------------------------------------------------
+this.set_qwizdata = function (i_qwiz, variable, value) {
+   qwizdata[i_qwiz][variable] = value;
 }
 
 

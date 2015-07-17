@@ -1,11 +1,11 @@
 <?php
 /**
- * Plugin Name: Qwiz - online quizzes and flashcards
- * Plugin URI: http://dkprojects.net/qwiz
+ * Plugin Name: Qwizcards - online quizzes and flashcards
+ * Plugin URI: http://qwizcards.com
  * Description: Easy online quizzes and flashcards for WordPress
- * Version: beta1 for 2.30
+ * Version: beta 1 for 2.32
  * Author: Dan Kirshner
- * Author URI: http://dkprojects.net/qwiz
+ * Author URI: http://qwizcards.com
  * License: GPL2
  */
 
@@ -31,6 +31,12 @@ define ('BETA_SUBDIR', 'beta/' . PLUGIN_DIR);
 
 $debug = false;
 
+$server_loc        = '//qwizcards.com/admin';
+$secure_server_loc = 'https//host359.hostmonster.com/~whereisq/qwiz/admin';
+//$server_loc        = '//localhost/qwiz/admin';
+//$secure_server_loc = '//localhost/qwiz/admin';
+
+
 function qwiz_language_init () {
 
    // Try to load "qwiz-{locale}.mo" from 
@@ -43,6 +49,7 @@ function qwiz_language_init () {
 
 
 function add_qwiz_js_and_style () {
+   global $server_loc, $secure_server_loc;
 
    // JavaScript.
    $qwiz                 = qwiz_plugin_url ('qwiz.js');
@@ -50,11 +57,11 @@ function add_qwiz_js_and_style () {
    $qwiz_qcards_common   = qwiz_plugin_url ('qwiz_qcards_common.js');
    $jquery_ui            = qwiz_plugin_url ('jquery-ui.min.js');
    $jquery_ui_touchpunch = qwiz_plugin_url ('jquery.ui.touch-punch.min.js');
-   wp_enqueue_script ('qwiz_handle',                 $qwiz,                 array (), '2.30', true);
-   wp_enqueue_script ('qwizcards_handle',            $qwizcards,            array (), '2.30', true);
-   wp_enqueue_script ('qwiz_qcards_common_handle',   $qwiz_qcards_common,   array (), '2.30', true);
-   wp_enqueue_script ('jquery_ui_handle',            $jquery_ui,            array (), '2.30', true);
-   wp_enqueue_script ('jquery_ui_touchpunch_handle', $jquery_ui_touchpunch, array (), '2.30', true);
+   wp_enqueue_script ('qwiz_handle',                 $qwiz,                 array (), '2.31', true);
+   wp_enqueue_script ('qwizcards_handle',            $qwizcards,            array (), '2.31', true);
+   wp_enqueue_script ('qwiz_qcards_common_handle',   $qwiz_qcards_common,   array (), '2.31', true);
+   wp_enqueue_script ('jquery_ui_handle',            $jquery_ui,            array (), '2.31', true);
+   wp_enqueue_script ('jquery_ui_touchpunch_handle', $jquery_ui_touchpunch, array (), '2.31', true);
 
    // Options/parameters.  Set default content option.
    $plugin_url = qwiz_plugin_url ( '/');
@@ -98,7 +105,8 @@ function add_qwiz_js_and_style () {
       'icon_qwiz'        => $icon_qwiz,
       'content'          => $content,
       'beta'             => $beta,
-      'server_loc'       => '//dkprojects.net/qwiz/admin',
+      'server_loc'       => $server_loc,
+      'secure_server_loc'=> $secure_server_loc,
       'hint_timeout_sec' => $hint_timeout_sec
    );
    wp_localize_script ('qwiz_handle',      'qwiz_params', $qwiz_params);
@@ -138,9 +146,11 @@ function add_qwizzled_button ($plugin_array) {
 
 
 function qwizzled_plugin_url () {
+   global $server_loc, $secure_server_loc;
+
    $plugin_url = qwiz_plugin_url ( '/');
    print "<script type=\"text/javascript\">";
-   print "   var qwizzled_plugin = {'url': '$plugin_url'}\n";
+   print "   var qwizzled_plugin = {'url': '$plugin_url', 'server_loc': '$server_loc', 'secure_server_loc': '$secure_server_loc'}\n";
    print "</script>\n";
 }
 
@@ -216,7 +226,7 @@ function qwiz_admin_bar_item ($wp_admin_bar) {
 
    $args = array (
       'id'     => 'qwiz_menu',
-      'title'  => 'Qwiz'
+      'title'  => 'Qwizcards'
    );
    $wp_admin_bar->add_node ($args);
 

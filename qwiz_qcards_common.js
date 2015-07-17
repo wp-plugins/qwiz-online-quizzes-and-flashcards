@@ -13,10 +13,14 @@ var qwiz_qcards_common_f = function () {
 var $ = jQuery;
 
 var qqc = this;
+var qqcname = 'qwiz_qcards_common';
 
 var number_word;
 var jjax_script_no = 0;
 var head = 'not ready';
+
+var server_loc = 'not ready';
+var secure_server_loc;
 
 var debug = [];
 debug[0] = false;    // general.
@@ -30,6 +34,7 @@ $ (document).ready (function () {
    document_qwiz_declined_login_b = $.cookie ('qwiz_declined_login');
 
    number_word = [qqc.T ('zero'), qqc.T ('one'), qqc.T ('two'), qqc.T ('three'), qqc.T ('four'), qqc.T ('five'), qqc.T ('six'), qqc.T ('seven'), qqc.T ('eight'), qqc.T ('nine'), qqc.T ('ten')];
+
 
    head = document.getElementsByTagName ('head')[0];
    if (debug[0]) {
@@ -88,8 +93,17 @@ this.jjax = function (qname, i_qwiz, qrecord_id, dest, data) {
       send_data += '&qwiz_session_id=' + encodeURIComponent (document_qwiz_session_id);
    }
 
-   var server_dest = qqc.get_qwiz_param ('server_loc', '//localhost/qwiz/admin') + '/' + dest + '.php';
-   script.src = server_dest + send_data;
+   if (server_loc == 'not ready') {
+      server_loc = qqc.get_qwiz_param ('server_loc', '//localhost/qwiz/admin');
+      secure_server_loc = qqc.get_qwiz_param ('secure_server_loc', '//localhost/qwiz/admin');
+   }
+   var local_server_loc;
+   if (dest == 'login') {
+      local_server_loc = secure_server_loc;
+   } else {
+      local_server_loc = server_loc;
+   }
+   script.src = local_server_loc + '/' + dest + '.php' + send_data;
    if (debug[0]) {
       console.log ('[jjax] data:', data);
       console.log ('[jjax] script.src:', script.src);
@@ -104,7 +118,7 @@ this.jjax = function (qname, i_qwiz, qrecord_id, dest, data) {
 
 
 // -----------------------------------------------------------------------------
-this.check_session_id = function (i_qwiz, qrecord_id) {
+this.check_session_id = function (i_qwiz) {
 
    // Get cookie, check if still valid (server call).  If undefined, change
    // to null string (so don't pass string 'undefined' to php).
@@ -116,7 +130,7 @@ this.check_session_id = function (i_qwiz, qrecord_id) {
       document_qwiz_user_logged_in_b = false;
    } else {
       var data = {cookie_session_id: cookie_session_id};
-      qqc.jjax ('', i_qwiz, qrecord_id, 'check_session_id', data);
+      qqc.jjax ('', i_qwiz, '', 'check_session_id', data);
    }
 }
 
@@ -150,7 +164,7 @@ this.set_user_menus_and_icons = function (sign_out_f) {
       // Menu item for logout.
       htm +=    '<div>'
              +      qqc.T ('Not') + ' ' + document_qwiz_username + '? '
-             +     '<a href="javascript: qname.sign_out ()">'
+             +     '<a href="javascript: ' + qqcname + '.sign_out ()">'
              +         qqc.T ('Sign out')
              +     '</a>'
              +  '</div>';
@@ -222,6 +236,23 @@ this.set_user_menus_and_icons = function (sign_out_f) {
 
    // Also set icons visible, color based on login state.
    $ ('div.qwiz-usermenu_icon').css ({visibility: 'visible', color: icon_color});
+}
+
+
+// -----------------------------------------------------------------------------
+this.sign_out = function () {
+
+   // Delete cookie, unset flag.
+   $.removeCookie ('qwiz_session_id', {path: '/'});
+   document_qwiz_user_logged_in_b = false;
+
+   // Remove session ID from DB table.
+   var data = {session_id: document_qwiz_session_id, table: 'session_id'};
+   qqc.jjax ('', -1, '', 'delete_session_id', data);
+
+   // Reset menus to reflect current (logged-out) state.  Flag to NOT start
+   // bouncing icons.
+   qqc.set_user_menus_and_icons (true);
 }
 
 
@@ -474,9 +505,9 @@ this.init_enter_intercept = function () {
                         // qdeck-related, ignore.
                         var tagname = e.target.tagName.toLowerCase ();
                         if (tagname == 'input' || tagname == 'textarea') {
-                           var classname = e.target.className.toLowerCase ();
-                           if (classname.indexOf ('qwiz') == -1
-                                          && classname.indexOf ('qcard') == -1) {
+                           var id = e.target.id.toLowerCase ();
+                           if (id.indexOf ('qwiz') == -1
+                                                && id.indexOf ('qdeck') == -1) {
                               return false;
                            }
                         }

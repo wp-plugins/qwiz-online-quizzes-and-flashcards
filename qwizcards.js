@@ -1,5 +1,11 @@
 /*
- * Version 2.30 2015-06-??
+ * Version 2.32 2015-07-??
+ * Fix - <Enter> not working for login.
+ * Mouseenter starts timer for show hint on first card of no-intro deck.
+ * Check if deck registered.
+ * Check if user will get credit for deck.
+ *
+ * Version 2.30 2015-06-26
  * Team login.
  * Login timeout.
  * Check that attributes have a value given in double quotes.
@@ -167,7 +173,7 @@ var textentry_matches = {};
 var lc_textentry_matches = {};
 
 var Tcheck_answer_message;
-var show_hint_timeout;
+var show_hint_timeout = {};
 
 var qrecord_b = false;
 var q_and_a_text = '';
@@ -506,7 +512,26 @@ function init_textentry_autocomplete (i_deck, i_card) {
    deckdata[i_deck].check_answer_disabled_b = true;
    deckdata[i_deck].textentry_n_hints = 0;
 
-   // Set timer to show hint button in a while.  Closure.
+   // If first card of no-intro deck, set up for mouseenter to start timer
+   // to show hint button.
+   if (deckdata[i_deck].n_reviewed == 0 
+                     || (no_intro_b[i_deck] || deckdata[i_deck].n_cards == 1)) {
+      $ ('div#qcard_window-qdeck' + i_deck).attr ('onmouseenter', qname + '.start_hint_timeout (' + i_deck + ')');
+   } else {
+
+      // Otherwise, start timeout now (with question display).
+      q.start_hint_timeout (i_deck);
+   }
+}
+
+
+// -----------------------------------------------------------------------------
+this.start_hint_timeout = function (i_deck) {
+
+   // Only execute this function once for this question.
+   $ ('div#qcard_window-qdeck' + i_deck).removeAttr ('onmouseenter');
+
+   // Closure for setTimeout ().
    var show_hint_button = function () {
       $ ('#textentry_hint-qdeck' + i_deck)
          .removeAttr ('disabled')
@@ -514,8 +539,9 @@ function init_textentry_autocomplete (i_deck, i_card) {
          .removeClass ('qbutton_disabled')
          .show ();
    }
+   $ ('#textentry_hint-qdeck' + i_deck).html ('Hint').hide ();
    if (hint_timeout_sec >= 0) {
-      show_hint_timeout = setTimeout (show_hint_button, hint_timeout_sec*1000);
+      show_hint_timeout[i_deck] = setTimeout (show_hint_button, hint_timeout_sec*1000);
    }
 }
 
@@ -539,15 +565,14 @@ function process_qdeck_pair (htm, i_deck) {
    deckdata[i_deck].exit_html = '';
 
    deckdata[i_deck].qrecord_id = false;
+   deckdata[i_deck].qrecord_id_ok = 'check credit';
 
    // Include any opening tags (e.g., "<p>" in WordPress).
    var m = htm.match (/(<[^\/][^>]*>\s*)*?\[qdeck([^\]]*)\]/m);
    var qdeck_tag  = m[0];
    var attributes = m[2];
 
-   // If "qrecord_id=..." present, parse out database ID.  Set flag indicating
-   // one or more quizzes subject to recording.  Set up array to save question
-   // text.
+   // If "qrecord_id=..." present, parse out database ID.
    attributes = qqc.replace_smart_quotes (attributes);
    if (debug[0]) {
       console.log ('[process_qdeck_pair] qdeck_tag: ', qdeck_tag);
@@ -555,7 +580,16 @@ function process_qdeck_pair (htm, i_deck) {
    }
    var qrecord_id = get_attr (attributes, 'qrecord_id');
    if (qrecord_id) {
+
+      // Set flag indicating this deck subject to recording.  (Will get unset
+      // by check_registered returned JavaScript if not registered.)
       deckdata[i_deck].qrecord_id = qrecord_id;
+
+      // Check if deck has been registered.
+      var data = {qwiz_qdeck: 'qdeck'};
+      qqc.jjax (qname, i_deck, qrecord_id, 'check_registered', data);
+
+      // Set up array to save question text.
       deckdata[i_deck].q_and_a_text = {};
 
       // If haven't checked already, see if user already logged in (get session
@@ -564,7 +598,7 @@ function process_qdeck_pair (htm, i_deck) {
          qrecord_b = true;
          if (typeof (document_qwiz_user_logged_in_b) == 'undefined'
                               || document_qwiz_user_logged_in_b == 'not ready') {
-            qqc.check_session_id (i_deck, qrecord_id);
+            qqc.check_session_id (i_deck);
          }
       }
    }
@@ -747,11 +781,11 @@ function create_qwiz_icon_div (i_deck) {
    divs.push ('<div id="icon_qdeck' + i_deck + '" class="icon_qdeck" ' + style + '>');
    var icon_qwiz = qqc.get_qwiz_param ('icon_qwiz');
    if (icon_qwiz != 'Not displayed') {
-      var title = 'Qwiz - online quizzes and flashcards';
+      var title = 'Qwizcards - online quizzes and flashcards';
       if (icon_qwiz != 'Icon only') {
-         divs.push ('<a href="//dkprojects.net/qwiz">');
+         divs.push ('<a href="//qwizcards.com">');
       } else {
-         title += ' - dkprojects.net/qwiz';
+         title += ' - qwizcards.com';
       }
 
       divs.push ('      <img class="icon_qdeck" style="border: none;" title="' + title + '" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAUCAIAAAALACogAAAABnRSTlMA/wD/AP83WBt9AAAACXBIWXMAAA7EAAAOxAGVKw4bAAABP0lEQVR4nGP8//8/AymAiSTV5GhgwSZ4rcRrxRooW3futlBnJDlGND/cXzXVccFLVP0oepiwqtZJyH2wrenBtogQBgYGhsv9q15j9cO1qTDVW8JEGRgYGBi0PJ0YGBgYrjzCpuH+qv1rGBgYGHQLoaoZGBgYlOTEGRgYGB68uY+h4fXuQy8ZGBgYnLSRvXjv0UsGBgYGBRFFdA1Prm+6x8DAwBBio4XsyO37GBgYGHTkEHaixYO4mszrWTl1CjmH7iMcKe5nhdAAi4cnL6/A3HbrHgMDw56pJ0QYIOHr5JgmgzASZoOFdggDAwPDy03HRCEhs6YJEne6c0uQHYkUcXt76pL3oTqQQbxqVjay8Sh+cC5pmuuEpkFMWQZNBCNpwMDrWTmT2+5hCCu54EqtomkVLjqYwgoiuGzACWifgQDhK2rq5bcX2gAAAABJRU5ErkJggg==" />');
@@ -1060,7 +1094,7 @@ function process_feedback_item (choice_html) {
 this.textentry_hint = function (i_deck) {
 
    // Cancel any previous timer.
-   clearTimeout (show_hint_timeout);
+   clearTimeout (show_hint_timeout[i_deck]);
 
    deckdata[i_deck].textentry_n_hints++;
 
@@ -1089,7 +1123,7 @@ this.textentry_hint = function (i_deck) {
          .removeClass ('qbutton_disabled');
    }
    if (hint_timeout_sec >= 0) {
-      show_hint_timeout = setTimeout (show_hint_button, hint_timeout_sec*1000);
+      show_hint_timeout[i_deck] = setTimeout (show_hint_button, hint_timeout_sec*1000);
    }
 }
 
@@ -1508,7 +1542,7 @@ this.start_deck = function (i_deck) {
                if (confirm (T ('You are logged in as') + ' ' + document_qwiz_username + '.\n' + T ('Do you want to continue?  (Click "Cancel" to sign out)'))) {
                   document_qwiz_current_login_sec = now_sec;
                } else {
-                  q.sign_out ();
+                  qqc.sign_out ();
                }
             }
 
@@ -1527,7 +1561,7 @@ this.start_deck = function (i_deck) {
                }
             }
             var now_sec = new Date ().getTime ()/1000.0;
-            var data = {type: 'start', now_sec: now_sec};
+            var data = {qrecord_id_ok: deckdata[i_deck].qrecord_id_ok, type: 'start', now_sec: now_sec};
             qqc.jjax (qname, i_deck, deckdata[i_deck].qrecord_id, 'record_qcard', data);
          }
       } else {
@@ -2013,17 +2047,20 @@ this.login_ok = function (i_deck, session_id, remember_f) {
    // Hide login.
    $ ('#qdeck_login-qdeck' + i_deck).hide ();
 
-   // If recording any decks, reset all start times.
+   // If recording any decks, reset flag to record start time on first
+   // interaction (in flip ()) with no-intro decks.
    if (qrecord_b) {
-      var qrecord_ids = [];
       for (var ii_deck=0; ii_deck<n_decks; ii_deck++) {
          if (deckdata[ii_deck].qrecord_id) {
-            qrecord_ids.push (deckdata[ii_deck].qrecord_id);
+            deckdata[ii_deck].record_start_b = true;
+         }
+
+         // Also, set indicator to re-check whether (new?) user will get
+         // credit for each deck.
+         if (deckdata[ii_deck].qrecord_id) {
+            deckdata[ii_deck].qrecord_id_ok = 'check credit';
          }
       }
-      qrecord_ids = qrecord_ids.join ('\t');
-      var now_sec = new Date ().getTime ()/1000.0;
-      qqc.jjax (qname, i_deck, qrecord_ids, 'record_qcard', {type: 'start', now_sec: now_sec});
    }
 
    // Show buttons.
@@ -2101,19 +2138,6 @@ this.show_usermenu = function (i_deck) {
 
 
 // -----------------------------------------------------------------------------
-this.sign_out = function () {
-
-   // Delete cookie, unset flag.
-   $.removeCookie ('qwiz_session_id', {path: '/'});
-   document_qwiz_user_logged_in_b = false;
-
-   // Reset menus to reflect current (logged-out) state.  Flag to NOT start
-   // bouncing icons.
-   qqc.set_user_menus_and_icons (true);
-}
-
-
-// -----------------------------------------------------------------------------
 this.flip = function (i_deck) {
 
    if (deckdata[i_deck].check_answer_disabled_b) {
@@ -2144,7 +2168,7 @@ this.flip = function (i_deck) {
          if (deckdata[i_deck].record_start_b && document_qwiz_user_logged_in_b) {
             deckdata[i_deck].record_start_b = false;
             var now_sec = new Date ().getTime ()/1000.0;
-            var data = {type: 'start', now_sec: now_sec};
+            var data = {qrecord_id_ok: deckdata[i_deck].qrecord_id_ok, type: 'start', now_sec: now_sec};
             qqc.jjax (qname, i_deck, deckdata[i_deck].qrecord_id, 'record_qcard', data);
          }
       }
@@ -2855,6 +2879,12 @@ function get_attr (htm, attr_name) {
    errmsgs = errmsgs.concat (deckdata.additional_errmsgs);
 
    return attr_value;
+}
+
+
+// -----------------------------------------------------------------------------
+this.set_deckdata = function (i_deck, variable, value) {
+   qwizdata[i_deck][variable] = value;
 }
 
 

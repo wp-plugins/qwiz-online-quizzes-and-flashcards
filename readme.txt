@@ -1,16 +1,16 @@
-=== Qwiz - online quizzes and flashcards ===
+=== Qwizcards - online quizzes and flashcards ===
 Contributors: dan_kirshner
 Tags: interactive quiz, quiz, flashcards, labeled diagrams
 Tested up to: 4.2
-Stable tag: 2.30
+Stable tag: 2.31
 License: GPL2
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
-Qwiz lets you create quizzes and flashcard decks using simple shortcodes (such as "[q]" for a question) that you include in your page/post.
+Qwizcards lets you create quizzes and flashcard decks using simple shortcodes (such as "[q]" for a question) that you include in your page/post.
 
 
 == Description ==
-Easy online quizzes and flashcards for WordPress - use simple shortcodes (such as "[q]" for a question) in your page or post.  See http://dkprojects.net/qwiz
+Easy online quizzes and flashcards for WordPress - use simple shortcodes (such as "[q]" for a question) in your page or post.  See http://qwizcards.com
 
 == Installation ==
 Upload 'qwiz-online-qwizzes-wp-plugin.php' to your plugins directory ('.../wp-content/plugins').
@@ -20,8 +20,16 @@ Activate the plugin through the 'Plugins' menu in WordPress
 
 == Changelog ==
 
+= 2.32 =
+2015-07-??
+Fix - <Enter> wasn't working for login.
+
+= 2.31 =
+2015-06-27
+Fix bug - labels were getting pre-placed after "Take quiz again".
+
 = 2.30 =
-2015-06-??
+2015-06-26
 Team login.
 Login timeout.
 Check that attributes have a value given in double quotes.
@@ -32,6 +40,8 @@ Required-input textentry "Check answer" text changes with entry state.
 [fx] feedback applies to all incorrect choices.
 Hint button appears after timeout, or after gray "Check answer" click.
 Qwiz settings option for hint-button timeout.
+On re-do of a labeled diagram, restore previously-correctly-placed labels.
+Fix bug - labeled diagrams - "Next" button not showing.
 
 = 2.29 =
 2015-04-26
