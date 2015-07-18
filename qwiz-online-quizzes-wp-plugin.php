@@ -3,7 +3,7 @@
  * Plugin Name: Qwizcards - online quizzes and flashcards
  * Plugin URI: http://qwizcards.com
  * Description: Easy online quizzes and flashcards for WordPress
- * Version: beta 6 for 2.32
+ * Version: beta 7 for 2.32
  * Author: Dan Kirshner
  * Author URI: http://qwizcards.com
  * License: GPL2
@@ -32,7 +32,8 @@ define ('BETA_SUBDIR', 'beta/' . PLUGIN_DIR);
 $debug = false;
 
 $server_loc        = '//qwizcards.com/admin';
-$secure_server_loc = 'https://host359.hostmonster.com/~whereisq/qwiz/admin';
+$secure_server_loc = '//qwizcards.com/admin';
+//$secure_server_loc = 'https://host359.hostmonster.com/~whereisq/qwiz/admin';
 //$server_loc        = '//localhost/qwiz/admin';
 //$secure_server_loc = '//localhost/qwiz/admin';
 
