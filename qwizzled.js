@@ -1,6 +1,7 @@
 /*
  * Version 2.32 2015-07-??
  * Register quizzes/decks menu option.
+ * Secure login for register quizzes/decks.
  *
  * Version 2.29 2015-04-26
  * Don't use <code></code> for already-wrapped [q] and [l].
@@ -2821,14 +2822,16 @@ function check_session_id () {
 
 
 // -----------------------------------------------------------------------------
-this.login_ok = function (maker_session_id) {
+this.login_ok = function (maker_session_id, username) {
 
    // Called from maker_login_popup.php.
    // Success.  Create session cookie, valid for one day, 
    // set -- 1 day, good for whole site.  Value set by server.  Callback 
    // script also set session ID q.maker_session_id and sets q.username.
-   var options = {path: '/', expires: 1};
    q.maker_session_id = maker_session_id;
+   q.username         = username;
+
+   var options = {path: '/', expires: 1};
    $.cookie ('maker_session_id', maker_session_id, options);
 
    // Set flag, record time.
