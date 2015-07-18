@@ -2884,7 +2884,7 @@ function get_attr (htm, attr_name) {
 
 // -----------------------------------------------------------------------------
 this.set_deckdata = function (i_deck, variable, value) {
-   qwizdata[i_deck][variable] = value;
+   deckdata[i_deck][variable] = value;
 }
 
 

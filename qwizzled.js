@@ -1,7 +1,6 @@
 /*
  * Version 2.32 2015-07-??
  * Register quizzes/decks menu option.
- * Secure login for register quizzes/decks.
  *
  * Version 2.29 2015-04-26
  * Don't use <code></code> for already-wrapped [q] and [l].
@@ -254,6 +253,43 @@ this.show_main_menu = function (ed, qwiz_button_b) {
    ddiv.push (      '</div>');
    ddiv.push (      '<img src="' + qwizzled_plugin.url + 'images/icon_exit_red.png" class="icon_main_menu_exit" onclick="qwizzled.exit_register_qqs ()" />');
    ddiv.push (   '</div>');
+   ddiv.push (   '<div id="register_qqs_login">');
+   ddiv.push (      '<br /><br />');
+   ddiv.push (      '<b>Qwizcards administrative login</b>');
+   ddiv.push (      '<form action="nada" onSubmit="return qwizzled.login ()">');
+   ddiv.push (      '<table border="0" align="center">');
+   ddiv.push (         '<tr>');
+   ddiv.push (            '<td>');
+   ddiv.push (               '<label for="qwizzled_username">'+ T ('User name') + '</label>');
+   ddiv.push (            '</td>');
+
+   var onfocus = 'onfocus="jQuery (\'#register_qqs_login p.login_error\').css ({visibility: \'hidden\'})"';
+
+   ddiv.push (            '<td>');
+   ddiv.push (               '<input type="text" id="qwizzled_username" ' + onfocus + ' />');
+   ddiv.push (            '</td>');
+   ddiv.push (         '</tr>');
+   ddiv.push (         '<tr>');
+   ddiv.push (            '<td>');
+   ddiv.push (               '<label for="qwizzled_password">'+ T ('Password') + '</label>');
+   ddiv.push (            '</td>');
+   ddiv.push (            '<td>');
+   ddiv.push (               '<input type="password" id="qwizzled_password" ' + onfocus + ' />');
+   ddiv.push (            '</td>');
+   ddiv.push (         '</tr>');
+   ddiv.push (         '<tr>');
+   ddiv.push (            '<td colspan="2" align="center">');
+   ddiv.push (               '<input type="submit" value="Login" />');
+   ddiv.push (               '&emsp;');
+   ddiv.push (               '<input type="button" value="Cancel" onclick="qwizzled.exit_register_qqs ()" />');
+   ddiv.push (            '</td>');
+   ddiv.push (         '<tr>');
+   ddiv.push (      '</table>\n');
+   ddiv.push (      '</form>\n');
+   ddiv.push (      '<p class="login_error">');
+   ddiv.push (         T ('Login incorrect. Please try again'));
+   ddiv.push (      '</p>\n');
+   ddiv.push (   '</div>');
    ddiv.push (   '<div id="register_qqs_user">');
    ddiv.push (   '</div>');
    ddiv.push (   '<div id="register_qqs_main">');
@@ -476,12 +512,25 @@ function add_style () {
    s.push ('   border:          2px solid rgba(79, 112, 153, 1);');
    s.push ('}');
 
+   s.push ('#register_qqs_login,');
+   s.push ('#register_qqs_main {');
+   s.push ('   display:         none;');
+   s.push ('   background:      white;');
+   s.push ('   padding:         5px;');
+   s.push ('}');
+
    s.push ('#register_qqs_user {');
    s.push ('   text-align:      right;');
    s.push ('   display:         none;');
                              /* top right bot left */
    s.push ('   padding:         2px 5px 0px 5px;');
    s.push ('   background:      white;');
+   s.push ('}');
+
+   s.push ('p.login_error {');
+   s.push ('   visibility:      hidden;');
+   s.push ('   color:           red;');
+   s.push ('   font-weight:     bold;');
    s.push ('}');
 
    s.push ('table.register_qqs th,');
@@ -2464,14 +2513,13 @@ this.register_qqs = function () {
 // -----------------------------------------------------------------------------
 this.register_qqs2 = function () {
 
-   // If maker not logged in, open login window.
+   // If maker not logged in, show login dialog.
    if (! q.maker_logged_in_b) {
 
-      window.name = "qwizzled";
-      var login_popup =open(qwizzled_plugin.secure_server_loc + '/qalogin.php',
-                             'login_popup',
-                             ',width=400,height=250,toolbar=no,scrollbars=no,location=no,toolbar=no,statusbar=no,menubar=no,resizable=0');
-      login_popup.focus ();
+      // Login callback will continue with register_qqs3 ().
+      $ ('#register_qqs_login').show ();
+      $ ('#register_qqs_dialog_box').show ();
+      $ ('#qwizzled_username').focus ();
    } else {
       q.register_qqs3 ();
    }
@@ -2484,6 +2532,7 @@ this.register_qqs3 = function () {
    if (debug[0]) {
       console.log ('[register_qqs3]');
    }
+   $ ('#register_qqs_login').hide ();
    $ ('#register_qqs_main').html ('');
 
    // Show username in dialog box.
@@ -2822,17 +2871,43 @@ function check_session_id () {
 
 
 // -----------------------------------------------------------------------------
-this.login_ok = function (maker_session_id, username) {
+this.login = function () {
 
-   // Called from maker_login_popup.php.
+   // Have we got username and password?
+   var $username = $ ('#qwizzled_username');
+   var username = $username.val ();
+   if (! username ) {
+      alert (T ('Please enter User name'));
+      $username.focus ();
+      return false;
+   }
+
+   var $password = $ ('#qwizzled_password');
+   var password = $password.val ();
+   if (! password) {
+      alert (T ('Please enter Password'));
+      $password.focus ();
+      return false;
+   }
+
+   // We'll send "SHA3" of password.
+   var sha3_password = CryptoJS.SHA3 (password).toString ();
+
+   // Do jjax call.
+   var data = {jjax: 1, username: username, sha3_password: sha3_password};
+   jjax (qname, 'maker_login', data);
+   return false;
+}
+
+
+// -----------------------------------------------------------------------------
+this.login_ok = function () {
+
    // Success.  Create session cookie, valid for one day, 
    // set -- 1 day, good for whole site.  Value set by server.  Callback 
    // script also set session ID q.maker_session_id and sets q.username.
-   q.maker_session_id = maker_session_id;
-   q.username         = username;
-
    var options = {path: '/', expires: 1};
-   $.cookie ('maker_session_id', maker_session_id, options);
+   $.cookie ('maker_session_id', q.maker_session_id, options);
 
    // Set flag, record time.
    q.maker_logged_in_b = true;
@@ -2843,6 +2918,17 @@ this.login_ok = function (maker_session_id, username) {
 
    // Proceed.
    q.register_qqs3 ();
+}
+
+
+// -----------------------------------------------------------------------------
+this.login_not_ok = function () {
+
+   // Invalid login.  Error message.
+   $ ('#register_qqs_login p.login_error').css ({visibility: 'visible'});
+
+   // So subsequent focus () will work.
+   $ ('#qwizzled_password').blur ();
 }
 
 
@@ -2861,6 +2947,7 @@ this.sign_out = function () {
    // fields.
    $ ('#register_qqs_user').hide ();
    $ ('#register_qqs_main').hide ();
+   $ ('#register_qqs_login').show ();
    $ ('#qwizzled_username').val ('').focus ();
    $ ('#qwizzled_password').val ('');
 }

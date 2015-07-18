@@ -98,12 +98,11 @@ this.jjax = function (qname, i_qwiz, qrecord_id, dest, data) {
       secure_server_loc = qqc.get_qwiz_param ('secure_server_loc', '//localhost/qwiz/admin');
    }
    var local_server_loc;
-   //DKTMP
-   //if (dest == 'login') {
-   //   local_server_loc = secure_server_loc;
-   //} else {
+   if (dest == 'login') {
+      local_server_loc = secure_server_loc;
+   } else {
       local_server_loc = server_loc;
-  // }
+   }
    script.src = local_server_loc + '/' + dest + '.php' + send_data;
    if (debug[0]) {
       console.log ('[jjax] data:', data);
