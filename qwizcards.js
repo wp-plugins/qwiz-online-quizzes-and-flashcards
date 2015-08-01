@@ -1921,7 +1921,7 @@ function get_login_html (i_deck, add_team_member_f) {
    }
    login_html +=
           '</p>\n'
-     +    '<table border="0" align="center" style="width: auto;">'
+     +    '<table>'
      +       '<tr>'
      +          '<td>'
      +             '<label for="qdeck_username-qdeck' + i_deck + '">'+ T ('User name') + '</label>'

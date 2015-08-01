@@ -583,7 +583,6 @@ function init_qwizzled ($content, local_n_qwizzes) {
 function init_textentry_autocomplete () {
 
    $ ('input.qwiz_textentry').autocomplete ({
-      minLength:     3,
       source:        find_matching_terms,
       close:         menu_closed,
       open:          menu_shown,

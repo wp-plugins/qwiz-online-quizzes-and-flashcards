@@ -123,6 +123,8 @@ this.maker_logged_in_b = false;
 var n_qwizzes;
 var n_decks;
 
+var hide_new_account_info_timeout;
+
 // -----------------------------------------------------------------------------
 /*
 $(document).ready (function () {
@@ -198,7 +200,7 @@ this.show_main_menu = function (ed, qwiz_button_b) {
    mm.push ('   <div id="qwizzled_main_menu_header" class="qwizzled_main_menu_header">');
    mm.push ('      <img src="' + qwizzled_plugin.url + 'images/icon_qwiz.png" class="icon_qwiz" />');
    mm.push ('      <div class="qwizzled_main_menu_title">');
-   mm.push ('         Qwizcards - ' + T ('labeled diagram editing menu'));
+   mm.push ('         Qwizcards - ' + T ('editing menu'));
    mm.push ('      </div>');
    mm.push ('      <img src="' + qwizzled_plugin.url + 'images/icon_exit_red.png" class="icon_main_menu_exit" onclick="qwizzled.exit_main_menu ()" />');
    mm.push ('   </div>');
@@ -282,6 +284,9 @@ this.show_main_menu = function (ed, qwiz_button_b) {
    ddiv.push (               '<input type="submit" value="Login" />');
    ddiv.push (               '&emsp;');
    ddiv.push (               '<input type="button" value="Cancel" onclick="qwizzled.exit_register_qqs ()" />');
+   ddiv.push (               ' &emsp; ');
+   ddiv.push (               '<a href="' + qwizzled_plugin.secure_server_loc + '/new_account.php" target="_blank">');
+   ddiv.push (                  'Create new account</a> <img src="' + qwizzled_plugin.url + 'images/info_icon.png" class="new_account_info" onmouseenter="qwizzled.show_new_account_info ()" onmouseleave="qwizzled.hide_new_account_info ()">');
    ddiv.push (            '</td>');
    ddiv.push (         '<tr>');
    ddiv.push (      '</table>\n');
@@ -289,6 +294,9 @@ this.show_main_menu = function (ed, qwiz_button_b) {
    ddiv.push (      '<p class="login_error">');
    ddiv.push (         T ('Login incorrect. Please try again'));
    ddiv.push (      '</p>\n');
+   ddiv.push (      '<div id="new_account_info">');
+   ddiv.push (         'With a Qwizcards administrative account you can get reports of your students&rsquo; quiz scores and use of flashcard decks.');
+   ddiv.push (      '</div>');
    ddiv.push (   '</div>');
    ddiv.push (   '<div id="register_qqs_user">');
    ddiv.push (   '</div>');
@@ -381,6 +389,19 @@ function reinit_dragging () {
          $ (this).css ({'margin-right': -(ui_obj.size.width + horizontal_margin_adjust) + 'px', 'margin-bottom': -(ui_obj.size.height + vertical_margin_adjust) + 'px'});
       }
    }).removeAttr ('data-mce-style');
+}
+
+
+// -----------------------------------------------------------------------------
+this.show_new_account_info = function () {
+   clearTimeout (hide_new_account_info_timeout);
+   $ ('#new_account_info').show ();
+}
+
+
+// -----------------------------------------------------------------------------
+this.hide_new_account_info = function () {
+   hide_new_account_info_timeout = setTimeout ("jQuery ('#new_account_info').hide ()", 2000);
 }
 
 
@@ -514,28 +535,46 @@ function add_style () {
 
    s.push ('#register_qqs_login,');
    s.push ('#register_qqs_main {');
-   s.push ('   display:         none;');
-   s.push ('   background:      white;');
-   s.push ('   padding:         5px;');
+   s.push ('   position:            relative;');
+   s.push ('   display:             none;');
+   s.push ('   background:          white;');
+   s.push ('   padding:             5px;');
    s.push ('}');
 
    s.push ('#register_qqs_user {');
-   s.push ('   text-align:      right;');
-   s.push ('   display:         none;');
-                             /* top right bot left */
-   s.push ('   padding:         2px 5px 0px 5px;');
-   s.push ('   background:      white;');
+   s.push ('   text-align:          right;');
+   s.push ('   display:             none;');
+                                 /* top right bot left */
+   s.push ('   padding:             2px 5px 0px 5px;');
+   s.push ('   background:          white;');
    s.push ('}');
 
    s.push ('p.login_error {');
-   s.push ('   visibility:      hidden;');
-   s.push ('   color:           red;');
-   s.push ('   font-weight:     bold;');
+   s.push ('   visibility:          hidden;');
+   s.push ('   color:               red;');
+   s.push ('   font-weight:         bold;');
+   s.push ('}');
+
+   s.push ('#new_account_info {');
+   s.push ('   position:            absolute;');
+   s.push ('   top:                 40px;');
+   s.push ('   left:                75px;');
+   s.push ('   width:               350px;');
+   s.push ('   padding:             8px;');
+   s.push ('   background:          white;');
+   s.push ('   border:              1px solid black;');
+   s.push ('   box-shadow:          -3px 3px 2px gray;');
+   s.push ('   display:             none;');
+   s.push ('}');
+
+   s.push ('img.new_account_info {');
+   s.push ('   border:              0px;');
+   s.push ('   pointer:             help;');
    s.push ('}');
 
    s.push ('table.register_qqs th,');
    s.push ('table.register_qqs td {');
-   s.push ('   padding-right:  10px;');
+   s.push ('   padding-right:       10px;');
    s.push ('}');
 
    s.push ('img.icon_clickable {');
@@ -2602,6 +2641,9 @@ this.register_qqs4 = function () {
    h.push (   '<th>');
    h.push (      'Registered?');
    h.push (   '</th>');
+   h.push (   '<th>');
+   h.push (      'Add/delete');
+   h.push (   '</th>');
    h.push ('</tr>');
 
    var n_rows = q.qrecord_ids.length;
@@ -2627,22 +2669,27 @@ this.register_qqs4 = function () {
       h.push (   '</td>');
 
       var registered;
+      var add_delete;
       quiz_deck = q.q_fs[i_row] == 'Q' ? 'quiz' : 'deck';
       if (q.qwiz_qdeck_ids[i_row]) {
-         registered = 'Yes &ensp;'
-                      + '<img src="' + qwizzled_plugin.url + 'images/delete.png" '
-                      + 'title="Remove ' + quiz_deck + ' from reports and delete associated student responses from database" '
-                      + 'class="icon_clickable" '
-                      + 'onclick="qwizzled.deregister_qq (' + i_row + ')" />';
+         registered = 'Yes';
+         add_delete = '<img src="' + qwizzled_plugin.url + 'images/delete.png" '
+                      +    'title="Remove ' + quiz_deck + ' from reports and delete associated student responses from database" '
+                      +    'class="icon_clickable" '
+                      + '   onclick="qwizzled.deregister_qq (' + i_row + ')" />';
       } else {
-         registered = 'No &ensp;'
-                      + '<img src="' + qwizzled_plugin.url + 'images/add_icon.png" '
-                      + 'title="Register ' + quiz_deck + ' to record and report student scores" '
-                      + 'class="icon_clickable" '
-                      + 'onclick="qwizzled.register_qq (\'' + q.qrecord_ids[i_row] + '\', ' + i_row + ')" />';
+         registered = 'No';
+         add_delete = '<img src="' + qwizzled_plugin.url + 'images/add_icon.png" '
+                      +    'title="Register ' + quiz_deck + ' to record and report student scores" '
+                      +    'class="icon_clickable" '
+                      +    'onclick="qwizzled.register_qq (\'' + q.qrecord_ids[i_row] + '\', ' + i_row + ')" />';
       }
-      h.push (   '<td style="text-align: right; padding-right: 1.5em;">');
+      h.push (   '<td class="center">');
       h.push (      registered);
+      h.push (   '</td>');
+
+      h.push (   '<td class="center">');
+      h.push (      add_delete);
       h.push (   '</td>');
 
       // Cell to enter new qrecord_id.
@@ -2905,7 +2952,7 @@ this.login_ok = function () {
 
    // Success.  Create session cookie, valid for one day, 
    // set -- 1 day, good for whole site.  Value set by server.  Callback 
-   // script also set session ID q.maker_session_id and sets q.username.
+   // script also sets session ID q.maker_session_id and sets q.username.
    var options = {path: '/', expires: 1};
    $.cookie ('maker_session_id', q.maker_session_id, options);
 

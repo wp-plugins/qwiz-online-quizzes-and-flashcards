@@ -108,6 +108,7 @@ div.qdeck-usermenu div {
 .qdeck-login table {
    width:               auto;
    margin:              auto;
+   border:              0px;
 }
 
 .qdeck-login td {
