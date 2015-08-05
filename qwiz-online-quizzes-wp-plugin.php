@@ -3,7 +3,7 @@
  * Plugin Name: Qwizcards - online quizzes and flashcards
  * Plugin URI: http://qwizcards.com
  * Description: Easy online quizzes and flashcards for WordPress
- * Version: beta 10 for 2.32
+ * Version: beta 11 for 2.32
  * Author: Dan Kirshner
  * Author URI: http://qwizcards.com
  * License: GPL2

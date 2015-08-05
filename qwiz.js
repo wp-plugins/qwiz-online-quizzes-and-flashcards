@@ -1,10 +1,11 @@
 /*
- * Version 2.32 2015-07-??
+ * Version 2.32 2015-08-??
  * Fix - <Enter> not working for login.
  * Mouseenter starts timer for show hint on first question of no-intro quiz.
  * Start timer for show hint on question 1 of no-intro quiz on mouseenter.
  * Check if quiz registered.
  * Check if user will get credit for quiz.
+ * Login option to register (independent student).
  *
  * Version 2.31 2015-06-27
  * Fix bug - labels were getting pre-placed after "Take quiz again".
@@ -1534,24 +1535,34 @@ function get_login_html (i_qwiz, add_team_member_f) {
      +         '<td>'
      +            '<input type="password" id="qwiz_password-qwiz' + i_qwiz + '" ' + onfocus + ' />'
      +         '</td>'
+     +      '</tr>'
      +      '<tr>'
-     +   '</table>\n'
-     +   '<button class="qbutton login_button" onclick="' + qname + '.login (' + i_qwiz + ',' + add_team_member_f + ')">'
-     +      T ('Login')
-     +   '</button>'
-     +   '&emsp;'
-     +   '<button class="qbutton" onclick="' + qname + '.no_login (' + i_qwiz + ', true)">';
+     +         '<td>'
+     +         '</td>'
+     +         '<td>'
+     +            '<button class="qbutton login_button" onclick="' + qname + '.login (' + i_qwiz + ',' + add_team_member_f + ')">'
+     +               T ('Login')
+     +            '</button>'
+     +            '&emsp;'
+     +            '<button class="qbutton" onclick="' + qname + '.no_login (' + i_qwiz + ', true)">';
    if (add_team_member_f) {
       login_div_html +=
-             T ('Cancel')
-     +    '</button>';
+                     T ('Cancel')
+     +            '</button>';
    } else {
       login_div_html +=
-            T ('No thanks')
-     +   '</button>'
-     +   '<br />'
-     +   '<span class="qwiz-remember" title="' + T ('Save preference (do not use on shared computer)') + '"><label><span><input type="checkbox" /></span> ' + T ('Remember') + '</label></span>';
+                    T ('No thanks')
+     +           '</button>'
+     +           ' &emsp; '
+     +           '<a href="' + qqc.get_qwiz_param ('secure_server_loc', '//localhost/qwiz/admin') + '/new_ind_student_account.php" title="Track what you\'ve accomplished">'
+     +              'Register</a>'
+     +           '<br />'
+     +           '<span class="qwiz-remember" title="' + T ('Save preference (do not use on shared computer)') + '"><label><span><input type="checkbox" /></span> ' + T ('Remember') + '</label></span>';
    }
+   login_div_html +=
+               '</td>'
+     +      '</tr>'
+     +   '</table>\n';
    login_div_html +=
          '<p class="login_error">'
      +      T ('Login incorrect. Please try again')

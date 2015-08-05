@@ -157,8 +157,13 @@ this.set_user_menus_and_icons = function (sign_out_f) {
              +  '</div>';
 
       // Menu item for records.
+      if (server_loc == 'not ready') {
+         server_loc = qqc.get_qwiz_param ('server_loc', '//localhost/qwiz/admin');
+      }
       htm +=    '<div>'
+             +     '<a href="' + server_loc + '/index.php?student_view=1" target="_blank">'
              +      qqc.T ('My scores')
+             +     '</a>'
              +  '</div>';
 
       // Menu item for logout.

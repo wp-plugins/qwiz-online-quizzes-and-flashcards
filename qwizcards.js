@@ -4,6 +4,7 @@
  * Mouseenter starts timer for show hint on first card of no-intro deck.
  * Check if deck registered.
  * Check if user will get credit for deck.
+ * Login option to register (independent student).
  *
  * Version 2.30 2015-06-26
  * Team login.
@@ -1937,24 +1938,34 @@ function get_login_html (i_deck, add_team_member_f) {
      +          '<td>'
      +             '<input type="password" id="qdeck_password-qdeck' + i_deck + '" ' + onfocus + ' />'
      +          '</td>'
+     +       '</tr>'
      +       '<tr>'
-     +    '</table>\n'
-     +    '<button class="qbutton login_button" onclick="' + qname + '.login (' + i_deck + ',' + add_team_member_f + ')">'
-     +       T ('Login')
-     +    '</button>'
-     +    '&emsp;' 
-     +    '<button class="qbutton" onclick="' + qname + '.no_login (' + i_deck + ',' + add_team_member_f + ')">';
+     +          '<td>'
+     +          '</td>'
+     +          '<td>'
+     +             '<button class="qbutton login_button" onclick="' + qname + '.login (' + i_deck + ',' + add_team_member_f + ')">'
+     +                T ('Login')
+     +             '</button>'
+     +             '&emsp;' 
+     +             '<button class="qbutton" onclick="' + qname + '.no_login (' + i_deck + ',' + add_team_member_f + ')">';
    if (add_team_member_f) {
       login_html +=
-             T ('Cancel')
-     +    '</button>';
+                      T ('Cancel')
+     +             '</button>';
    } else {
       login_html +=
-             T ('No thanks')
-     +    '</button>'
-     +    '<br />'
-     +    '<span class="qdeck-remember" title="' + T ('Save preference (do not use on shared computer)') + '"><label><span><input type="checkbox" /></span> ' + T ('Remember') + '</label></span>';
+                      T ('No thanks')
+     +             '</button>'
+     +             ' &emsp; '
+     +             '<a href="' + qqc.get_qwiz_param ('secure_server_loc', '//localhost/qwiz/admin') + '/new_ind_student_account.php" title="Track what you\'ve accomplished">'
+     +             'Register</a>'
+     +             '<br />'
+     +             '<span class="qdeck-remember" title="' + T ('Save preference (do not use on shared computer)') + '"><label><span><input type="checkbox" /></span> ' + T ('Remember') + '</label></span>';
    }
+   login_html +=
+                '</td>'
+     +       '<tr>'
+     +    '</table>\n';
    login_html +=
           '<p class="login_error">'
      +       T ('Login incorrect. Please try again')

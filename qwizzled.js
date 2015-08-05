@@ -77,7 +77,7 @@ var qname = 'qwizzled';
 
 // Debug settings.
 var debug = [];
-debug.push (true );    // 0 - general.
+debug.push (false);    // 0 - general.
 debug.push (false);    // 1 - htm detail in parse_html_block ().
 debug.push (false);    // 2 - Preliminary checks.
 
@@ -521,7 +521,7 @@ function add_style () {
    s.push ('}');
 
    s.push ('#register_qqs_dialog_box {');
-   s.push ('   position:        fixed;');
+   s.push ('   position:        fixed !important;');
    s.push ('   min-width:       500px;');
    s.push ('   display:         none;');
 
@@ -2567,7 +2567,6 @@ this.register_qqs2 = function () {
 
 // -----------------------------------------------------------------------------
 this.register_qqs3 = function () {
-
    if (debug[0]) {
       console.log ('[register_qqs3]');
    }
@@ -2616,6 +2615,7 @@ this.register_qqs3 = function () {
          var data = {q_fs: JSON.stringify (q.q_fs), qrecord_ids: JSON.stringify (q.qrecord_ids)};
          jjax (qname, 'check_registered', data);
       } else {
+         q.qwiz_qdeck_ids = [];
          q.register_qqs4 ();
       }
    } else {
@@ -2626,9 +2626,11 @@ this.register_qqs3 = function () {
 
 
 // -----------------------------------------------------------------------------
+// Show table of quizzes/decks, with options.
 this.register_qqs4 = function () {
-
-   // Show table of quizzes/decks, with options.
+   if (debug[0]) {
+      console.log ('[register_qqs4] q.qwiz_qdeck_ids:', q.qwiz_qdeck_ids);
+   }
    var h = [];
    h.push ('<table class="register_qqs" align="center" border="0">');
    h.push ('<tr>');
